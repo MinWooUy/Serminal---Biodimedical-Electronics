@@ -15,7 +15,6 @@ module tb_conv1d_tile_top;
 	localparam WGT_MEM_DEPTH = 64;
 	
 	localparam FEEDER_DEPTH = 16;
-	localparam CNT_W = 5;
 	localparam K_W = 16;
 	
 	localparam ARRAY_ROWS = 3;
@@ -116,7 +115,6 @@ module tb_conv1d_tile_top;
 		.WGT_MEM_DEPTH(WGT_MEM_DEPTH),
 		
 		.FEEDER_DEPTH(FEEDER_DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W),
 		
 		.ARRAY_ROWS(ARRAY_ROWS),

@@ -42,6 +42,7 @@ feeder/weight_feeder.v
 // Bộ nhớ tensor
 mem/tensor_sram.v
 mem/tensor_pingpong_buffer.v
+mem/ring_buffer.v
 
 // Conv1D: AGU, loader, tile top, layer controller
 conv1d/conv1d_address_generating.v

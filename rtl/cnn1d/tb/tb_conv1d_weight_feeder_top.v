@@ -13,7 +13,6 @@ module tb_conv1d_weight_feeder_top;
     localparam ARRAY_COLS = 3;
 
     localparam DEPTH      = 16;
-    localparam CNT_W      = 5;
     localparam K_W        = 16;
 
     localparam MEM_DEPTH  = 64;
@@ -224,7 +223,6 @@ module tb_conv1d_weight_feeder_top;
         .ARRAY_COLS(ARRAY_COLS),
 
         .DEPTH(DEPTH),
-        .CNT_W(CNT_W),
         .K_W(K_W),
 
         .COL_W(COL_W)

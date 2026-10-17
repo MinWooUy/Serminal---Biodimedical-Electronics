@@ -1,7 +1,6 @@
 module feed_lane#(
 	parameter DATA_W = 8,
-	parameter CNT_W = 5,
-	parameter DEPTH = 16,
+	parameter DEPTH = 256,
 	parameter LANE_N = 0
 )(
 	input clk, reset,
@@ -21,8 +20,7 @@ module feed_lane#(
 	assign rd_fire = rd_en & ~mem_empty;
 
 	// FIFO
-	FIFO_param #(
-		.CNT_W(CNT_W),
+	ring_buffer #(
 		.DATA_W(DATA_W),
 		.DEPTH(DEPTH)
 	) u_fifo (
@@ -30,7 +28,8 @@ module feed_lane#(
 		.wr_en(wr_en), .rd_en(rd_fire),
 		.wr_data(wr_data),
 		.mem_full(mem_full), .mem_empty(mem_empty),
-		.rd_data(fifo_rd_data)
+		.rd_data(fifo_rd_data),
+		.count()
 	);
 
 	// pipeline control metadata

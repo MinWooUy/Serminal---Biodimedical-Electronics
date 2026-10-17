@@ -2,7 +2,6 @@
 module tb_feed_lane();
 
   parameter DATA_W = 8;
-  parameter CNT_W  = 5;
   parameter DEPTH  = 16;
   parameter LANE_N = 2;          // test trễ 2 nhịp
 
@@ -14,7 +13,7 @@ module tb_feed_lane();
   wire [DATA_W-1:0]    o_data;
 
   feed_lane #(
-    .DATA_W(DATA_W), .CNT_W(CNT_W), .DEPTH(DEPTH), .LANE_N(LANE_N)
+    .DATA_W(DATA_W), .DEPTH(DEPTH), .LANE_N(LANE_N)
   ) uut (
     .clk(clk), .reset(reset),
     .wr_en(wr_en), .rd_en(rd_en), .wr_data(wr_data),

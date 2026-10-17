@@ -15,7 +15,6 @@ module tb_conv1d_ifmap_feeder_top;
     localparam MEM_DEPTH  = 32;
 
     localparam DEPTH      = 16;
-    localparam CNT_W      = 5;
     localparam K_W        = 16;
 
 
@@ -190,7 +189,6 @@ module tb_conv1d_ifmap_feeder_top;
         .ARRAY_ROWS(ARRAY_ROWS),
 
         .DEPTH(DEPTH),
-        .CNT_W(CNT_W),
         .K_W(K_W)
     ) dut (
         .i_clk(i_clk),
