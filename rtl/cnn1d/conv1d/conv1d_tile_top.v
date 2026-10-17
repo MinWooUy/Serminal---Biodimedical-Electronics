@@ -103,8 +103,18 @@ module conv1d_tile_top #(
 	output wire o_ifmap_write_bank,
 	
 	output wire o_wgt_read_bank,
-	output wire o_wgt_write_bank
+	output wire o_wgt_write_bank,
+
+	// =====================================================
+	// CONFIG ERROR
+	// 1 khi tile bị từ chối: k_len == 0 hoặc k_len > FEEDER_DEPTH.
+	// Tile không chạy, vẫn trả o_done. Giữ tới lần start hợp lệ tiếp theo.
+	// Khi o_cfg_err = 1, o_tile/o_tile_valid là của tile TRƯỚC, không được dùng.
+	// =====================================================
+	output wire o_cfg_err
 );
+	reg cfg_err_q;
+	assign o_cfg_err = cfg_err_q;
 
 	// =====================================================
 	// TILE FSM STATES
@@ -469,6 +479,7 @@ module conv1d_tile_top #(
 	always @(posedge i_clk or posedge i_reset) begin
 		if(i_reset) begin
 			state_q <= S_IDLE;
+			cfg_err_q <= 1'b0;
 		end else begin
 			case(state_q)
 				
@@ -477,7 +488,13 @@ module conv1d_tile_top #(
 				// -----------------------------------------
 				S_IDLE: begin
 					if(i_start) begin
-						state_q <= S_LOAD_START;
+						if(i_k_len == 0 || i_k_len > FEEDER_DEPTH) begin
+							cfg_err_q <= 1'b1;
+							state_q <= S_DONE; // Done không chạy loader
+						end else begin
+							cfg_err_q <= 1'b0;
+							state_q <= S_LOAD_START;
+						end
 					end
 				end
 				
@@ -529,5 +546,13 @@ module conv1d_tile_top #(
 			endcase
 		end
 	end
+
+	// synthesis translate_off
+	always @(posedge i_clk) begin
+		if(!i_reset && state_q == S_IDLE && i_start && (i_k_len == 0 || i_k_len > FEEDER_DEPTH)) begin
+			$display("[CFG] conv1d_tile_top t=%0t: tu choi tile, i_k_len=%0d (can 1..%0d)", $time, i_k_len, FEEDER_DEPTH);
+		end
+	end
+	// synthesis translate_on
 
 endmodule
