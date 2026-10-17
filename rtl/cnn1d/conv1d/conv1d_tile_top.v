@@ -30,7 +30,6 @@ module conv1d_tile_top #(
 	parameter WGT_MEM_DEPTH = 1024,
 	
 	parameter FEEDER_DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16,
 	
 	parameter ARRAY_ROWS = 3,
@@ -297,7 +296,6 @@ module conv1d_tile_top #(
 		.ROW_W(ROW_W),
 		
 		.DEPTH(FEEDER_DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W)
 	) u_ifmap_feeder_top(
 		.i_clk(i_clk),
@@ -349,7 +347,6 @@ module conv1d_tile_top #(
 		.ARRAY_COLS(ARRAY_COLS),
 		
 		.DEPTH(FEEDER_DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W),
 		
 		.COL_W(COL_W)

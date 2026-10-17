@@ -6,7 +6,6 @@ module conv1d_weight_feeder_top#(
 	parameter ARRAY_COLS = 3,
 	
 	parameter DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16,
 	
 	parameter COL_W = (ARRAY_COLS <= 1) ? 1 : $clog2(ARRAY_COLS+1)
@@ -117,7 +116,6 @@ module conv1d_weight_feeder_top#(
 	weight_feeder #(
 		.DATA_W(DATA_W),
       .DEPTH(DEPTH),
-      .CNT_W(CNT_W),
       .K_W(K_W),
 
       .ARRAY_COLS(ARRAY_COLS),
