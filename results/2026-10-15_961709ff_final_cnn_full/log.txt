@@ -1,0 +1,13 @@
+final training on all DS1 (22 records), seed 42, 8 epochs, loss ce, class weights sqrt_inverse -> E:\PROJECTS\1DCNN\results\2026-10-15_961709ff_final_cnn_full
+inner-train 40572 beats (N 36678, S 639, V 2889, F 366), inner-val 10155, buffer 58
+class weights [0.1806, 1.3682, 0.6435, 1.8078]; RR mu [0.775600016117096, 0.7778000235557556, 0.7760999798774719, 0.9988999962806702] sigma [0.2110999971628189, 0.2079000025987625, 0.17499999701976776, 0.1534000039100647]
+params 668228
+    epoch   1  train 0.4493  inner-val 0.6841 *  lr 1.0e-03  5.09s
+    epoch   2  train 0.2651  inner-val 0.5260 *  lr 1.0e-03  4.34s
+    epoch   3  train 0.2189  inner-val 0.6948    lr 1.0e-03  4.34s
+    epoch   4  train 0.1878  inner-val 0.5803    lr 1.0e-03  4.41s
+    epoch   5  train 0.1712  inner-val 0.5730    lr 1.0e-03  4.35s
+    epoch   6  train 0.1636  inner-val 0.6284    lr 5.0e-04  4.35s
+    epoch   7  train 0.1365  inner-val 0.6624    lr 5.0e-04  4.35s
+    epoch   8  train 0.1246  inner-val 0.5662    lr 5.0e-04  4.35s
+saved -> E:\PROJECTS\1DCNN\results\2026-10-15_961709ff_final_cnn_full\model.pt (no held-out data: this run has no OOF metrics)

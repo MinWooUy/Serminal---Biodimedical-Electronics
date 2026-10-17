@@ -1,0 +1,43 @@
+config configs\ablation\A5_svdb_n25_lite.yaml -> E:\PROJECTS\1DCNN\results\2026-10-14_e4826154_A5_svdb_n25_lite_trial-f0-s42
+torch 2.14.1+cu126, CUDA 12.6, device cuda (NVIDIA GeForce RTX 3050 Laptop GPU)
+cache E:\PROJECTS\1DCNN\data\cache\beats_detector_a4eaff51 : 50785 beats N 45703, S 909, V 3761, F 412
+extra training-only beats ({'source': 'svdb', 'variant': 'n25', 'sample_seed': 0}) from svdb_beats_e1e1e470: 46769 beats N 31716, S 9232, V 5798, F 23 -> inner-train only
+model params: 23796
+
+[seed 42 fold 0] outer 9313  inner-train 79870  inner-val 8324  buffer 47
+  inner-train per class N 62129, S 9783, V 7898, F 60 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.104, 0.262, 0.291, 3.343]  rr mu [0.734000027179718, 0.7739999890327454, 0.7559999823570251, 0.9679999947547913] sigma [0.21899999678134918, 0.2150000035762787, 0.17900000512599945, 0.16200000047683716]
+    epoch   1  train 0.2981  inner-val 0.2473 *  lr 1.0e-03  4.75s  | diag outer F1 0.681 R 0.99/0.87/0.99/0.00
+    epoch   2  train 0.2008  inner-val 0.2859    lr 1.0e-03  3.59s  | diag outer F1 0.660 R 0.99/0.89/0.99/0.00
+    epoch   3  train 0.1838  inner-val 0.2821    lr 1.0e-03  3.37s  | diag outer F1 0.655 R 0.99/0.90/1.00/0.00
+    epoch   4  train 0.1749  inner-val 0.2907    lr 1.0e-03  3.46s  | diag outer F1 0.668 R 0.99/0.87/0.99/0.00
+    epoch   5  train 0.1675  inner-val 0.3034    lr 5.0e-04  3.53s  | diag outer F1 0.668 R 0.99/0.89/0.96/0.00
+    epoch   6  train 0.1580  inner-val 0.2974    lr 5.0e-04  3.40s  | diag outer F1 0.660 R 0.99/0.90/0.97/0.00
+    epoch   7  train 0.1549  inner-val 0.2887    lr 5.0e-04  3.57s  | diag outer F1 0.668 R 0.99/0.90/0.98/0.00
+    epoch   8  train 0.1542  inner-val 0.2667    lr 5.0e-04  3.69s  | diag outer F1 0.670 R 0.99/0.88/0.97/0.00
+    epoch   9  train 0.1498  inner-val 0.2793    lr 2.5e-04  3.77s  | diag outer F1 0.651 R 0.99/0.90/0.95/0.00
+    epoch  10  train 0.1449  inner-val 0.2758    lr 2.5e-04  3.72s  | diag outer F1 0.665 R 0.99/0.90/0.98/0.00
+    epoch  11  train 0.1408  inner-val 0.2770    lr 2.5e-04  3.49s  | diag outer F1 0.623 R 0.99/0.90/0.90/0.00
+    epoch  12  train 0.1397  inner-val 0.2735    lr 2.5e-04  3.57s  | diag outer F1 0.649 R 0.99/0.90/0.97/0.00
+    epoch  13  train 0.1411  inner-val 0.2635    lr 1.3e-04  3.76s  | diag outer F1 0.663 R 0.99/0.90/0.96/0.00
+    epoch  14  train 0.1379  inner-val 0.2803    lr 1.3e-04  3.59s  | diag outer F1 0.656 R 0.99/0.90/0.95/0.00
+    epoch  15  train 0.1377  inner-val 0.2735    lr 1.3e-04  3.60s  | diag outer F1 0.655 R 0.99/0.90/0.95/0.00
+    epoch  16  train 0.1355  inner-val 0.2773    lr 1.3e-04  3.58s  | diag outer F1 0.650 R 0.99/0.90/0.94/0.00
+    epoch  17  train 0.1382  inner-val 0.2735    lr 6.3e-05  3.36s  | diag outer F1 0.647 R 0.99/0.90/0.95/0.00
+    epoch  18  train 0.1340  inner-val 0.2687    lr 6.3e-05  3.49s  | diag outer F1 0.656 R 0.99/0.90/0.96/0.00
+    epoch  19  train 0.1347  inner-val 0.2680    lr 6.3e-05  3.46s  | diag outer F1 0.649 R 0.99/0.90/0.94/0.00
+    epoch  20  train 0.1326  inner-val 0.2646    lr 6.3e-05  3.36s  | diag outer F1 0.646 R 0.99/0.90/0.95/0.00
+  done: stopped at epoch 20 (best epoch 1), 76.6 s (3.61 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.2473
+  outer fold (OOF) macro-F1 0.6458   macro-F1 (N/S/V) 0.8611   SVEB Se 0.8990 +P 0.5855   VEB Se 0.9453 +P 0.9749
+  cls       P       R      F1      n
+    N  0.9663  0.9917  0.9788   7857
+    S  0.5855  0.8990  0.7092     99
+    V  0.8505  0.9453  0.8954    987
+    F  0.0000  0.0000  0.0000    370
+  confusion (rows = true N/S/V/F, cols = pred):
+      7792     41     24      0
+        10     89      0      0
+        34     20    933      0
+       228      2    140      0
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_e4826154_A5_svdb_n25_lite_trial-f0-s42

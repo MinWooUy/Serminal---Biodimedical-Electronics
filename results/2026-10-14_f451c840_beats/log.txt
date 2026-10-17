@@ -1,0 +1,62 @@
+[detector] built 22 records in 37.9 s, 116.2 MiB -> E:\PROJECTS\1DCNN\data\cache\beats_detector_a4eaff51
+
+[detector] beats per class: annotations -> lost (FN / first-last / window edge) -> dataset
+cls    ann    FN  f/l edge   kept   lost%
+  N  45866   122   41    0  45703   0.36%
+  S    944    34    1    0    909   3.71%
+  V   3788    25    2    0   3761   0.71%
+  F    415     3    0    0    412   0.72%
+  Q      8     3    0    0      0 100.00%  (Q excluded after RR)
+FP detections: 438 (kept in cache as kind=FP after first/last/edge drop: 438); detections in VF: 418
+
+[detector] train/val beats per fold (matched, non-Q)
+fold      N     S     V     F
+   0   7857    99   987   370
+   1  10622   390   643     2
+   2  10104   128   715    10
+   3   7969   193   791    29
+   4   9151    99   625     1
+
+[detector] RR features per class (mean ± std): rr_prev, rr_next, rr_avg8, rr_ratio
+  N  0.797±0.202   0.770±0.187   0.780±0.168   1.021±0.140
+  S  0.503±0.132   0.680±0.302   0.642±0.220   0.827±0.175
+  V  0.551±0.174   0.890±0.328   0.732±0.182   0.761±0.168
+  F  0.611±0.124   0.510±0.130   0.632±0.094   0.967±0.095
+[detector] RR min / max (s) and mean rr_ratio per class
+  N rr_prev 0.200/3.000  rr_next 0.200/3.000  rr_avg8 0.310/1.899  ratio mean 1.021 (min 0.212, max 3.299)
+  S rr_prev 0.253/1.108  rr_next 0.336/1.836  rr_avg8 0.361/1.318  ratio mean 0.827 (min 0.291, max 1.422)
+  V rr_prev 0.214/3.000  rr_next 0.200/3.000  rr_avg8 0.289/1.680  ratio mean 0.761 (min 0.310, max 4.381)
+  F rr_prev 0.372/2.106  rr_next 0.233/1.239  rr_avg8 0.431/1.231  ratio mean 0.967 (min 0.487, max 1.865)
+X: shape (50785, 360), mean -0.000, std 1.000; beats touching clip ±8: N 0.04%, S 0.00%, V 0.00%, F 0.00%
+[annotation] built 22 records in 14.4 s, 115.2 MiB -> E:\PROJECTS\1DCNN\data\cache\beats_annotation_aa4c71fd
+
+[annotation] beats per class: annotations -> lost (FN / first-last / window edge) -> dataset
+cls    ann    FN  f/l edge   kept   lost%
+  N  45866     0   42    0  45824   0.09%
+  S    944     0    1    0    943   0.11%
+  V   3788     0    0    0   3788   0.00%
+  F    415     0    1    0    414   0.24%
+  Q      8     0    0    0      0 100.00%  (Q excluded after RR)
+FP detections: 0 (kept in cache as kind=FP after first/last/edge drop: 0); detections in VF: 0
+
+[annotation] train/val beats per fold (matched, non-Q)
+fold      N     S     V     F
+   0   7869    99   992   372
+   1  10697   390   647     2
+   2  10135   161   727    10
+   3   7972   194   797    29
+   4   9151    99   625     1
+
+[annotation] RR features per class (mean ± std): rr_prev, rr_next, rr_avg8, rr_ratio
+  N  0.801±0.194   0.770±0.186   0.783±0.166   1.024±0.122
+  S  0.503±0.130   0.695±0.316   0.652±0.222   0.817±0.180
+  V  0.551±0.175   0.893±0.322   0.732±0.183   0.760±0.153
+  F  0.611±0.124   0.511±0.130   0.632±0.089   0.966±0.093
+[annotation] RR min / max (s) and mean rr_ratio per class
+  N rr_prev 0.283/3.000  rr_next 0.283/3.000  rr_avg8 0.310/1.899  ratio mean 1.024 (min 0.425, max 3.242)
+  S rr_prev 0.317/1.108  rr_next 0.333/1.836  rr_avg8 0.361/1.581  ratio mean 0.817 (min 0.272, max 1.422)
+  V rr_prev 0.253/3.000  rr_next 0.253/2.467  rr_avg8 0.289/1.765  ratio mean 0.760 (min 0.269, max 2.316)
+  F rr_prev 0.372/2.106  rr_next 0.294/1.239  rr_avg8 0.452/1.129  ratio mean 0.966 (min 0.487, max 1.865)
+X: shape (50969, 360), mean -0.000, std 1.000; beats touching clip ±8: N 0.05%, S 0.00%, V 0.00%, F 0.00%
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_f451c840_beats

@@ -1,0 +1,58 @@
+[seed 42 fold 0] macro-F1 0.3054  recall N 0.455, S 0.212, V 0.367, F 0.397
+[seed 42 fold 1] macro-F1 0.3903  recall N 0.843, S 0.038, V 0.768, F 0.500
+[seed 42 fold 2] macro-F1 0.3233  recall N 0.782, S 0.461, V 0.331, F 0.000
+[seed 42 fold 3] macro-F1 0.5144  recall N 0.948, S 0.399, V 0.570, F 0.034
+[seed 42 fold 4] macro-F1 0.3904  recall N 0.612, S 0.030, V 0.842, F 1.000
+=== seed 42: pooled OOF ===
+macro-F1 0.3788   macro-F1 (N/S/V) 0.4941   SVEB Se 0.1925 +P 0.0377   VEB Se 0.5504 +P 0.6079
+cls       P       R      F1      n
+  N  0.9849  0.7349  0.8417  45703
+  S  0.0377  0.1925  0.0631    909
+  V  0.6072  0.5504  0.5774   3761
+  F  0.0174  0.3641  0.0332    412
+confusion (rows = true N/S/V/F, cols = pred):
+   33585   3220    932   7966
+      44    175    403    287
+     289   1170   2070    232
+     181     77      4    150
+[seed 43 fold 0] macro-F1 0.3054  recall N 0.455, S 0.212, V 0.367, F 0.397
+[seed 43 fold 1] macro-F1 0.3903  recall N 0.843, S 0.038, V 0.768, F 0.500
+[seed 43 fold 2] macro-F1 0.3233  recall N 0.782, S 0.461, V 0.331, F 0.000
+[seed 43 fold 3] macro-F1 0.5144  recall N 0.948, S 0.399, V 0.570, F 0.034
+[seed 43 fold 4] macro-F1 0.3904  recall N 0.612, S 0.030, V 0.842, F 1.000
+=== seed 43: pooled OOF ===
+macro-F1 0.3788   macro-F1 (N/S/V) 0.4941   SVEB Se 0.1925 +P 0.0377   VEB Se 0.5504 +P 0.6079
+cls       P       R      F1      n
+  N  0.9849  0.7349  0.8417  45703
+  S  0.0377  0.1925  0.0631    909
+  V  0.6072  0.5504  0.5774   3761
+  F  0.0174  0.3641  0.0332    412
+confusion (rows = true N/S/V/F, cols = pred):
+   33585   3220    932   7966
+      44    175    403    287
+     289   1170   2070    232
+     181     77      4    150
+[seed 44 fold 0] macro-F1 0.3054  recall N 0.455, S 0.212, V 0.367, F 0.397
+[seed 44 fold 1] macro-F1 0.3903  recall N 0.843, S 0.038, V 0.768, F 0.500
+[seed 44 fold 2] macro-F1 0.3233  recall N 0.782, S 0.461, V 0.331, F 0.000
+[seed 44 fold 3] macro-F1 0.5144  recall N 0.948, S 0.399, V 0.570, F 0.034
+[seed 44 fold 4] macro-F1 0.3904  recall N 0.612, S 0.030, V 0.842, F 1.000
+=== seed 44: pooled OOF ===
+macro-F1 0.3788   macro-F1 (N/S/V) 0.4941   SVEB Se 0.1925 +P 0.0377   VEB Se 0.5504 +P 0.6079
+cls       P       R      F1      n
+  N  0.9849  0.7349  0.8417  45703
+  S  0.0377  0.1925  0.0631    909
+  V  0.6072  0.5504  0.5774   3761
+  F  0.0174  0.3641  0.0332    412
+confusion (rows = true N/S/V/F, cols = pred):
+   33585   3220    932   7966
+      44    175    403    287
+     289   1170   2070    232
+     181     77      4    150
+
+=== baseline RR: OOF macro-F1 0.3788 ± 0.0000 ===
+  N: precision 0.9849±0.0000  recall 0.7349±0.0000  f1 0.8417±0.0000
+  S: precision 0.0377±0.0000  recall 0.1925±0.0000  f1 0.0631±0.0000
+  V: precision 0.6072±0.0000  recall 0.5504±0.0000  f1 0.5774±0.0000
+  F: precision 0.0174±0.0000  recall 0.3641±0.0000  f1 0.0332±0.0000
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_bf5acf13_baseline_rr

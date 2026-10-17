@@ -1,0 +1,24 @@
+C1 logit-bias calibration on 2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3; grid -3.0..1.0 step 0.25 (289 pairs)
+  seed 42 fold 0: b_S -0.25  b_F +0.00  (inner 4-fold macro-F1 0.4889)
+  seed 42 fold 1: b_S -0.75  b_F +0.00  (inner 4-fold macro-F1 0.5094)
+  seed 42 fold 2: b_S -0.50  b_F -1.25  (inner 4-fold macro-F1 0.5451)
+  seed 42 fold 3: b_S -0.50  b_F +0.00  (inner 4-fold macro-F1 0.5292)
+  seed 42 fold 4: b_S -0.25  b_F +0.25  (inner 4-fold macro-F1 0.5142)
+seed 42 before: macro-F1 0.5091  N/S/V 0.6789  SVEB Se/+P 0.448/0.236  VEB Se/+P 0.839/0.732  N->F 343  N->V 1015
+seed 42 nested: macro-F1 0.5058  N/S/V 0.6745  SVEB Se/+P 0.294/0.317  VEB Se/+P 0.873/0.685  N->F 151  N->V 1322
+  seed 43 fold 0: b_S -0.25  b_F -0.25  (inner 4-fold macro-F1 0.4911)
+  seed 43 fold 1: b_S -0.50  b_F -0.25  (inner 4-fold macro-F1 0.5089)
+  seed 43 fold 2: b_S -0.25  b_F -1.25  (inner 4-fold macro-F1 0.5573)
+  seed 43 fold 3: b_S -0.25  b_F +0.25  (inner 4-fold macro-F1 0.5341)
+  seed 43 fold 4: b_S -0.50  b_F -0.25  (inner 4-fold macro-F1 0.5114)
+seed 43 before: macro-F1 0.5165  N/S/V 0.6887  SVEB Se/+P 0.408/0.283  VEB Se/+P 0.888/0.694  N->F 464  N->V 1266
+seed 43 nested: macro-F1 0.5142  N/S/V 0.6845  SVEB Se/+P 0.307/0.353  VEB Se/+P 0.909/0.664  N->F 144  N->V 1476
+  seed 44 fold 0: b_S -0.25  b_F -0.75  (inner 4-fold macro-F1 0.4759)
+  seed 44 fold 1: b_S -0.25  b_F -0.75  (inner 4-fold macro-F1 0.4890)
+  seed 44 fold 2: b_S -0.25  b_F -0.75  (inner 4-fold macro-F1 0.5427)
+  seed 44 fold 3: b_S -0.25  b_F -0.75  (inner 4-fold macro-F1 0.5346)
+  seed 44 fold 4: b_S -0.25  b_F +0.25  (inner 4-fold macro-F1 0.5012)
+seed 44 before: macro-F1 0.5010  N/S/V 0.6679  SVEB Se/+P 0.419/0.310  VEB Se/+P 0.905/0.585  N->F 717  N->V 2185
+seed 44 nested: macro-F1 0.5066  N/S/V 0.6755  SVEB Se/+P 0.350/0.421  VEB Se/+P 0.925/0.568  N->F 647  N->V 2377
+
+nested macro-F1: before 0.5089 ± 0.0078 | after 0.5089 ± 0.0046; deltas [-0.0033, -0.0023, 0.0057] mean +0.0000  all>0 False  mean>=0.01 False -> keep (no calibration)

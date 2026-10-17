@@ -1,0 +1,29 @@
+built SVDB cache E:\PROJECTS\1DCNN\data\cache\svdb_neg_beats_ddd93fdf in 74 s: kept 18/18, excluded []
+  801: channel 1 (negative-channel fallback) Se 99.88 +P 100.00 pos 0.15
+  802: channel 0 (negative-channel fallback) Se 99.94 +P 100.00 pos 0.16
+  805: channel 1 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.08
+  826: channel 0 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.00
+  841: channel 0 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.00
+  851: channel 1 (negative-channel fallback) Se 97.68 +P 97.49 pos 0.37
+  852: channel 0 (negative-channel fallback) Se 99.96 +P 99.81 pos 0.07
+  857: channel 1 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.09
+  860: channel 1 (negative-channel fallback) Se 100.00 +P 99.67 pos 0.30
+  862: channel 0 (negative-channel fallback) Se 99.86 +P 100.00 pos 0.01
+  865: channel 1 (negative-channel fallback) Se 99.72 +P 99.94 pos 0.07
+  866: channel 0 (negative-channel fallback) Se 99.92 +P 99.74 pos 0.05
+  871: channel 1 (negative-channel fallback) Se 99.94 +P 99.94 pos 0.00
+  878: channel 0 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.03
+  879: channel 0 (negative-channel fallback) Se 100.00 +P 100.00 pos 0.33
+  884: channel 1 (negative-channel fallback) Se 99.76 +P 100.00 pos 0.31
+  886: channel 1 (negative-channel fallback) Se 99.91 +P 99.95 pos 0.01
+  890: channel 0 (negative-channel fallback) Se 99.95 +P 100.00 pos 0.03
+
+set                                            N       S       V       F    total
+DS1 (MIT-BIH, train/val)                   45703     909    3761     412    50785
+SVDB all + neg                            162049   12176    9886      23   184134
+SVDB n25 + neg (seed 0)                    40512   12176    9886      23    62597
+  of which neg-fallback records (n25)       8796    2944    4088       0    15828
+DS1 + SVDB all + neg                      207752   13085   13647     435   234919
+DS1 + SVDB n25 + neg (seed 0)              86215   13085   13647     435   113382
+DS1 +   of which neg-fallback records (n25)   54499    3853    7849     412    66613
+saved -> E:\PROJECTS\1DCNN\results\2026-10-15_e9e6a777_svdb_neg_beats

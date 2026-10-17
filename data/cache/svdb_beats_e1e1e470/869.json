@@ -1,0 +1,1 @@
+{"rec": 869, "reason": "ok", "chosen": 0, "n_ann": {"N": 1507, "S": 632, "V": 22, "F": 0, "Q": 0}, "fn": {"N": 0, "S": 0, "V": 0, "F": 0, "Q": 0}, "fp": 0, "vf_det": 0, "lost_first_last": {"N": 1, "S": 1, "V": 0, "F": 0, "Q": 0}, "lost_edge": {"N": 0, "S": 0, "V": 0, "F": 0, "Q": 0}, "fp_kept": 0, "n_beats": 2159}

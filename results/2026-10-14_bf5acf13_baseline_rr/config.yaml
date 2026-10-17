@@ -1,0 +1,5 @@
+name: baseline_rr
+dataset: DS1
+beats_config: configs/beats.yaml
+model: StandardScaler + LogisticRegression(class_weight=balanced, max_iter=2000)
+_cache: beats_detector_deffe947

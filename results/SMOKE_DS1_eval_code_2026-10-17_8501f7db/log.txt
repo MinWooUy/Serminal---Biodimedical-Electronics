@@ -1,0 +1,111 @@
+evaluation on records [208]; git HEAD smoke
+frozen models: Full 2026-10-15_961709ff_final_cnn_full, Lite 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3 (+ lite_int8.npz)
+  208: detector Se 99.42 +P 99.66; annotation beats 2951
+
+=== 2. CLASSIFIER, annotation segmentation — full_float ===
+macro-F1 0.7102   macro-F1 (N/S/V) 0.6498   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9889 +P 0.9790
+cls       P       R      F1      n
+  N  0.9908  0.9514  0.9707   1585
+  S  0.0000  0.0000  0.0000      2
+  V  0.9684  0.9889  0.9786    992
+  F  0.8475  0.9409  0.8917    372
+confusion (rows = true N/S/V/F, cols = pred):
+    1508      3     21     53
+       2      0      0      0
+       1      0    981     10
+      11      0     11    350
+
+=== 2. CLASSIFIER, annotation segmentation — lite_float ===
+macro-F1 0.6749   macro-F1 (N/S/V) 0.6400   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9748 +P 0.9738
+cls       P       R      F1      n
+  N  0.9391  0.9722  0.9554   1585
+  S  0.0000  0.0000  0.0000      2
+  V  0.9546  0.9748  0.9646    992
+  F  0.8897  0.6935  0.7795    372
+confusion (rows = true N/S/V/F, cols = pred):
+    1541      7     26     11
+       2      0      0      0
+       4      0    967     21
+      94      0     20    258
+
+=== 2. CLASSIFIER, annotation segmentation — lite_integer ===
+macro-F1 0.6725   macro-F1 (N/S/V) 0.6398   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9768 +P 0.9729
+cls       P       R      F1      n
+  N  0.9379  0.9722  0.9548   1585
+  S  0.0000  0.0000  0.0000      2
+  V  0.9528  0.9768  0.9647    992
+  F  0.8936  0.6774  0.7706    372
+confusion (rows = true N/S/V/F, cols = pred):
+    1541      8     27      9
+       2      0      0      0
+       2      0    969     21
+      98      1     21    252
+
+=== 3a. END-TO-END, matched beats — full_float ===
+macro-F1 0.7104   macro-F1 (N/S/V) 0.6497   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9889 +P 0.9789
+cls       P       R      F1      n
+  N  0.9907  0.9505  0.9702   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9692  0.9889  0.9789    987
+  F  0.8471  0.9432  0.8926    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1497      4     21     53
+       2      0      0      0
+       1      0    976     10
+      11      0     10    349
+=== 3b. END-TO-END gross — full_float: missed per class [10, 0, 4, 3], FP detections predicted per class [2, 2, 6, 0]
+
+=== 3a. END-TO-END, matched beats — lite_float ===
+macro-F1 0.6768   macro-F1 (N/S/V) 0.6396   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9737 +P 0.9737
+cls       P       R      F1      n
+  N  0.9384  0.9670  0.9525   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9591  0.9737  0.9663    987
+  F  0.8938  0.7054  0.7885    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1523     16     26     10
+       2      0      0      0
+       5      0    961     21
+      93      1     15    261
+=== 3b. END-TO-END gross — lite_float: missed per class [10, 0, 4, 3], FP detections predicted per class [4, 2, 4, 0]
+
+=== 3a. END-TO-END, matched beats — lite_integer ===
+macro-F1 0.6743   macro-F1 (N/S/V) 0.6391   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9747 +P 0.9727
+cls       P       R      F1      n
+  N  0.9367  0.9670  0.9516   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9572  0.9747  0.9659    987
+  F  0.8979  0.6892  0.7798    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1523     17     27      8
+       2      0      0      0
+       4      0    962     21
+      97      2     16    255
+=== 3b. END-TO-END gross — lite_integer: missed per class [10, 0, 4, 3], FP detections predicted per class [4, 2, 4, 0]
+
+==============================================================================================================
+SUMMARY
+Detector (1 records): +-150 ms Se 99.425%  +P 99.661%  (TP 2938 FN 17 FP 10);  +-75 ms Se 99.391%  +P 99.627%
+model         mode                 macro-F1   N/S/V  SVEB Se  SVEB +P   VEB Se   VEB +P
+full_float    annotation             0.7102  0.6498   0.0000   0.0000   0.9889   0.9790
+full_float    e2e matched            0.7104  0.6497   0.0000   0.0000   0.9889   0.9789
+full_float    e2e gross              0.7074  0.6468   0.0000   0.0000   0.9849   0.9731
+lite_float    annotation             0.6749  0.6400   0.0000   0.0000   0.9748   0.9738
+lite_float    e2e matched            0.6768  0.6396   0.0000   0.0000   0.9737   0.9737
+lite_float    e2e gross              0.6739  0.6369   0.0000   0.0000   0.9697   0.9697
+lite_integer  annotation             0.6725  0.6398   0.0000   0.0000   0.9768   0.9729
+lite_integer  e2e matched            0.6743  0.6391   0.0000   0.0000   0.9747   0.9727
+lite_integer  e2e gross              0.6714  0.6365   0.0000   0.0000   0.9707   0.9688
+
+confusion matrices (rows true N/S/V/F, cols predicted N/S/V/F; gross adds missed beats and FP detections):
+  full_float    annotation     1508      3     21     53 |      2      0      0      0 |      1      0    981     10 |     11      0     11    350
+  full_float    e2e matched    1497      4     21     53 |      2      0      0      0 |      1      0    976     10 |     11      0     10    349
+  full_float    e2e gross      1497      4     21     53 |      2      0      0      0 |      1      0    976     10 |     11      0     10    349   missed [10, 0, 4, 3]   FP detections predicted [2, 2, 6, 0]
+  lite_float    annotation     1541      7     26     11 |      2      0      0      0 |      4      0    967     21 |     94      0     20    258
+  lite_float    e2e matched    1523     16     26     10 |      2      0      0      0 |      5      0    961     21 |     93      1     15    261
+  lite_float    e2e gross      1523     16     26     10 |      2      0      0      0 |      5      0    961     21 |     93      1     15    261   missed [10, 0, 4, 3]   FP detections predicted [4, 2, 4, 0]
+  lite_integer  annotation     1541      8     27      9 |      2      0      0      0 |      2      0    969     21 |     98      1     21    252
+  lite_integer  e2e matched    1523     17     27      8 |      2      0      0      0 |      4      0    962     21 |     97      2     16    255
+  lite_integer  e2e gross      1523     17     27      8 |      2      0      0      0 |      4      0    962     21 |     97      2     16    255   missed [10, 0, 4, 3]   FP detections predicted [4, 2, 4, 0]
+
+saved -> E:\PROJECTS\1DCNN\results\SMOKE_DS1_eval_code_2026-10-17_8501f7db

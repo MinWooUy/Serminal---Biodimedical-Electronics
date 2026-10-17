@@ -1,0 +1,52 @@
+[detector] built 22 records in 18.2 s, 65.9 MiB -> E:\PROJECTS\1DCNN\data\cache\beats_detector_e81f6f07
+
+[detector] beats per class: annotations -> lost (FN / first-last / window edge) -> dataset
+cls    ann    FN  f/l edge   kept   lost%
+  N  45866   122   41    0  45703   0.36%
+  S    944    34    1    0    909   3.71%
+  V   3788    25    2    0   3761   0.71%
+  F    415     3    0    0    412   0.72%
+  Q      8     3    0    0      0 100.00%  (Q excluded after RR)
+FP detections: 438 (kept in cache as kind=FP after first/last/edge drop: 438); detections in VF: 418
+
+[detector] train/val beats per fold (matched, non-Q)
+fold      N     S     V     F
+   0   7857    99   987   370
+   1  10622   390   643     2
+   2  10104   128   715    10
+   3   7969   193   791    29
+   4   9151    99   625     1
+
+[detector] RR features per class (mean ± std): rr_prev, rr_next, rr_avg8, rr_ratio
+  N  0.797±0.212   0.770±0.197   0.780±0.169   1.021±0.143
+  S  0.503±0.132   0.680±0.302   0.642±0.220   0.827±0.175
+  V  0.552±0.184   0.891±0.332   0.732±0.184   0.761±0.172
+  F  0.611±0.124   0.510±0.130   0.632±0.094   0.967±0.095
+X: shape (50785, 360), mean -0.007, std 0.962, clipped 0.711%
+[annotation] built 22 records in 5.4 s, 65.1 MiB -> E:\PROJECTS\1DCNN\data\cache\beats_annotation_19188049
+
+[annotation] beats per class: annotations -> lost (FN / first-last / window edge) -> dataset
+cls    ann    FN  f/l edge   kept   lost%
+  N  45866     0   42    0  45824   0.09%
+  S    944     0    1    0    943   0.11%
+  V   3788     0    0    0   3788   0.00%
+  F    415     0    1    0    414   0.24%
+  Q      8     0    0    0      0 100.00%  (Q excluded after RR)
+FP detections: 0 (kept in cache as kind=FP after first/last/edge drop: 0); detections in VF: 0
+
+[annotation] train/val beats per fold (matched, non-Q)
+fold      N     S     V     F
+   0   7869    99   992   372
+   1  10697   390   647     2
+   2  10135   161   727    10
+   3   7972   194   797    29
+   4   9151    99   625     1
+
+[annotation] RR features per class (mean ± std): rr_prev, rr_next, rr_avg8, rr_ratio
+  N  0.802±0.220   0.773±0.511   0.784±0.170   1.024±0.127
+  S  0.503±0.130   0.695±0.316   0.652±0.223   0.817±0.180
+  V  0.576±1.626   0.893±0.322   0.762±0.632   0.759±0.189
+  F  0.611±0.124   0.511±0.130   0.632±0.089   0.966±0.093
+X: shape (50969, 360), mean -0.007, std 0.962, clipped 0.709%
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_66211bef_beats

@@ -1,0 +1,55 @@
+integer pipeline gate on 2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3 (filter Q20, 12 guard bits)
+  record 101: 1860 beats; integer refinement differs from float for 0/1868 detections
+  record 106: 2022 beats; integer refinement differs from float for 0/2024 detections
+  record 108: 1714 beats; integer refinement differs from float for 1/2092 detections
+  record 109: 2526 beats; integer refinement differs from float for 0/2528 detections
+  record 112: 2537 beats; integer refinement differs from float for 2/2539 detections
+  record 114: 1875 beats; integer refinement differs from float for 0/1877 detections
+  record 115: 1950 beats; integer refinement differs from float for 0/1952 detections
+  record 116: 2381 beats; integer refinement differs from float for 0/2385 detections
+  record 118: 2276 beats; integer refinement differs from float for 1/2279 detections
+  record 119: 1985 beats; integer refinement differs from float for 0/1987 detections
+  record 122: 2474 beats; integer refinement differs from float for 0/2476 detections
+  record 124: 1617 beats; integer refinement differs from float for 0/1619 detections
+  record 201: 1927 beats; integer refinement differs from float for 0/1930 detections
+  record 203: 2937 beats; integer refinement differs from float for 0/2978 detections
+  record 205: 2651 beats; integer refinement differs from float for 0/2653 detections
+  record 207: 1854 beats; integer refinement differs from float for 0/2277 detections
+  record 208: 2934 beats; integer refinement differs from float for 0/2948 detections
+  record 209: 3003 beats; integer refinement differs from float for 0/3008 detections
+  record 215: 3361 beats; integer refinement differs from float for 3/3363 detections
+  record 220: 2045 beats; integer refinement differs from float for 0/2047 detections
+  record 223: 2602 beats; integer refinement differs from float for 1/2604 detections
+  record 230: 2254 beats; integer refinement differs from float for 1/2256 detections
+
+seed 42: macro-F1 float 0.5092  i 0.5065  ii 0.5076  iii 0.5084  | argmax agreement with float: i 0.9912  ii 0.9927  iii 0.9922
+  float -> (iii) transitions (rows float N/S/V/F):
+     43986    127     48     45
+        59   1627     42      0
+        13     16   4472      1
+        24      6     16    303
+  beats changed float -> (iii), by TRUE class: {'N': 335, 'S': 17, 'V': 42, 'F': 3} (total 397)
+
+seed 43: macro-F1 float 0.5165  i 0.5223  ii 0.5221  iii 0.5214  | argmax agreement with float: i 0.9903  ii 0.9863  iii 0.9861
+  float -> (iii) transitions (rows float N/S/V/F):
+     43708     97     93    167
+        13   1225     72      0
+       145     55   4728      3
+        38      0     21    420
+  beats changed float -> (iii), by TRUE class: {'N': 571, 'S': 44, 'V': 80, 'F': 9} (total 704)
+
+seed 44: macro-F1 float 0.5010  i 0.5023  ii 0.4990  iii 0.4989  | argmax agreement with float: i 0.9873  ii 0.9895  iii 0.9895
+  float -> (iii) transitions (rows float N/S/V/F):
+     42640    101     55     18
+        16   1187     28      0
+        48     53   5909      4
+       193      0     15    518
+  beats changed float -> (iii), by TRUE class: {'N': 473, 'S': 14, 'V': 41, 'F': 3} (total 531)
+
+macro-F1 mean ± std: float 0.5089 ± 0.0077 | i 0.5104 ± 0.0106 | ii 0.5096 ± 0.0117 | iii 0.5096 ± 0.0113
+  float: SVEB Se/+P 0.425/0.276  VEB Se/+P 0.878/0.670
+      i: SVEB Se/+P 0.442/0.263  VEB Se/+P 0.872/0.687
+     ii: SVEB Se/+P 0.440/0.269  VEB Se/+P 0.882/0.672
+    iii: SVEB Se/+P 0.439/0.270  VEB Se/+P 0.883/0.672
+INTEGER PIPELINE GATE: drop float -> (iii) per seed [0.0008, -0.0049, 0.0021], mean -0.0007 (<= 0.02) -> PASS
+saved per-beat OOF predictions -> results\2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3\pipeline_int_preds.npz
