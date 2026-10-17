@@ -1,0 +1,45 @@
+config configs\cnn_full.yaml -> E:\PROJECTS\1DCNN\results\2026-10-14_8d8450c0_cnn_full_trial-f3-s42
+torch 2.14.1+cu126, CUDA 12.6, device cuda (NVIDIA GeForce RTX 3050 Laptop GPU)
+cache E:\PROJECTS\1DCNN\data\cache\beats_detector_deffe947 : 50785 beats N 45703, S 909, V 3761, F 412
+model params: 668228
+
+[seed 42 fold 3] outer 8982  inner-train 33346  inner-val 8409  buffer 48
+  inner-train per class N 30089, S 570, V 2349, F 338 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.188, 1.366, 0.673, 1.774]  rr mu [0.7720000147819519, 0.7749999761581421, 0.7730000019073486, 0.9980000257492065] sigma [0.21799999475479126, 0.21400000154972076, 0.18000000715255737, 0.1589999943971634]
+    epoch   1  train 0.4571  inner-val 0.3262 *  lr 1.0e-03  4.79s
+    epoch   2  train 0.2485  inner-val 0.2527 *  lr 1.0e-03  3.72s
+    epoch   3  train 0.1988  inner-val 0.2608    lr 1.0e-03  3.73s
+    epoch   4  train 0.1699  inner-val 0.1802 *  lr 1.0e-03  3.53s
+    epoch   5  train 0.1549  inner-val 0.1594 *  lr 1.0e-03  3.61s
+    epoch   6  train 0.1390  inner-val 0.1731    lr 1.0e-03  3.66s
+    epoch   7  train 0.1401  inner-val 0.1989    lr 1.0e-03  3.57s
+    epoch   8  train 0.1323  inner-val 0.1678    lr 1.0e-03  3.87s
+    epoch   9  train 0.1181  inner-val 0.1769    lr 5.0e-04  3.83s
+    epoch  10  train 0.1032  inner-val 0.1266 *  lr 5.0e-04  3.58s
+    epoch  11  train 0.0963  inner-val 0.1189 *  lr 5.0e-04  3.85s
+    epoch  12  train 0.0963  inner-val 0.1460    lr 5.0e-04  3.88s
+    epoch  13  train 0.0895  inner-val 0.1223    lr 5.0e-04  3.92s
+    epoch  14  train 0.0850  inner-val 0.1288    lr 5.0e-04  3.68s
+    epoch  15  train 0.0891  inner-val 0.1464    lr 2.5e-04  3.57s
+    epoch  16  train 0.0778  inner-val 0.1235    lr 2.5e-04  3.95s
+    epoch  17  train 0.0739  inner-val 0.1172 *  lr 2.5e-04  3.66s
+    epoch  18  train 0.0726  inner-val 0.1641    lr 2.5e-04  3.66s
+    epoch  19  train 0.0759  inner-val 0.1396    lr 2.5e-04  3.52s
+    epoch  20  train 0.0673  inner-val 0.1246    lr 2.5e-04  3.52s
+    epoch  21  train 0.0713  inner-val 0.1267    lr 1.3e-04  3.78s
+    epoch  22  train 0.0653  inner-val 0.1292    lr 1.3e-04  3.57s
+    epoch  23  train 0.0656  inner-val 0.1292    lr 1.3e-04  3.81s
+  done: 23 epochs, 88.6 s (3.75 s/epoch); best inner-val loss 0.1172
+  outer fold (OOF) macro-F1 0.4341
+  cls       P       R      F1      n
+    N  0.9635  0.8509  0.9037   7969
+    S  0.7660  0.1865  0.3000    193
+    V  0.4041  0.7459  0.5242    791
+    F  0.0046  0.0690  0.0086     29
+  confusion (rows = true N/S/V/F, cols = pred):
+      6781      3    753    432
+        47     36    108      2
+       192      8    590      1
+        18      0      9      2
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_8d8450c0_cnn_full_trial-f3-s42

@@ -1,0 +1,29 @@
+quantised 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3: calibration max|x| on 4000 inner-train beats (incl. svdb_beats_e1e1e470); conv (a_out, k min..max) [(2, 5, 8), (3, 8, 10), (3, 7, 9), (3, 8, 10)], rr_exp [6, 6, 6, 5], fc1 a_out 4, fc2 k 7
+
+EXPORT SANITY CHECK on the final inner-val (10155 DS1 beats; NOT a reported metric):
+float pipeline + float model:
+macro-F1 0.6984   macro-F1 (N/S/V) 0.7176   SVEB Se 0.4630 +P 0.3709   VEB Se 0.8688 +P 0.6927
+cls       P       R      F1      n
+  N  0.9872  0.9564  0.9716   8971
+  S  0.3709  0.4630  0.4119    270
+  V  0.6901  0.8688  0.7692    869
+  F  0.7576  0.5556  0.6410     45
+confusion (rows = true N/S/V/F, cols = pred):
+    8580    155    231      5
+      41    125    104      0
+      54     57    755      3
+      16      0      4     25
+fully integer pipeline (int filter / z / RR + int8 CNN):
+macro-F1 0.6967   macro-F1 (N/S/V) 0.7212   SVEB Se 0.4667 +P 0.3717   VEB Se 0.8861 +P 0.6975
+cls       P       R      F1      n
+  N  0.9873  0.9549  0.9708   8971
+  S  0.3717  0.4667  0.4138    270
+  V  0.6949  0.8861  0.7790    869
+  F  0.7500  0.5333  0.6234     45
+confusion (rows = true N/S/V/F, cols = pred):
+    8566    164    236      5
+      46    126     98      0
+      47     49    770      3
+      17      0      4     24
+argmax agreement 0.9954; macro-F1 float 0.6984 vs integer 0.6967
+saved -> E:\PROJECTS\1DCNN\results\2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3\lite_int8.npz

@@ -1,0 +1,36 @@
+
+=== mode: signed ===
+cls      n | (a) shift mean±std ms | (b) det-ann mean±std, p95|.| ms | (c) edge ann / det
+  N  45866 |    0.78 ±   5.30      |   -0.02 ±   3.05, p95   0.00      |  1791 /  1740
+  S    944 |    0.56 ±   8.82      |    0.05 ±   3.61, p95   2.78      |   110 /   108
+  V   3788 |   -2.27 ±  15.02      |    2.95 ±  13.90, p95  50.00      |   309 /   478
+  F    415 |    5.90 ±  10.13      |   -0.06 ±   3.50, p95   0.00      |     2 /     4
+  Q      8 |    0.35 ±  16.63      |   -1.11 ±   2.22, p95   4.44      |     1 /     1
+
+=== mode: abs ===
+cls      n | (a) shift mean±std ms | (b) det-ann mean±std, p95|.| ms | (c) edge ann / det
+  N  45866 |    2.46 ±   8.26      |   -0.43 ±   5.05, p95   0.00      |   146 /   478
+  S    944 |    0.84 ±   9.64      |   -0.17 ±   3.93, p95   0.00      |    15 /    12
+  V   3788 |    4.63 ±  13.57      |   -0.14 ±   6.93, p95   0.00      |    48 /    47
+  F    415 |    6.47 ±   7.66      |   -0.15 ±   3.01, p95   0.00      |     1 /     1
+  Q      8 |   -3.12 ±   9.77      |  -14.44 ±  28.89, p95  57.78      |     2 /     0
+
+=== mode: none ===
+cls      n | (a) shift mean±std ms | (b) det-ann mean±std, p95|.| ms | (c) edge ann / det
+  N  45866 |    0.00 ±   0.00      |   -0.75 ±   6.95, p95   5.56      |     0 /     0
+  S    944 |    0.00 ±   0.00      |    0.14 ±   7.37, p95   5.56      |     0 /     0
+  V   3788 |    0.00 ±   0.00      |    7.20 ±  15.55, p95  44.44      |     0 /     0
+  F    415 |    0.00 ±   0.00      |    2.52 ±   7.46, p95  12.36      |     0 /     0
+  Q      8 |    0.00 ±   0.00      |  -18.89 ±  20.67, p95  50.00      |     0 /     0
+
+within-(record, class) std of shift vs original annotation, mean over records (ms)
+cls |           signed |              abs | n records
+  N |             2.67 |             3.65 | 22
+  S |             4.08 |             5.00 | 15
+  V |             9.89 |             9.78 | 15
+  F |            12.89 |             2.37 | 8
+  Q |            11.86 |             6.40 | 3
+best mode for V (min p95|b|, tie -> min std): abs ({'signed': (50.0, 13.9), 'abs': (0.0, 6.93), 'none': (44.44, 15.55)})
+best mode for F (min p95|b|, tie -> min std): abs ({'signed': (0.0, 3.5), 'abs': (0.0, 3.01), 'none': (12.36, 7.46)})
+CHOSEN: abs
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_6dfad70f_align

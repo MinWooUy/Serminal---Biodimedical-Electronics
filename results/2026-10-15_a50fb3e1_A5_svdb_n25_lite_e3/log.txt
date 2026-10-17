@@ -1,0 +1,168 @@
+config configs\ablation\A5_svdb_n25_lite_e3.yaml -> E:\PROJECTS\1DCNN\results\2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3
+torch 2.14.1+cu126, CUDA 12.6, device cuda (NVIDIA GeForce RTX 3050 Laptop GPU)
+cache E:\PROJECTS\1DCNN\data\cache\beats_detector_a4eaff51 : 50785 beats N 45703, S 909, V 3761, F 412
+extra training-only beats ({'source': 'svdb', 'variant': 'n25', 'sample_seed': 0}) from svdb_beats_e1e1e470: 46769 beats N 31716, S 9232, V 5798, F 23 -> inner-train only
+model params: 23796
+
+[seed 42 fold 0] outer 9313  inner-train 79870  inner-val 8324  buffer 47
+  inner-train per class N 62129, S 9783, V 7898, F 60 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.104, 0.262, 0.291, 3.343]  rr mu [0.734000027179718, 0.7739999890327454, 0.7559999823570251, 0.9679999947547913] sigma [0.21899999678134918, 0.2150000035762787, 0.17900000512599945, 0.16200000047683716]
+  RESUMED from s42_f0.pt (+1 snapshot checkpoints): no re-training
+
+[seed 42 fold 1] outer 11657  inner-train 78039  inner-val 7813  buffer 45
+  inner-train per class N 59861, S 9544, V 8247, F 387 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.215, 0.538, 0.578, 2.67]  rr mu [0.7350000143051147, 0.7749999761581421, 0.7570000290870667, 0.9679999947547913] sigma [0.2160000056028366, 0.21400000154972076, 0.17800000309944153, 0.1589999943971634]
+  RESUMED from s42_f1.pt (+1 snapshot checkpoints): no re-training
+
+[seed 42 fold 2] outer 10957  inner-train 78620  inner-val 7933  buffer 44
+  inner-train per class N 60380, S 9796, V 8062, F 382 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.213, 0.528, 0.583, 2.676]  rr mu [0.7269999980926514, 0.7680000066757202, 0.75, 0.9670000076293945] sigma [0.2070000022649765, 0.20399999618530273, 0.1679999977350235, 0.1550000011920929]
+  RESUMED from s42_f2.pt (+1 snapshot checkpoints): no re-training
+
+[seed 42 fold 3] outer 8982  inner-train 80115  inner-val 8409  buffer 48
+  inner-train per class N 61805, S 9802, V 8147, F 361 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.207, 0.519, 0.569, 2.705]  rr mu [0.7319999933242798, 0.7720000147819519, 0.7540000081062317, 0.9679999947547913] sigma [0.21799999475479126, 0.2150000035762787, 0.17800000309944153, 0.16200000047683716]
+  RESUMED from s42_f3.pt (+1 snapshot checkpoints): no re-training
+
+[seed 42 fold 4] outer 9876  inner-train 79489  inner-val 8141  buffer 48
+  inner-train per class N 61117, S 9791, V 8192, F 389 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.213, 0.533, 0.582, 2.672]  rr mu [0.7369999885559082, 0.777999997138977, 0.7599999904632568, 0.9679999947547913] sigma [0.21699999272823334, 0.21199999749660492, 0.17800000309944153, 0.16099999845027924]
+  RESUMED from s42_f4.pt (+1 snapshot checkpoints): no re-training
+
+=== seed 42: pooled OOF over 5 folds ===
+macro-F1 0.5091   macro-F1 (N/S/V) 0.6789   SVEB Se 0.4477 +P 0.2362   VEB Se 0.8394 +P 0.7323
+cls       P       R      F1      n
+  N  0.9795  0.9475  0.9633  45703
+  S  0.2362  0.4477  0.3093    909
+  V  0.7011  0.8394  0.7640   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   43305   1040   1015    343
+     361    407    139      2
+     327    273   3157      4
+     217      3    192      0
+--- seed 42, fixed 3 epochs: pooled OOF ---
+macro-F1 0.5091   macro-F1 (N/S/V) 0.6789   SVEB Se 0.4477 +P 0.2362   VEB Se 0.8394 +P 0.7323
+cls       P       R      F1      n
+  N  0.9795  0.9475  0.9633  45703
+  S  0.2362  0.4477  0.3093    909
+  V  0.7011  0.8394  0.7640   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   43305   1040   1015    343
+     361    407    139      2
+     327    273   3157      4
+     217      3    192      0
+
+[seed 43 fold 0] outer 9313  inner-train 79870  inner-val 8324  buffer 47
+  inner-train per class N 62129, S 9783, V 7898, F 60 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.104, 0.262, 0.291, 3.343]  rr mu [0.734000027179718, 0.7739999890327454, 0.7559999823570251, 0.9679999947547913] sigma [0.21899999678134918, 0.2150000035762787, 0.17900000512599945, 0.16200000047683716]
+  RESUMED from s43_f0.pt (+1 snapshot checkpoints): no re-training
+
+[seed 43 fold 1] outer 11657  inner-train 78039  inner-val 7813  buffer 45
+  inner-train per class N 59861, S 9544, V 8247, F 387 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.215, 0.538, 0.578, 2.67]  rr mu [0.7350000143051147, 0.7749999761581421, 0.7570000290870667, 0.9679999947547913] sigma [0.2160000056028366, 0.21400000154972076, 0.17800000309944153, 0.1589999943971634]
+  RESUMED from s43_f1.pt (+1 snapshot checkpoints): no re-training
+
+[seed 43 fold 2] outer 10957  inner-train 78620  inner-val 7933  buffer 44
+  inner-train per class N 60380, S 9796, V 8062, F 382 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.213, 0.528, 0.583, 2.676]  rr mu [0.7269999980926514, 0.7680000066757202, 0.75, 0.9670000076293945] sigma [0.2070000022649765, 0.20399999618530273, 0.1679999977350235, 0.1550000011920929]
+  RESUMED from s43_f2.pt (+1 snapshot checkpoints): no re-training
+
+[seed 43 fold 3] outer 8982  inner-train 80115  inner-val 8409  buffer 48
+  inner-train per class N 61805, S 9802, V 8147, F 361 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.207, 0.519, 0.569, 2.705]  rr mu [0.7319999933242798, 0.7720000147819519, 0.7540000081062317, 0.9679999947547913] sigma [0.21799999475479126, 0.2150000035762787, 0.17800000309944153, 0.16200000047683716]
+  RESUMED from s43_f3.pt (+1 snapshot checkpoints): no re-training
+
+[seed 43 fold 4] outer 9876  inner-train 79489  inner-val 8141  buffer 48
+  inner-train per class N 61117, S 9791, V 8192, F 389 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.213, 0.533, 0.582, 2.672]  rr mu [0.7369999885559082, 0.777999997138977, 0.7599999904632568, 0.9679999947547913] sigma [0.21699999272823334, 0.21199999749660492, 0.17800000309944153, 0.16099999845027924]
+  RESUMED from s43_f4.pt (+1 snapshot checkpoints): no re-training
+
+=== seed 43: pooled OOF over 5 folds ===
+macro-F1 0.5165   macro-F1 (N/S/V) 0.6887   SVEB Se 0.4081 +P 0.2834   VEB Se 0.8883 +P 0.6937
+cls       P       R      F1      n
+  N  0.9810  0.9457  0.9630  45703
+  S  0.2834  0.4081  0.3345    909
+  V  0.6770  0.8883  0.7684   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   43223    750   1266    464
+     329    371    209      0
+     219    186   3341     15
+     291      2    119      0
+--- seed 43, fixed 3 epochs: pooled OOF ---
+macro-F1 0.5165   macro-F1 (N/S/V) 0.6887   SVEB Se 0.4081 +P 0.2834   VEB Se 0.8883 +P 0.6937
+cls       P       R      F1      n
+  N  0.9810  0.9457  0.9630  45703
+  S  0.2834  0.4081  0.3345    909
+  V  0.6770  0.8883  0.7684   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   43223    750   1266    464
+     329    371    209      0
+     219    186   3341     15
+     291      2    119      0
+
+[seed 44 fold 0] outer 9313  inner-train 79870  inner-val 8324  buffer 47
+  inner-train per class N 62129, S 9783, V 7898, F 60 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.104, 0.262, 0.291, 3.343]  rr mu [0.734000027179718, 0.7739999890327454, 0.7559999823570251, 0.9679999947547913] sigma [0.21899999678134918, 0.2150000035762787, 0.17900000512599945, 0.16200000047683716]
+  RESUMED from s44_f0.pt (+1 snapshot checkpoints): no re-training
+
+[seed 44 fold 1] outer 11657  inner-train 78039  inner-val 7813  buffer 45
+  inner-train per class N 59861, S 9544, V 8247, F 387 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.215, 0.538, 0.578, 2.67]  rr mu [0.7350000143051147, 0.7749999761581421, 0.7570000290870667, 0.9679999947547913] sigma [0.2160000056028366, 0.21400000154972076, 0.17800000309944153, 0.1589999943971634]
+  RESUMED from s44_f1.pt (+1 snapshot checkpoints): no re-training
+
+[seed 44 fold 2] outer 10957  inner-train 78620  inner-val 7933  buffer 44
+  inner-train per class N 60380, S 9796, V 8062, F 382 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.213, 0.528, 0.583, 2.676]  rr mu [0.7269999980926514, 0.7680000066757202, 0.75, 0.9670000076293945] sigma [0.2070000022649765, 0.20399999618530273, 0.1679999977350235, 0.1550000011920929]
+  RESUMED from s44_f2.pt (+1 snapshot checkpoints): no re-training
+
+[seed 44 fold 3] outer 8982  inner-train 80115  inner-val 8409  buffer 48
+  inner-train per class N 61805, S 9802, V 8147, F 361 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.207, 0.519, 0.569, 2.705]  rr mu [0.7319999933242798, 0.7720000147819519, 0.7540000081062317, 0.9679999947547913] sigma [0.21799999475479126, 0.2150000035762787, 0.17800000309944153, 0.16200000047683716]
+  RESUMED from s44_f3.pt (+1 snapshot checkpoints): no re-training
+
+[seed 44 fold 4] outer 9876  inner-train 79489  inner-val 8141  buffer 48
+  inner-train per class N 61117, S 9791, V 8192, F 389 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.213, 0.533, 0.582, 2.672]  rr mu [0.7369999885559082, 0.777999997138977, 0.7599999904632568, 0.9679999947547913] sigma [0.21699999272823334, 0.21199999749660492, 0.17800000309944153, 0.16099999845027924]
+  RESUMED from s44_f4.pt (+1 snapshot checkpoints): no re-training
+
+=== seed 44: pooled OOF over 5 folds ===
+macro-F1 0.5010   macro-F1 (N/S/V) 0.6679   SVEB Se 0.4191 +P 0.3095   VEB Se 0.9051 +P 0.5846
+cls       P       R      F1      n
+  N  0.9836  0.9214  0.9515  45703
+  S  0.3095  0.4191  0.3561    909
+  V  0.5657  0.9051  0.6963   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   42110    691   2185    717
+     293    381    234      1
+     192    156   3404      9
+     215      3    194      0
+--- seed 44, fixed 3 epochs: pooled OOF ---
+macro-F1 0.5010   macro-F1 (N/S/V) 0.6679   SVEB Se 0.4191 +P 0.3095   VEB Se 0.9051 +P 0.5846
+cls       P       R      F1      n
+  N  0.9836  0.9214  0.9515  45703
+  S  0.3095  0.4191  0.3561    909
+  V  0.5657  0.9051  0.6963   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   42110    691   2185    717
+     293    381    234      1
+     192    156   3404      9
+     215      3    194      0
+
+=== fixed-epoch snapshots: pooled OOF macro-F1 (mean ± std over seeds) ===
+    3 epochs: macro-F1 0.5089 ± 0.0078  per seed [0.5091, 0.5165, 0.501]  N->F 508
+stop epoch: mean 3.0 ± 0.0 (min 3, max 3)
+
+=== A5_svdb_n25_lite_e3: OOF macro-F1 0.5089 ± 0.0078 (n seeds = 3) ===
+  N: precision 0.9814±0.0021  recall 0.9382±0.0146  f1 0.9593±0.0067
+  S: precision 0.2764±0.0371  recall 0.4250±0.0204  f1 0.3333±0.0234
+  V: precision 0.6479±0.0722  recall 0.8776±0.0341  f1 0.7429±0.0405
+  F: precision 0.0000±0.0000  recall 0.0000±0.0000  f1 0.0000±0.0000
+  macro-F1 N/S/V 0.6785±0.0104; SVEB Se 0.4250±0.0204 +P 0.2764±0.0371; VEB Se 0.8776±0.0341 +P 0.6702±0.0766
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3

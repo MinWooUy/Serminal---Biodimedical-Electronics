@@ -1,0 +1,108 @@
+name: svdb_select
+rule: A-strict
+detector:
+  name: detector_pt
+  dataset: DS1
+  filter:
+    low_hz: 0.5
+    high_hz: 40.0
+    order: 2
+  pan_tompkins:
+    fs: 360
+    lp_len: 11
+    hp_len: 57
+    deriv_shift: 12
+    mwi_len: 54
+    refractory: 72
+    twave_window: 130
+    learn_len: 720
+    peak_confirm: 36
+    sb_buffer: 16
+    hist_len: 128
+    filt_buffer: 4096
+    irregular_halving: true
+    realign_mode: abs
+  eval:
+    tolerances_ms:
+    - 150
+    - 75
+min_se_ppv: 0.97
+records:
+- 800
+- 801
+- 802
+- 803
+- 804
+- 805
+- 806
+- 807
+- 808
+- 809
+- 810
+- 811
+- 812
+- 820
+- 821
+- 822
+- 823
+- 824
+- 825
+- 826
+- 827
+- 828
+- 829
+- 840
+- 841
+- 842
+- 843
+- 844
+- 845
+- 846
+- 847
+- 848
+- 849
+- 850
+- 851
+- 852
+- 853
+- 854
+- 855
+- 856
+- 857
+- 858
+- 859
+- 860
+- 861
+- 862
+- 863
+- 864
+- 865
+- 866
+- 867
+- 868
+- 869
+- 870
+- 871
+- 872
+- 873
+- 874
+- 875
+- 876
+- 877
+- 878
+- 879
+- 880
+- 881
+- 882
+- 883
+- 884
+- 885
+- 886
+- 887
+- 888
+- 889
+- 890
+- 891
+- 892
+- 893
+- 894

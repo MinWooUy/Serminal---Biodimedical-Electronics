@@ -1,0 +1,2073 @@
+{
+  "model": "2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3",
+  "segments": [
+    {
+      "name": "rec101_93600",
+      "record": 101,
+      "start_sample": 93600,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 126,
+      "n_beats": 124,
+      "arrays": {
+        "adc": {
+          "file": "rec101_93600_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "2d5e327c2b5f3304919c058dd892ace21383d5a8c3d29a1a58ac30bd6140a59b"
+        },
+        "pt_hp": {
+          "file": "rec101_93600_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "0e188c370d904037aea808406f08101008f3656b23966eb3a8a0188a28374a20"
+        },
+        "pt_d": {
+          "file": "rec101_93600_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "c1c1d376d5097825a2b0beaa0ef0f09ab9f0c1465d6d0a3fda8f8d912c17d480"
+        },
+        "pt_mwi": {
+          "file": "rec101_93600_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "5a5f1b45cdb13687ea567471405518ae7477dc640df6d07a8331ef2ac775bf96"
+        },
+        "filt": {
+          "file": "rec101_93600_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "e1cd2c276f92e5495f6d807113ebb9644b2b33b56ee0263aa22f3d127dc505bf"
+        },
+        "det_r_coarse": {
+          "file": "rec101_93600_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            126
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "5cf80c8fa1bde93f2b16d4d3d137ad5e9956d8c734747ffdf694bbedffe68c2d"
+        },
+        "det_searchback": {
+          "file": "rec101_93600_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            126
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "ebc47d1683f1e8b6d506bf43f07f93e64fcb54ea8310a90211336139a80e706a"
+        },
+        "det_r_refined": {
+          "file": "rec101_93600_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            126
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "ec2ca739a89df7ac4df548465ea17b1de7da60c51956139547c27ab95ab60b22"
+        },
+        "beat_det_index": {
+          "file": "rec101_93600_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            124
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "a046c9dc41747ac5c22d394c5c3f1f634fc41f24a76504fba2cf2fc9b9eee260"
+        },
+        "beat_window": {
+          "file": "rec101_93600_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            124,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "c0f7959df700461788f1b3b47e63e7b07a5d44fc944c8d6d9c8b1f5ae6d8fec2"
+        },
+        "beat_z_q": {
+          "file": "rec101_93600_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "965d50ca5a3cf1ec4e1b24eecdbaa6f658a3bb7788c95b728b8e523794fc6b76"
+        },
+        "beat_rr_parts": {
+          "file": "rec101_93600_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            124,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "ac232fd6e85c512c263298ebe73d7ae76c78721b31e3c46807fc34b7f62692bc"
+        },
+        "beat_rr_q": {
+          "file": "rec101_93600_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "5b85ddd5ff874dd7a39a32c276454d516a22830e07193ee910d21d7f23b2f78a"
+        },
+        "beat_conv0": {
+          "file": "rec101_93600_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "fc9875a41751a9efb63c21314361e2faaf8943764a8de608db0a0c0618d79abd"
+        },
+        "beat_pool0": {
+          "file": "rec101_93600_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "6bc4975ee140f05c770a51aac3b014426473cdc6a43ca826c466da6261c44e94"
+        },
+        "beat_conv1": {
+          "file": "rec101_93600_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "b88e7dc31dc5028e77015f157ddad0ed73ba1f57c559b27af3ec313f0ea3c5b2"
+        },
+        "beat_pool1": {
+          "file": "rec101_93600_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "0041a840a22c13bb6a01b4644ae341b6b462e3c4f5e6dc897e510c384999e9ea"
+        },
+        "beat_conv2": {
+          "file": "rec101_93600_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "a6ebef9a03613d571ad28176d25d7b087c4381960f2a2fd29b4aeed17472701a"
+        },
+        "beat_pool2": {
+          "file": "rec101_93600_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "3fd60d032efa2e50dc97977487cbf63f8ca0c53349722ede67051bea3d231e02"
+        },
+        "beat_conv3": {
+          "file": "rec101_93600_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "3487274f156451d48652467ce4d832af2b1d0d3f7d4611017da4043d5b4570cb"
+        },
+        "beat_gap": {
+          "file": "rec101_93600_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            124,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "98b6913a5d52ef8aba789aa0ae9354b0140edd1dc6e0348ba9d712347e437d1c"
+        },
+        "beat_fc1": {
+          "file": "rec101_93600_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            124,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "08db957dab6be139b8e8398542ba9e21f5470014f184d53860b1d03f3649c4b4"
+        },
+        "beat_logits": {
+          "file": "rec101_93600_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            124,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "5f207cdabf4cdfa04c61f4dbd922fb96e33a940b827749798bbe04f7303729d0"
+        },
+        "beat_pred": {
+          "file": "rec101_93600_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            124
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "d76dd0891d76260b8dac8f826dd17acaef024390ab64b84dc083294e84f23178"
+        },
+        "beat_label": {
+          "file": "rec101_93600_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            124
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "66cf2c365703d63e04706b31e778f61576c0045bfe65cf2b2a2d67a78d3863a9"
+        }
+      }
+    },
+    {
+      "name": "rec118_237600",
+      "record": 118,
+      "start_sample": 237600,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 151,
+      "n_beats": 149,
+      "arrays": {
+        "adc": {
+          "file": "rec118_237600_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "f52981f7439fdac29de614212b96593b5ef0a50c69557598d3f499de11af10f1"
+        },
+        "pt_hp": {
+          "file": "rec118_237600_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "2a7f3bdbf33332cb9a85987cadf2d87a3b218935bfae00be08d353d98073518f"
+        },
+        "pt_d": {
+          "file": "rec118_237600_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "e8707f5190d721a3fd6f402da8aa89bc4571c84d3ef0dd7f47786cc2364a535e"
+        },
+        "pt_mwi": {
+          "file": "rec118_237600_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "0644846f87d4a2541d7ab11ecd75e04e239237b9ed0974ac9bbc8bee53e339ec"
+        },
+        "filt": {
+          "file": "rec118_237600_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "3ca190052f7e48a768b49aba662203f58073923559bca5a36756ad52069ef4ea"
+        },
+        "det_r_coarse": {
+          "file": "rec118_237600_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            151
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "fe05ad44af32297b22c9a657efdad8d975df0e02ee68f96eaf7270bcc829f34c"
+        },
+        "det_searchback": {
+          "file": "rec118_237600_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            151
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "3d134c4c73f071ff1bcfc7b576f680866b8b9866c694658bc4e3864b0d83a444"
+        },
+        "det_r_refined": {
+          "file": "rec118_237600_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            151
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "b97e5ec264f864fc7a8eb899e938bed7752d4fc570df4840531bc5eea3f921c7"
+        },
+        "beat_det_index": {
+          "file": "rec118_237600_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            149
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "6d490c6ab5aa2f73e7054f3061071f13b058a224afbbff093032bafdd0c3fcd0"
+        },
+        "beat_window": {
+          "file": "rec118_237600_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            149,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "e871ecb693375d6e5d82b43c5e59fe97816a2780e17ac0a8fbe501d484eac036"
+        },
+        "beat_z_q": {
+          "file": "rec118_237600_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "f4730ac1c2e3341c92404d6eb9ffd184e0bea5419f2504261d14400ce1c022ae"
+        },
+        "beat_rr_parts": {
+          "file": "rec118_237600_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            149,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "020a9c19aa9fc5c67caab1b1b526fc443e7428a620ad8890c6dbb36d605c8740"
+        },
+        "beat_rr_q": {
+          "file": "rec118_237600_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "4731fdd3e29cc10b55abeda934a3c3d49473e157c92a074c027db744c3f3b56a"
+        },
+        "beat_conv0": {
+          "file": "rec118_237600_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "157b6f8491b0011f5a897c4eb571565f28484321bc2eb144c8b87b01f02c79ef"
+        },
+        "beat_pool0": {
+          "file": "rec118_237600_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "c47528cb4db63d5201bb3600560e919ae72ea900e438aa80e86dd28fd293e1a4"
+        },
+        "beat_conv1": {
+          "file": "rec118_237600_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "52a04027cf48c3548e1e56094fa2b39bdef6025fc90765b0a8ca262b0358af21"
+        },
+        "beat_pool1": {
+          "file": "rec118_237600_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "b46de7f1cfc595521eac607e60512352e450c440582aa666ef542fd35f60553f"
+        },
+        "beat_conv2": {
+          "file": "rec118_237600_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "d80a115a82a8b8c5f2717445bba4e61b756a82dbfa2b0044aa2cf18ec6ab1ad0"
+        },
+        "beat_pool2": {
+          "file": "rec118_237600_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "6cc777fa1bd11cf201d8eb91c1af28b3c8ea3db5213db1380ac050401fa12cca"
+        },
+        "beat_conv3": {
+          "file": "rec118_237600_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "01cd425d55865c5eaa2bf004c3bcf0b6d1cab7cf8002710dcc574aee6329dd18"
+        },
+        "beat_gap": {
+          "file": "rec118_237600_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            149,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "b7f24e28a72bb2d9a13117234a59f399e8f27bc49710ffd2b0ecc1dcdcc93dc6"
+        },
+        "beat_fc1": {
+          "file": "rec118_237600_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            149,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "6693541d0f3b0c7c6ee8ce5ee4d998fa6ed7fcfc6cf4245bd30462017c011351"
+        },
+        "beat_logits": {
+          "file": "rec118_237600_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            149,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "329bcf1cfe2430c4651919ceb5c0def9da8f5b5eadf72ae95ad1a71266b8a552"
+        },
+        "beat_pred": {
+          "file": "rec118_237600_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            149
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "63e97d40e529c7998340736ae4ec11a72f9018580031097d21c6d456d045f953"
+        },
+        "beat_label": {
+          "file": "rec118_237600_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            149
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "d7a846c76ddb096c5947f4340fd894cb09549c8bc0d1678357e4944eb2866e86"
+        }
+      }
+    },
+    {
+      "name": "rec119_489600",
+      "record": 119,
+      "start_sample": 489600,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 131,
+      "n_beats": 129,
+      "arrays": {
+        "adc": {
+          "file": "rec119_489600_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "0e321f9bb922962f94569244b4404b2e188240e862f688cb02ce87f70f267319"
+        },
+        "pt_hp": {
+          "file": "rec119_489600_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "17abbdf1ac4033da17f6010f6d467bd691738731a800c43c0f5912d5bf8d020b"
+        },
+        "pt_d": {
+          "file": "rec119_489600_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "1a64d39dedd08f274edf71e65aac04c13d073ba0370d86aad79ef7ab008cabc6"
+        },
+        "pt_mwi": {
+          "file": "rec119_489600_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "80e0f0e55fb63929f21a1ee738e8c32e8bc7938a819b6fc4a142fe2bfc18e393"
+        },
+        "filt": {
+          "file": "rec119_489600_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "6963cb3c538f8d78c46f789f9ed1b40710072f846793f2f9689940b6cae3f1a6"
+        },
+        "det_r_coarse": {
+          "file": "rec119_489600_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            131
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "1a9da18a6472a8cb48e8ee51016bc5f524957c89298637b27b8522ea6a0a581f"
+        },
+        "det_searchback": {
+          "file": "rec119_489600_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            131
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "d367e8be9eb342df9fd9f890c99b1a955f774f74183a2adf81b238bcb9527c05"
+        },
+        "det_r_refined": {
+          "file": "rec119_489600_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            131
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "c04a630e73608837acbedebdcc0e523298e1f755f3303e92a975ecd72451773d"
+        },
+        "beat_det_index": {
+          "file": "rec119_489600_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            129
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "294c7276eb854b4e5351232dcc9464322bfe49516b6ce6c463bcf0e1e938b229"
+        },
+        "beat_window": {
+          "file": "rec119_489600_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            129,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "9ab2d6799d8387896239c53d2d631bd6ff62cdcca3a6e2bb8540b2c18edfe27e"
+        },
+        "beat_z_q": {
+          "file": "rec119_489600_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "d121513da92afb2f842c12d155e803389522e502e5dea65f7dde1eadf8a9d506"
+        },
+        "beat_rr_parts": {
+          "file": "rec119_489600_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            129,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "8d4af150b522da77d4e1b7e1ffa61bacd8287344d709b0f6305b5dc260473028"
+        },
+        "beat_rr_q": {
+          "file": "rec119_489600_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "b649560c44cf9590e7e542bcf8b2b6f1cb55ef4fb686723eb341d1262366d05a"
+        },
+        "beat_conv0": {
+          "file": "rec119_489600_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "4f2caf7f90a532aca2af8ca190c2a999d15a0520ea2e5d07edee0118ddc16698"
+        },
+        "beat_pool0": {
+          "file": "rec119_489600_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "40e469575f8eec92a1e8339656d31428a4dfd70acceac7d5c138ad3b8d0ce480"
+        },
+        "beat_conv1": {
+          "file": "rec119_489600_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "49d504629e32d1f4ff446fdebf0b497ad7bbe8aa2897c924630151f73dae12f5"
+        },
+        "beat_pool1": {
+          "file": "rec119_489600_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "f9cb1e181a07534391d3e46599ae52c29df7aaa720b738415e4fee7526dd70b7"
+        },
+        "beat_conv2": {
+          "file": "rec119_489600_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "4a6c4a56b02952f6f7c2d0fe18857409c1c928716f748cf0a7c752a3bd847e67"
+        },
+        "beat_pool2": {
+          "file": "rec119_489600_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "bd0d65510951bc074c710d512e2312a2e5bb11c784daedb66093dc7b3e443a6d"
+        },
+        "beat_conv3": {
+          "file": "rec119_489600_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "8842e635dc932689bcb9d84eb33368fdd6d9a33b4dcfeedf8412a05eb36dfb53"
+        },
+        "beat_gap": {
+          "file": "rec119_489600_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            129,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "16f6d626d711df0375e745c9dea092ef92a3e5c6c9ce48489129edccbd2c9fb1"
+        },
+        "beat_fc1": {
+          "file": "rec119_489600_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            129,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "18dfe1e158e319d7aa102b3aef3ceddcfac4c9e766af1ef4b514101203d115df"
+        },
+        "beat_logits": {
+          "file": "rec119_489600_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            129,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "212964d28ae40fff5a270248c8f2d6095e815cd09b0eeddebc4b93e42a55648b"
+        },
+        "beat_pred": {
+          "file": "rec119_489600_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            129
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "26fdabef6b1c37271866d308651ccc28f65b9768f16774de2868e7beb70d03a6"
+        },
+        "beat_label": {
+          "file": "rec119_489600_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            129
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "26fdabef6b1c37271866d308651ccc28f65b9768f16774de2868e7beb70d03a6"
+        }
+      }
+    },
+    {
+      "name": "rec201_522000",
+      "record": 201,
+      "start_sample": 522000,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 117,
+      "n_beats": 115,
+      "arrays": {
+        "adc": {
+          "file": "rec201_522000_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "4187f9d0e31f6f5d5c0433e2885de41d1a67b2e300adeed23fd553ab693ea442"
+        },
+        "pt_hp": {
+          "file": "rec201_522000_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "fdac582636845c94df3eab3066da4c99e37980e3b135cc528f9eb9c46a76c856"
+        },
+        "pt_d": {
+          "file": "rec201_522000_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "dc52893b9c1ff8b9190d91b67f43b27a3e66e601321acf2a48e0527e97ec6074"
+        },
+        "pt_mwi": {
+          "file": "rec201_522000_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "b8b413a1df2ad7762fdd7255c6cbc3158a49cd4b7949d6055d233cccba0142a2"
+        },
+        "filt": {
+          "file": "rec201_522000_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "2c9f6a794a69e246a7cd192fab1908005b8e5efb48e0d5f32c68fa86ee2f7a42"
+        },
+        "det_r_coarse": {
+          "file": "rec201_522000_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            117
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "1f20b3bbcfe779a557c296f6f0952557908693b0ba9ff555a2d961267cc531a9"
+        },
+        "det_searchback": {
+          "file": "rec201_522000_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            117
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "74aaea1d1f3cf6b84779cdfb09051ccc422b5a701d222ba726fb0bd3ee18b838"
+        },
+        "det_r_refined": {
+          "file": "rec201_522000_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            117
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "9b4ffe94076a8e696fddbf7b1e511a950262f7b6cd66a74530d0ada941c2312d"
+        },
+        "beat_det_index": {
+          "file": "rec201_522000_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            115
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "55f27c8c46e365bd21d2c9e215140a3601c66e6674a5a718fa3fc7f44a068ef7"
+        },
+        "beat_window": {
+          "file": "rec201_522000_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            115,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "bf3f63bc22d3edd6e2ba581e6fdfed4c5278590f3219526a3389d5c808017076"
+        },
+        "beat_z_q": {
+          "file": "rec201_522000_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "4a513b7adf0f361ba04dfd4d2d1950545b6452fe69396fd0631d1a4e30d52f25"
+        },
+        "beat_rr_parts": {
+          "file": "rec201_522000_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            115,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "eea763ef6accc472429206aff17748685cf90e455b7f34466ff0402f6f8fef45"
+        },
+        "beat_rr_q": {
+          "file": "rec201_522000_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "76159c2c41a32b72b2a5e9b64f4136ee65bb37e140c7f6c259b7660c5ba2c390"
+        },
+        "beat_conv0": {
+          "file": "rec201_522000_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "0c5600ef9a486334279a903079642c927e9aff26792974cdfa52fe82edbcaa39"
+        },
+        "beat_pool0": {
+          "file": "rec201_522000_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "ee472a4aa1759b55382277a1fa069a8cd9e5a6f63cf9670dd323fbd168f7aa8a"
+        },
+        "beat_conv1": {
+          "file": "rec201_522000_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "66535d415003c4d2a95a346583ba99f5eb837afac76fdc5fb95b8d704326f2f8"
+        },
+        "beat_pool1": {
+          "file": "rec201_522000_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "8235f64c0f8fab4cb1240e5f4e6ff442d095809ae00298f1824a08ab291e1807"
+        },
+        "beat_conv2": {
+          "file": "rec201_522000_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "538e1230535ce5e673c73fd2c899cb5f04eac240ea9ab5bce62dc8c72087dcdb"
+        },
+        "beat_pool2": {
+          "file": "rec201_522000_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "f7b024cdbfd32835fdc376c3f2d08e9459bff7e7d5c008cc2ccfba89e8c48182"
+        },
+        "beat_conv3": {
+          "file": "rec201_522000_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "e3ae249da8adab99807d7a38c39e07e2a62b4c342577f7e4a9fb47655b536833"
+        },
+        "beat_gap": {
+          "file": "rec201_522000_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            115,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "8d665c081d599d6259ba3602d68c50d7e21f748a570548ed0f78285060dca714"
+        },
+        "beat_fc1": {
+          "file": "rec201_522000_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            115,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "493b90e4fd1dc6fa58d733551af631253e0d2894c68b3d64c98dd0d09ae9459c"
+        },
+        "beat_logits": {
+          "file": "rec201_522000_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            115,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "f75d83ce6e339cdf8a28104a4840390ab13e9fbc92d8d2fa0a9394955d26679d"
+        },
+        "beat_pred": {
+          "file": "rec201_522000_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            115
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "4f4959a1dd0b0cfd70beee7b284c0893de41990245a04f1f285554a5aebd35ad"
+        },
+        "beat_label": {
+          "file": "rec201_522000_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            115
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "2c177d5cd7a8efde4f3fac97514cb6fbab19029a64619b8a8cee01d25abbc421"
+        }
+      }
+    },
+    {
+      "name": "rec207_604800",
+      "record": 207,
+      "start_sample": 604800,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 171,
+      "n_beats": 169,
+      "arrays": {
+        "adc": {
+          "file": "rec207_604800_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "bbb905558f56b77acc87c2e0061c01ab48d72178916a927cf2efd9e951a602a3"
+        },
+        "pt_hp": {
+          "file": "rec207_604800_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "e4eafd9c11828cb44565a4fe61d6419c7a73e7aca52074f61263224198345aea"
+        },
+        "pt_d": {
+          "file": "rec207_604800_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "b607857f63f497b7966de0fd7b4333f574d9541061402b31a49d9d42336ca09a"
+        },
+        "pt_mwi": {
+          "file": "rec207_604800_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "683353d2c8ff92d49f6ef6dd7fd1afa72615ae16f9d353c957adfa96c920baac"
+        },
+        "filt": {
+          "file": "rec207_604800_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "af1ff10af2259fd9612d9f4a983e425db34feb9a4a75528ed6f9985635cd527c"
+        },
+        "det_r_coarse": {
+          "file": "rec207_604800_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            171
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "816573d532b30103e7d7b342b9ac5a95ec4266d16a04ea11d28a60d48af00552"
+        },
+        "det_searchback": {
+          "file": "rec207_604800_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            171
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "41c77c1739e8ed68f37930c031f36cba4618b62ac737e92584490a5df9fd10d4"
+        },
+        "det_r_refined": {
+          "file": "rec207_604800_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            171
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "edcaa15ad8bacad14e090be39e00abd2efa14d7f76dc8d872356cfa1d4f19612"
+        },
+        "beat_det_index": {
+          "file": "rec207_604800_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            169
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "a87814447351f2bef1083dfb3d132df8e7fca4337345437844ca2e60d4400c2c"
+        },
+        "beat_window": {
+          "file": "rec207_604800_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            169,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "754210ffc835952a72b381e2668cda5a4b62131a3ab491b71e3d4a2c1cf26ab6"
+        },
+        "beat_z_q": {
+          "file": "rec207_604800_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "ae0f4890cab4843865199a82252f2d0dfc92d7b76fd29d7e57f417999f0b02c0"
+        },
+        "beat_rr_parts": {
+          "file": "rec207_604800_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            169,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "d2e957432834e7061c77780bde0574ff2aa5aa813f4ccc912ff3a0f9a0dbaf32"
+        },
+        "beat_rr_q": {
+          "file": "rec207_604800_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "b250446c7d395de126dea11cc829045706cf61ab2e0410ccac703ba0c7cf3c23"
+        },
+        "beat_conv0": {
+          "file": "rec207_604800_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "56ed3fc4251098ad9f0b4d3849114e29bb24d3cdadcfc9c657300d90e761b7d4"
+        },
+        "beat_pool0": {
+          "file": "rec207_604800_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "b5b1202b9a51c8c64520ac3f525b446d6f6b625c775f3a7a96e639d507a298f0"
+        },
+        "beat_conv1": {
+          "file": "rec207_604800_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "fc776be59dfc73983e4fb05d664b84ab6fbc98635b935276773e1a37f2c39184"
+        },
+        "beat_pool1": {
+          "file": "rec207_604800_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "5092d7caec8b80e14c7a2324d93083b5b98dc10ec2df08e9e73b47d69666aa51"
+        },
+        "beat_conv2": {
+          "file": "rec207_604800_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "3605ee9b24ec87e324c359815e0ca8ead6573aae56dc882873adf734b3dba708"
+        },
+        "beat_pool2": {
+          "file": "rec207_604800_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "9d4626590eddd31ede0505a81056c74eb51c41c31cd2b66acb85aa64ebb38b95"
+        },
+        "beat_conv3": {
+          "file": "rec207_604800_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "8214fb69b3ed75f0f7bb3466eef3c6802e2bbe8218062e48706a17f3d370dc0e"
+        },
+        "beat_gap": {
+          "file": "rec207_604800_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            169,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "647098948f64def4dd8dd7c82f9355d0cdb6147be6770f344253c159ab7b8c46"
+        },
+        "beat_fc1": {
+          "file": "rec207_604800_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            169,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "18b85130ccecd8fccb19af2f9650c2455feb389de32bbaf246168923a8b04d46"
+        },
+        "beat_logits": {
+          "file": "rec207_604800_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            169,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "71aeb62f1018be56a9e2536a512f6d6fcac61d46546fe0ea53fa0ff32c2e42a1"
+        },
+        "beat_pred": {
+          "file": "rec207_604800_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            169
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "98e4dd962a3aea995710bfb647510c852b8bc8206c9e0f2906086208276fd232"
+        },
+        "beat_label": {
+          "file": "rec207_604800_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            169
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "2b5a427ce9811b808ff40e06bb53be67a969543d5272654cd9f8072d1a124f8c"
+        }
+      }
+    },
+    {
+      "name": "rec208_237600",
+      "record": 208,
+      "start_sample": 237600,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 193,
+      "n_beats": 191,
+      "arrays": {
+        "adc": {
+          "file": "rec208_237600_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "f1a4cc6139db927ac3b97d02743d4f8f1f54fdeebbe06a13169faa23ceea6c53"
+        },
+        "pt_hp": {
+          "file": "rec208_237600_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "08a1f60f286c606c8cf1c2eeceea61518323bbab41920b5f805358656c7e1ddf"
+        },
+        "pt_d": {
+          "file": "rec208_237600_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "2ad2d395969e38c8e84181498b57b19eb1088f813970b10502f3acc667c8cfdb"
+        },
+        "pt_mwi": {
+          "file": "rec208_237600_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "e202d43718e64e00eda7a35f8c9b4b0671cfe3403fd02042df4ab08d23bf9ea6"
+        },
+        "filt": {
+          "file": "rec208_237600_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "9d4a82db983d2a850d9fd76738534712d529396eadb03f314e6c35e7b4169ba0"
+        },
+        "det_r_coarse": {
+          "file": "rec208_237600_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            193
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "2ea4d3f9891eb6aae21385aa79a52431b521d16683bebf363c0a0e676e31f9cc"
+        },
+        "det_searchback": {
+          "file": "rec208_237600_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            193
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "e5266235cd0af9680382063b69dfe20e3d734f980a85095440b981ba012756b9"
+        },
+        "det_r_refined": {
+          "file": "rec208_237600_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            193
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "bbed542f2139505d442ee9c5b124abcfb924e1cc8f9c07db28f5c05ec7c5800a"
+        },
+        "beat_det_index": {
+          "file": "rec208_237600_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            191
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "2416cea3aaa7f8af346302949ece6939f5dc6f635f1481f94dbf9d6c7912590e"
+        },
+        "beat_window": {
+          "file": "rec208_237600_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            191,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "fbe22ad6444becfa69f83108072f579fce61487f79cf28e03cddc58157ec9b43"
+        },
+        "beat_z_q": {
+          "file": "rec208_237600_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "e509536f5eea3aa886fb62caf797394a29ec8554d9fdb59110e1de9b0f4a112d"
+        },
+        "beat_rr_parts": {
+          "file": "rec208_237600_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            191,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "f5b0917a6ee6f232a1ca61efde254ff32c3ead2028623b39b4603be3f012a6a3"
+        },
+        "beat_rr_q": {
+          "file": "rec208_237600_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "447a67b26231f16ec5c51e6e54d5c9b3d10f867e35272d29b964a2f8a6179a9d"
+        },
+        "beat_conv0": {
+          "file": "rec208_237600_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "cf0e1cdaecf52e0e4b637b010960205eedf2c3b11a3afd75ea036013c51d57e9"
+        },
+        "beat_pool0": {
+          "file": "rec208_237600_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "af781ad0bebd112f1b3619f2877fc64362a511e8b855945c05052ef2182e7774"
+        },
+        "beat_conv1": {
+          "file": "rec208_237600_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "4df834b5be1a5f32260591b2dca5570b792d4d7236ac997c05368d3cb478f733"
+        },
+        "beat_pool1": {
+          "file": "rec208_237600_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "699e57285eed92b6b931434c038d3e01b31df9374317906dbd1320b930d73b32"
+        },
+        "beat_conv2": {
+          "file": "rec208_237600_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "6d5e80ec6533c6ea2e3bfd2ea3a97493dba69f893922b43266cd929fdee8324d"
+        },
+        "beat_pool2": {
+          "file": "rec208_237600_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "b9443cf02c77a162abc9f967f3f35fe75d9c75f12afb045320f838e09c3c60d1"
+        },
+        "beat_conv3": {
+          "file": "rec208_237600_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "0657b3ab4fd8e338b5f26f975d67cc9b885a4e63298573b303919297ea40f32f"
+        },
+        "beat_gap": {
+          "file": "rec208_237600_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            191,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "cdd0adeb92e72012ea9bb75ce7f23be601afcca0f4e09046ab91f82fc524f6de"
+        },
+        "beat_fc1": {
+          "file": "rec208_237600_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            191,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "1b84d83ef5519fcfbb839950f15d68b8878bf27f63f937d72bf743fedd00f131"
+        },
+        "beat_logits": {
+          "file": "rec208_237600_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            191,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "c6ab8ce9330439a808cd817174b6a4db1d7711723e47ff635aa908ed512638fb"
+        },
+        "beat_pred": {
+          "file": "rec208_237600_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            191
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "4db603ad16cfe384c9855cff920b484374068449d777ca9ba8640fab138f4bae"
+        },
+        "beat_label": {
+          "file": "rec208_237600_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            191
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "8ad090f8ef1971ba189c5e488ffb0d5cd599a6eab8ed500b18a2ee8b7e92970c"
+        }
+      }
+    },
+    {
+      "name": "rec209_198000",
+      "record": 209,
+      "start_sample": 198000,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 241,
+      "n_beats": 239,
+      "arrays": {
+        "adc": {
+          "file": "rec209_198000_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "0f1288dd4294908990c700040ef2ec41d39947d30ef8eeb93644f34f566163fb"
+        },
+        "pt_hp": {
+          "file": "rec209_198000_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "6c7eea87ff432ef6eeda439d869a1b1570dd9846d8d426ef2e6dc3832309d484"
+        },
+        "pt_d": {
+          "file": "rec209_198000_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "3a2a2a380aab6b1664193e1d25e468254a9a898d86d6c4d4d6bf94654653ed21"
+        },
+        "pt_mwi": {
+          "file": "rec209_198000_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "be9e2181dc0806f188a4189a0bcc8dbd5102a9e55415da3beab0df6d12786461"
+        },
+        "filt": {
+          "file": "rec209_198000_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "7932c7aa882928552b5a26fbe225e1a01a6eecd3012371f622867d9ea2217dfc"
+        },
+        "det_r_coarse": {
+          "file": "rec209_198000_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            241
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "681d3ae79b19612add24ec29859ef34a044037d6faa1d1d9e5c69dfa0f51fc8a"
+        },
+        "det_searchback": {
+          "file": "rec209_198000_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            241
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "f2d7df9f7c7a829d151f2d26f67f11bb6b824fb5ed649c159dd6124c4b4dce60"
+        },
+        "det_r_refined": {
+          "file": "rec209_198000_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            241
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "890d2ae3cd33e150976fcf1042c49a10e49064a5421c1b91a3f8c25952ef902b"
+        },
+        "beat_det_index": {
+          "file": "rec209_198000_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            239
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "d6f81b46485d8dbd6e1e0ee20de16cdbf714ef9f28edb8091e8e10e04d8a3b2f"
+        },
+        "beat_window": {
+          "file": "rec209_198000_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            239,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "68178fd1238a838760df127ea3220939962cf8b38e043d72e78bcd02b55713df"
+        },
+        "beat_z_q": {
+          "file": "rec209_198000_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "d88eadc0d8a287e80282b8c4bfaa02ab4b857629f882c1415cffa42b54aa6fb2"
+        },
+        "beat_rr_parts": {
+          "file": "rec209_198000_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            239,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "def362c2e58139e71a256b3404862e276c372526265a87cc1d5499302e4b2b3b"
+        },
+        "beat_rr_q": {
+          "file": "rec209_198000_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "333258b24013ad4e29d772dd06b5c9d840e65832db25c4521b2a4b6613a8c15c"
+        },
+        "beat_conv0": {
+          "file": "rec209_198000_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "6264bc6eece0e18c262760b416728320b78fa1844141e774c182cfd14fff3a3f"
+        },
+        "beat_pool0": {
+          "file": "rec209_198000_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "fada673a52efd60d4feed1af99c0561d14a9761c7125d2267c345741ef118366"
+        },
+        "beat_conv1": {
+          "file": "rec209_198000_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "a0af4c3d8b23296b61781daa4b28c63eb25b606b5937a3e55f2f33a1917e91ff"
+        },
+        "beat_pool1": {
+          "file": "rec209_198000_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "7be1b06ced683b036cd9418f0299c5ad677e879d7abfbd63df423fa10ad356e7"
+        },
+        "beat_conv2": {
+          "file": "rec209_198000_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "8ad2fe3696efd9a7517f82566205278885f94efa887d6e0af1dcf1af86676e0e"
+        },
+        "beat_pool2": {
+          "file": "rec209_198000_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "cd0414d5a21154d8d4d5cd18f60d4112ba35580aabb698227fe3ae37f68697e0"
+        },
+        "beat_conv3": {
+          "file": "rec209_198000_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "7bf2e1e08e0f98b9832e57bd5941f4615b0b96d066a1af5427f4608101029bf9"
+        },
+        "beat_gap": {
+          "file": "rec209_198000_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            239,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "3d475d436b9f290a1bf8ba770540bdac4dc7fe1ae231eea03c56b5445b92654f"
+        },
+        "beat_fc1": {
+          "file": "rec209_198000_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            239,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "7ebaded593c75d226dd945dc9d6285dd2087bfe4f163a360783bc3db533ebef6"
+        },
+        "beat_logits": {
+          "file": "rec209_198000_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            239,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "84ae386f9fd04a8df0f71411ed6859c272080d949599b2c4f34cdc9184728db4"
+        },
+        "beat_pred": {
+          "file": "rec209_198000_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            239
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "e5c07e25e37052c9f293acc0a12cf2e39c1ac6189f34a82a4aa9f80587796a65"
+        },
+        "beat_label": {
+          "file": "rec209_198000_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            239
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "efa92ace6d495961acd200b4a4ac5655135f8fb7dcc9782b028e931da1e5a4d7"
+        }
+      }
+    },
+    {
+      "name": "rec223_187200",
+      "record": 223,
+      "start_sample": 187200,
+      "n_samples": 43200,
+      "adc_zero": 1024,
+      "n_detections": 192,
+      "n_beats": 190,
+      "arrays": {
+        "adc": {
+          "file": "rec223_187200_adc.bin",
+          "dtype": "int16",
+          "shape": [
+            43200
+          ],
+          "meaning": "raw ADC counts (segment start = zero state everywhere)",
+          "sha256": "f8c963477a4ea1519cb6892eb129befadc2078bdff0b72e2c74046acf2ed30b2"
+        },
+        "pt_hp": {
+          "file": "rec223_187200_pt_hp.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins band-pass (LP+HP) output per sample",
+          "sha256": "931cf4e201da4f04b903c5716cd84aef7b2bbfef3abf6074a0058a93e9ba5360"
+        },
+        "pt_d": {
+          "file": "rec223_187200_pt_d.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins derivative output per sample",
+          "sha256": "98e58d935953cca10f0ca573202cf245cf3b7f8b2cb710d4d1dcf47158242ebe"
+        },
+        "pt_mwi": {
+          "file": "rec223_187200_pt_mwi.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "Pan-Tompkins MWI output per sample",
+          "sha256": "9f748a2d8b360a94002047d4aa5385eea351bd31d9edf9ca10aa9db33115b062"
+        },
+        "filt": {
+          "file": "rec223_187200_filt.bin",
+          "dtype": "int32",
+          "shape": [
+            43200
+          ],
+          "meaning": "0.5-40 Hz filter output, ADC * 2^12 (Q20 coefficients, int64 acc)",
+          "sha256": "8e26f89d4753ede04f54b19f30593632d7c24cb59fbb288f2a4cea80b643a614"
+        },
+        "det_r_coarse": {
+          "file": "rec223_187200_det_r_coarse.bin",
+          "dtype": "int32",
+          "shape": [
+            192
+          ],
+          "meaning": "detections: band-pass peak - 38 (sorted)",
+          "sha256": "d12fa1cfca7c855dfc7f643f95c21d6de8d89965cab1daaa0da3f329e9711469"
+        },
+        "det_searchback": {
+          "file": "rec223_187200_det_searchback.bin",
+          "dtype": "int8",
+          "shape": [
+            192
+          ],
+          "meaning": "1 if the detection came from search-back",
+          "sha256": "5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5"
+        },
+        "det_r_refined": {
+          "file": "rec223_187200_det_r_refined.bin",
+          "dtype": "int32",
+          "shape": [
+            192
+          ],
+          "meaning": "integer abs refinement on filt (+-18 samples, delay 2)",
+          "sha256": "b1fc116179546acdfe6270519562bbc23a479778f489a0f7ca14ad6ed3c389a7"
+        },
+        "beat_det_index": {
+          "file": "rec223_187200_beat_det_index.bin",
+          "dtype": "int32",
+          "shape": [
+            190
+          ],
+          "meaning": "index into the detections of each classified beat",
+          "sha256": "f07a2ec360cc329d38c704449024be060a47f8d680b1b55e7141c96cb6f7b892"
+        },
+        "beat_window": {
+          "file": "rec223_187200_beat_window.bin",
+          "dtype": "int32",
+          "shape": [
+            190,
+            360
+          ],
+          "meaning": "filt[R + 2 - 180 : R + 2 + 180]",
+          "sha256": "2d89b05c9280c1477d6041d964eb2e4300017b5dfda14815c623e182f376f4ae"
+        },
+        "beat_z_q": {
+          "file": "rec223_187200_beat_z_q.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            360
+          ],
+          "meaning": "integer z-score, scale 2^4, saturated +-127",
+          "sha256": "e384f3368f7cbf2ff70f25e108826b392c830bbbe2f90a6f36ff228a685bae0c"
+        },
+        "beat_rr_parts": {
+          "file": "rec223_187200_beat_rr_parts.bin",
+          "dtype": "int32",
+          "shape": [
+            190,
+            4
+          ],
+          "meaning": "rr_prev, rr_next, sum of up to 8 past RR, count (samples, clipped 72..1080)",
+          "sha256": "38040b5faab8adeba9e9ab344abe899485adcc4e2bfcd8f1a88208c7d1264970"
+        },
+        "beat_rr_q": {
+          "file": "rec223_187200_beat_rr_q.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            4
+          ],
+          "meaning": "quantised RR features with RR_EXP",
+          "sha256": "d7ab8f9d972006edc37f7beef66c23c05c19a586237a5403a91b5c2b19ac16b9"
+        },
+        "beat_conv0": {
+          "file": "rec223_187200_beat_conv0.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            16,
+            360
+          ],
+          "meaning": "CNN conv0 output (after requantise / ReLU / saturate)",
+          "sha256": "9f08912d2eed7eeb4536e56e7ddf67e45632835ffc82d5bd5191d6a863bbe0e1"
+        },
+        "beat_pool0": {
+          "file": "rec223_187200_beat_pool0.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            16,
+            180
+          ],
+          "meaning": "CNN pool0 output (after requantise / ReLU / saturate)",
+          "sha256": "952bd93edae22ce3344f38e51ccedcbca6f43bf2da358f2b7621a5995ec46f24"
+        },
+        "beat_conv1": {
+          "file": "rec223_187200_beat_conv1.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            32,
+            180
+          ],
+          "meaning": "CNN conv1 output (after requantise / ReLU / saturate)",
+          "sha256": "6f2703b7f50d70d91e9f2d5ee4a8d9393d293b06713b0db9eb47adde31279c92"
+        },
+        "beat_pool1": {
+          "file": "rec223_187200_beat_pool1.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            32,
+            90
+          ],
+          "meaning": "CNN pool1 output (after requantise / ReLU / saturate)",
+          "sha256": "035e58f3e3dc87d67a3a9e3b739a81306bfc1747ac985c7a9afcd14930365b89"
+        },
+        "beat_conv2": {
+          "file": "rec223_187200_beat_conv2.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            64,
+            90
+          ],
+          "meaning": "CNN conv2 output (after requantise / ReLU / saturate)",
+          "sha256": "ecea5d0f4d6e27abd13df8a9d90c85a7c68918c8c84bc8c483c09b5dd0b77c08"
+        },
+        "beat_pool2": {
+          "file": "rec223_187200_beat_pool2.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            64,
+            45
+          ],
+          "meaning": "CNN pool2 output (after requantise / ReLU / saturate)",
+          "sha256": "19162a8591a9f92157c62ba40346274a056e2cee7dc3bd1507c3bd61535bf50e"
+        },
+        "beat_conv3": {
+          "file": "rec223_187200_beat_conv3.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            64,
+            45
+          ],
+          "meaning": "CNN conv3 output (after requantise / ReLU / saturate)",
+          "sha256": "3198d9d540de7d479dbf8fa85a6eb9628637913cfb9face4810701a28c45e022"
+        },
+        "beat_gap": {
+          "file": "rec223_187200_beat_gap.bin",
+          "dtype": "int32",
+          "shape": [
+            190,
+            64
+          ],
+          "meaning": "GAP sum over 45 positions",
+          "sha256": "e635615d027aef1dffa59de8cf1d4262217221db5db4086691dc8201585777df"
+        },
+        "beat_fc1": {
+          "file": "rec223_187200_beat_fc1.bin",
+          "dtype": "int8",
+          "shape": [
+            190,
+            32
+          ],
+          "meaning": "FC1 output",
+          "sha256": "3dc9702d2e6c1da82a8e4f82a8d1ee499d5edd28cc8bb590bc36c6c1f8bd1e70"
+        },
+        "beat_logits": {
+          "file": "rec223_187200_beat_logits.bin",
+          "dtype": "int32",
+          "shape": [
+            190,
+            4
+          ],
+          "meaning": "FC2 logits (common scale)",
+          "sha256": "784c0f6fcf78912c63e08bb300a5a992ab9a6c999045ba396616c5702d0b49eb"
+        },
+        "beat_pred": {
+          "file": "rec223_187200_beat_pred.bin",
+          "dtype": "int8",
+          "shape": [
+            190
+          ],
+          "meaning": "argmax: 0 N, 1 S, 2 V, 3 F",
+          "sha256": "0954c7cfcf8f257eb41f1a4ea7ddf03493f6eae2c9db39314f7561cd5c58e9ee"
+        },
+        "beat_label": {
+          "file": "rec223_187200_beat_label.bin",
+          "dtype": "int8",
+          "shape": [
+            190
+          ],
+          "meaning": "AAMI label of the matched annotation (-1 Q, -2 unmatched)",
+          "sha256": "a7ee67d04a0b4520caef5e3c9a4e58e966150b4e58824dcfa05f14667084b56d"
+        }
+      }
+    }
+  ],
+  "notes": "Export for the C / RISC-V port: weights.h + golden vectors of the fully integer pipeline (DS1 only).\n\nweights.h : every integer constant of the deployed pipeline (filter Q20 coefficients, Pan-Tompkins\n            parameters, beat/RR constants, int8 CNN weights, int32 biases, per-channel shifts).\ngolden/   : contiguous DS1 ADC segments; each segment is processed FROM ZERO STATE (as the C code will):\n  per sample : adc (int16), pt_hp / pt_d / pt_mwi (int32), filt (int32, ADC * 2^12)\n  detections : r_coarse, searchback flag, r_refined (integer abs refinement)\n  per beat   : r, window (int32 x 360, filtered), z_q (int8 x 360), rr_parts (rr_prev, rr_next, sum8, n8),\n               rr_q (int8 x 4), conv0..3 (int8, before pooling), pool0..2, gap (int32), fc1 (int8),\n               logits (int32 x 4), pred, label (AAMI 0..3, -1 Q, -2 unmatched detection)\n  Raw little-endian .bin files + manifest.json (dtype, shape, meaning, SHA-256); a copy of the manifest is\n  written to export/golden_manifest.json (versioned; the .bin files are reproducible and not versioned). The C port must match ALL\n  of them bit-exactly (Week 3 requirement); float results are irrelevant for this check.\nSegments: for each chosen record the window of --seconds with the most non-N annotated beats.\n",
+  "total": {
+    "beats": 1306,
+    "labels": {
+      "-2": 3,
+      "-1": 1,
+      "0": 649,
+      "1": 307,
+      "2": 295,
+      "3": 51
+    }
+  }
+}

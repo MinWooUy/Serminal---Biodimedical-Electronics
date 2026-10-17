@@ -1,0 +1,9 @@
+built SVDB cache E:\PROJECTS\1DCNN\data\cache\svdb_beats_e1e1e470 in 374 s: kept 60/78, excluded [801, 802, 805, 826, 841, 851, 852, 857, 860, 862, 865, 866, 871, 878, 879, 884, 886, 890]
+
+set                                            N       S       V       F    total
+DS1 (MIT-BIH, train/val)                   45703     909    3761     412    50785
+SVDB all                                  126866    9232    5798      23   141919
+SVDB n25 (all S/V/F + 25% N, seed 0)       31716    9232    5798      23    46769
+DS1 + SVDB all                            172569   10141    9559     435   192704
+DS1 + SVDB n25 (all S/V/F + 25% N, seed 0)   77419   10141    9559     435    97554
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_ecd32459_svdb_beats
