@@ -25,6 +25,8 @@ module conv1d_ifmap_loader #(
 	input wire signed [DATA_W-1:0] i_sram_rd_data,
 	input wire i_sram_rd_valid,
 	
+	// Backpressure: cờ full của từng lane FIFO (từ ifmap_feeder.o_mem_full)
+	input wire [ARRAY_ROWS-1:0] i_lane_full,
 	// Write into IFMAP feeder FIFOs
 	output reg [ARRAY_ROWS-1:0] o_ifm_wr_en,
 	output reg signed [ARRAY_ROWS*DATA_W-1:0] o_ifm_wr_data,
@@ -46,6 +48,12 @@ module conv1d_ifmap_loader #(
 	assign o_state_dbg = state_q;
 	assign o_busy = (state_q != S_IDLE) && (state_q != S_DONE);
 	
+	// Current physical row (khai báo trước wr_ok vì wr_ok dùng nó)
+	reg [ROW_W-1:0] row_cnt_q;
+
+	// Lane đích còn chỗ thì mới ghi
+	wire wr_ok = ~i_lane_full[row_cnt_q];
+
 	// AGU
 	wire [ADDR_W-1:0] agu_addr;
 	wire agu_valid;
@@ -61,7 +69,7 @@ module conv1d_ifmap_loader #(
 	wire agu_advance;
 	
 	assign agu_start = (state_q == S_IDLE) && i_start;
-	assign agu_advance = (state_q == S_WRITE);
+	assign agu_advance = (state_q == S_WRITE) && wr_ok; // Chỉ tăng địa chỉ khi ghi được
 	
 	// Số window cần tạo = số active row
 	wire [CFG_W-1:0] agu_num_windows;
@@ -92,9 +100,6 @@ module conv1d_ifmap_loader #(
 		.o_done(agu_done)
 	);
 	
-	// Current physical row
-	reg [ROW_W-1:0] row_cnt_q;
-	
 	// SRAM response hold register
 	reg signed [DATA_W-1:0] rd_data_q;
 	
@@ -107,7 +112,7 @@ module conv1d_ifmap_loader #(
 		o_ifm_wr_en = {ARRAY_ROWS{1'b0}};
 		o_ifm_wr_data = {ARRAY_ROWS*DATA_W{1'b0}};
 		
-		if(state_q == S_WRITE) begin
+		if(state_q == S_WRITE && wr_ok) begin
 			o_ifm_wr_en[row_cnt_q] = 1'b1;
 			o_ifm_wr_data[row_cnt_q*DATA_W +: DATA_W] = rd_data_q;
 		end
@@ -146,15 +151,17 @@ module conv1d_ifmap_loader #(
 				end
 				
 				S_WRITE: begin
-					if(agu_k_last) begin
-						if(agu_window_last) begin
-							state_q <= S_DONE;
+					if(wr_ok) begin
+						if(agu_k_last) begin
+							if(agu_window_last) begin
+								state_q <= S_DONE;
+							end else begin
+								row_cnt_q <= row_cnt_q + 1'b1;
+								state_q <= S_REQ;
+							end
 						end else begin
-							row_cnt_q <= row_cnt_q + 1'b1;
 							state_q <= S_REQ;
 						end
-					end else begin
-						state_q <= S_REQ;
 					end
 				end
 				

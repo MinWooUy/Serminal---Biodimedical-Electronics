@@ -74,6 +74,8 @@ module conv1d_ifmap_feeder_top #(
 		.i_window_step(i_window_step),
 		.i_active_rows(i_active_rows),
 		
+		.i_lane_full(feeder_mem_full),
+
 		// SRAM read
 		.o_sram_rd_en(o_sram_rd_en),
 		.o_sram_rd_addr(o_sram_rd_addr),

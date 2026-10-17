@@ -60,7 +60,10 @@ module conv1d_weight_feeder_top#(
 	// Loader --> weight feeder
 	wire [ARRAY_COLS-1:0] loader_wr_en;
 	wire signed [ARRAY_COLS*DATA_W-1:0] loader_wr_data;
-	
+
+	// Weight feeder --> loader: cờ full từng lane (backpressure)
+	wire [ARRAY_COLS-1:0] feeder_mem_full;
+
 	// K WIDTH ADAPTATION
 	wire [K_W-1:0] feeder_k_len;
 	
@@ -93,6 +96,8 @@ module conv1d_weight_feeder_top#(
       .i_base_addr(i_base_addr),
       .i_k_len(i_k_len),
       .i_active_cols(i_active_cols),
+
+      .i_lane_full(feeder_mem_full),
 
 		// SRAM read
 
@@ -138,14 +143,15 @@ module conv1d_weight_feeder_top#(
 
 		// SA STREAM
       .o_data(o_data),
-		.o_valid(o_valid),
+			.o_valid(o_valid),
       .o_first(o_first),
       .o_last(o_last),
 
        // STATUS
        .o_ready(o_ready),
        .o_done(o_feed_done),
-       .o_mem_empty(o_mem_empty)
+       .o_mem_empty(o_mem_empty),
+       .o_mem_full(feeder_mem_full)
     );
 
 
