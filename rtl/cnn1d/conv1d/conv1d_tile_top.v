@@ -29,7 +29,7 @@ module conv1d_tile_top #(
 	parameter IFMAP_MEM_DEPTH = 1024,
 	parameter WGT_MEM_DEPTH = 1024,
 	
-	parameter FEEDER_DEPTH = 16,
+	parameter FEEDER_DEPTH = 1024,
 	parameter K_W = 16,
 	
 	parameter ARRAY_ROWS = 3,
