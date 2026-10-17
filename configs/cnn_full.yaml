@@ -1,0 +1,23 @@
+# Step 4: CNN Full, record-grouped 5-fold CV on DS1, OOF macro-F1.
+name: cnn_full
+dataset: DS1
+beats_config: configs/beats.yaml        # R source = detector (default)
+model:
+  channels: [64, 128, 256, 512]
+  kernels: [7, 5, 3, 3]
+  hidden: 256                           # head 516 -> 256 -> 4
+  dropout_conv: 0.2                     # after MaxPool of blocks 1-3
+  dropout_head: 0.5                     # before the last FC
+train:
+  batch_size: 256
+  max_epochs: 60
+  lr: 1.0e-3
+  weight_decay: 1.0e-2
+  class_weight: sqrt_inverse            # from inner-train
+  plateau_factor: 0.5
+  plateau_patience: 3                   # on weighted inner-val loss
+  early_stop_patience: 6                # on weighted inner-val loss
+  inner_val_frac: 0.2                   # last 20% (time) of each train record
+  inner_buffer_s: 1.0                   # dropped around the cut
+seeds: [42, 43, 44]
+folds: [0, 1, 2, 3, 4]

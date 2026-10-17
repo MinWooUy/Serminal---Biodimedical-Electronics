@@ -1,0 +1,17 @@
+name: smoke_ds1_eval_code
+lite: 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3
+full: 2026-10-15_961709ff_final_cnn_full
+beats:
+  rr_source: detector
+  half_window: 180
+  match_tol_ms: 150
+  rr_avg_n: 8
+  rr_clip_s:
+  - 0.2
+  - 3.0
+  beat_norm:
+    type: zscore
+    eps: 1.0e-06
+    clip: 8.0
+records:
+- 208

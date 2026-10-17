@@ -1,0 +1,26 @@
+pooled OOF over 5 folds; mean ± std over seeds
+model                macro-F1 | N: P / R / F1 | S: P / R / F1 | V: P / R / F1 | F: P / R / F1
+Full         0.4336 ± 0.0113 | 0.970 / 0.849 / 0.905 | 0.212 / 0.193 / 0.201 | 0.487 / 0.879 / 0.626 | 0.001 / 0.007 / 0.002
+Lite         0.4379 ± 0.0282 | 0.969 / 0.887 / 0.926 | 0.140 / 0.162 / 0.147 | 0.570 / 0.848 / 0.678 | 0.001 / 0.001 / 0.001
+Baseline RR  0.3788 ± 0.0000 | 0.985 / 0.735 / 0.842 | 0.038 / 0.193 / 0.063 | 0.607 / 0.550 / 0.577 | 0.017 / 0.364 / 0.033
+
+per-class std (P / R / F1):
+Full         N: 0.000/0.025/0.014 | S: 0.014/0.052/0.035 | V: 0.047/0.007/0.041 | F: 0.000/0.002/0.001
+Lite         N: 0.004/0.047/0.024 | S: 0.068/0.049/0.060 | V: 0.065/0.068/0.033 | F: 0.001/0.001/0.001
+Baseline RR  N: 0.000/0.000/0.000 | S: 0.000/0.000/0.000 | V: 0.000/0.000/0.000 | F: 0.000/0.000/0.000
+
+(a) stop epoch (early stopping on inner-val loss):
+  Full: stop 13.9 ± 7.1 (min 7, max 26); best epoch 7.9 ± 7.1
+  Lite: stop 17.7 ± 13.2 (min 8, max 50); best epoch 11.7 ± 13.2
+
+(c) pooled OOF confusion matrices (rows true N/S/V/F, cols predicted)
+  Full seed 42: 38041   602  2557  4503 ;   544   164   190    11 ;   371    24  3330    36 ;   287     0   122     3
+  Full seed 43: 40125   453  3823  1302 ;   573   135   187    14 ;   368    86  3280    27 ;   292     0   118     2
+  Full seed 44: 38258   725  3337  3383 ;   570   228    92    19 ;   361    48  3312    40 ;   275     0   133     4
+  Lite seed 42: 39870   627  2112  3094 ;   569   137   197     6 ;   353    30  3353    25 ;   261     0   151     0
+  Lite seed 43: 42946   739  1432   586 ;   522   196   184     7 ;   709   127  2895    30 ;   338     0    73     1
+  Lite seed 44: 38762  1565  2887  2489 ;   577   108   208    16 ;   336    81  3324    20 ;   207     0   205     0
+
+(b) saved outer_f1_per_epoch.png (dotted = mean stop epoch); note: per-fold macro-F1, not pooled, so not directly comparable to the pooled baseline line
+
+GATE 4: recall > 0 for every class (every seed): Full True, Lite False; Full > baseline: True (0.4336 vs 0.3788) -> FAIL

@@ -1,0 +1,9 @@
+final training on all DS1 (22 records), seed 42, 3 epochs, loss focal, class weights sqrt_inverse -> E:\PROJECTS\1DCNN\results\2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3
+extra training-only beats {'source': 'svdb', 'variant': 'n25', 'sample_seed': 0} from svdb_beats_e1e1e470: 46769 -> inner-train only
+inner-train 87341 beats (N 68394, S 9871, V 8687, F 389), inner-val 10155, buffer 58
+class weights [0.2031, 0.5345, 0.5698, 2.6926]; RR mu [0.7369999885559082, 0.7738000154495239, 0.7574999928474426, 0.9708999991416931] sigma [0.2152000069618225, 0.21170000731945038, 0.17630000412464142, 0.15960000455379486]
+params 23796
+    epoch   1  train 0.3031  inner-val 0.2485 *  lr 1.0e-03  5.06s
+    epoch   2  train 0.1904  inner-val 0.2443 *  lr 1.0e-03  4.32s
+    epoch   3  train 0.1736  inner-val 0.2372 *  lr 1.0e-03  4.37s
+saved -> E:\PROJECTS\1DCNN\results\2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3\model.pt (no held-out data: this run has no OOF metrics)

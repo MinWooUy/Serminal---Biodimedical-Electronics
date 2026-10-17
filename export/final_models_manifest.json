@@ -1,0 +1,27 @@
+{
+  "lite": {
+    "dir": "2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3",
+    "files": {
+      "config.yaml": "86d14b16d109a32a904a0b64bc305947ca1354a67ff1fe2016e1684b1717b601",
+      "curve.png": "67ac74a2b8bc3ce80884811ba5c35e74759d7c53c0c65d8f9dc5b30c0f4d1ed4",
+      "history.json": "72ad7d50205922e998e68fd92ed6d366584f1f2481b94d8e8222f7eb6e6cb684",
+      "lite_int8.npz": "4940bef2dc096a2c64ec6d7f5041776bfa7eb77d3c25db2e6f7745db5e55da35",
+      "log.txt": "48f8b97a369f531d4cd055f3ecc321b27a4fdec1940d23506e0a4e019725bba2",
+      "model.pt": "3288740330f13117ce2915eb900fe76da6c1da3f7bb01ae353e1d8dd4027e0b8",
+      "quantize.json": "2c5203c164fd19d20e4d23acf19a859d0ea3c6159d9b2492280cea203728803a",
+      "quantize.log": "e2bbe866481f027ec4c246e84324d8914397eb91116fdfc85d7e8907eed48dca"
+    }
+  },
+  "full": {
+    "dir": "2026-10-15_961709ff_final_cnn_full",
+    "files": {
+      "config.yaml": "ad4aa4c35274378a7c9a0243c36b64121617b024a03bdea773952cda3aa976a2",
+      "curve.png": "cbd315e8035430066cd6ec151bb39e389ae14354faf6ba3cbe8fcf3d275183de",
+      "history.json": "846ae003b216ffbf176e969d0e9d3611cf00a662e8d18a62fc926dda5d415e36",
+      "log.txt": "715a4fbfbff5004d9bb8c53bde7b2699d487500dc54f63884c2566d3a7b90b29",
+      "model.pt": "507e2827a210d1687e245734b241b17559eb02db04f3185f3959d40d97728adb"
+    }
+  },
+  "weights_h_sha256": "1c84f26ba1f22773264982156a40b7c80a5545688f0ac769fba9bce056d0032e",
+  "note": "lite_int8.npz is the single source of the integer Lite constants: export/weights.h is generated from it, and the DS2 'Lite integer' branch loads it (no re-quantisation)."
+}

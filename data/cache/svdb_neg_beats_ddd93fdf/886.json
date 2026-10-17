@@ -1,0 +1,1 @@
+{"rec": 886, "reason": "negative-channel fallback", "chosen": 1, "n_ann": {"N": 2169, "S": 26, "V": 28, "F": 0, "Q": 0}, "fn": {"N": 0, "S": 0, "V": 2, "F": 0, "Q": 0}, "fp": 1, "vf_det": 0, "lost_first_last": {"N": 2, "S": 0, "V": 0, "F": 0, "Q": 0}, "lost_edge": {"N": 0, "S": 0, "V": 0, "F": 0, "Q": 0}, "fp_kept": 1, "n_beats": 2220}

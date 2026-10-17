@@ -1,0 +1,817 @@
+config configs\ablation\A2b_focal_sqrtinv_lite_e20.yaml -> E:\PROJECTS\1DCNN\results\2026-10-14_f47e032d_A2b_focal_sqrtinv_lite_e20
+torch 2.14.1+cu126, CUDA 12.6, device cuda (NVIDIA GeForce RTX 3050 Laptop GPU)
+cache E:\PROJECTS\1DCNN\data\cache\beats_detector_deffe947 : 50785 beats N 45703, S 909, V 3761, F 412
+model params: 23796
+
+[seed 42 fold 0] outer 9313  inner-train 33101  inner-val 8324  buffer 47
+  inner-train per class N 30413, S 551, V 2100, F 37 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.098, 0.727, 0.372, 2.804]  rr mu [0.7770000100135803, 0.7789999842643738, 0.7770000100135803, 0.9990000128746033] sigma [0.21899999678134918, 0.2150000035762787, 0.1809999942779541, 0.1599999964237213]
+    epoch   1  train 0.3315  inner-val 0.3452 *  lr 1.0e-03  2.23s  | diag outer F1 0.594 R 1.00/0.39/0.78/0.00
+    epoch   2  train 0.2062  inner-val 0.3228 *  lr 1.0e-03  1.45s  | diag outer F1 0.664 R 1.00/0.64/0.97/0.00
+    epoch   3  train 0.1700  inner-val 0.3356    lr 1.0e-03  1.41s  | diag outer F1 0.675 R 1.00/0.69/0.99/0.00
+    epoch   4  train 0.1640  inner-val 0.3016 *  lr 1.0e-03  1.42s  | diag outer F1 0.675 R 1.00/0.71/0.91/0.00
+    epoch   5  train 0.1469  inner-val 0.3520    lr 1.0e-03  1.45s  | diag outer F1 0.690 R 0.99/0.79/0.99/0.00
+    epoch   6  train 0.1438  inner-val 0.4001    lr 1.0e-03  1.43s  | diag outer F1 0.684 R 1.00/0.72/0.94/0.00
+    epoch   7  train 0.1336  inner-val 0.4135    lr 1.0e-03  1.46s  | diag outer F1 0.681 R 0.99/0.75/1.00/0.00
+    epoch   8  train 0.1309  inner-val 0.3396    lr 5.0e-04  1.52s  | diag outer F1 0.703 R 1.00/0.89/0.99/0.00
+    epoch   9  train 0.1200  inner-val 0.3943    lr 5.0e-04  1.55s  | diag outer F1 0.702 R 1.00/0.83/0.98/0.00
+    epoch  10  train 0.1175  inner-val 0.4073    lr 5.0e-04  1.47s  | diag outer F1 0.698 R 1.00/0.80/0.98/0.00
+    epoch  11  train 0.1115  inner-val 0.4475    lr 5.0e-04  1.50s  | diag outer F1 0.699 R 1.00/0.83/0.94/0.00
+    epoch  12  train 0.1166  inner-val 0.4482    lr 2.5e-04  1.52s  | diag outer F1 0.705 R 0.99/0.85/0.98/0.00
+    epoch  13  train 0.1021  inner-val 0.4705    lr 2.5e-04  1.48s  | diag outer F1 0.696 R 1.00/0.82/0.93/0.00
+    epoch  14  train 0.1042  inner-val 0.4268    lr 2.5e-04  1.49s  | diag outer F1 0.691 R 1.00/0.82/0.90/0.00
+    epoch  15  train 0.1035  inner-val 0.4472    lr 2.5e-04  1.56s  | diag outer F1 0.702 R 1.00/0.82/0.98/0.00
+    epoch  16  train 0.1011  inner-val 0.4555    lr 1.3e-04  1.60s  | diag outer F1 0.682 R 1.00/0.82/0.82/0.00
+    epoch  17  train 0.0952  inner-val 0.4503    lr 1.3e-04  1.51s  | diag outer F1 0.690 R 1.00/0.82/0.89/0.00
+    epoch  18  train 0.0946  inner-val 0.4765    lr 1.3e-04  1.48s  | diag outer F1 0.696 R 1.00/0.82/0.92/0.00
+    epoch  19  train 0.0942  inner-val 0.4541    lr 1.3e-04  1.50s  | diag outer F1 0.689 R 1.00/0.81/0.89/0.00
+    epoch  20  train 0.0945  inner-val 0.4676    lr 6.3e-05  1.52s  | diag outer F1 0.693 R 1.00/0.82/0.90/0.00
+  done: stopped at epoch 20 (best epoch 4), 35.0 s (1.53 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3016
+  outer fold (OOF) macro-F1 0.6933   macro-F1 (N/S/V) 0.9244   SVEB Se 0.8182 +P 1.0000   VEB Se 0.9017 +P 0.9716
+  cls       P       R      F1      n
+    N  0.9501  0.9967  0.9729   7857
+    S  1.0000  0.8182  0.9000     99
+    V  0.8990  0.9017  0.9004    987
+    F  0.0000  0.0000  0.0000    370
+  confusion (rows = true N/S/V/F, cols = pred):
+      7831      0     26      0
+        18     81      0      0
+        97      0    890      0
+       296      0     74      0
+
+[seed 42 fold 1] outer 11657  inner-train 31270  inner-val 7813  buffer 45
+  inner-train per class N 28145, S 312, V 2449, F 364 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.176, 1.675, 0.598, 1.551]  rr mu [0.7820000052452087, 0.7820000052452087, 0.781000018119812, 1.0010000467300415] sigma [0.21199999749660492, 0.21199999749660492, 0.17900000512599945, 0.1509999930858612]
+    epoch   1  train 0.3719  inner-val 0.3654 *  lr 1.0e-03  1.51s  | diag outer F1 0.425 R 0.97/0.00/0.86/0.00
+    epoch   2  train 0.2037  inner-val 0.3361 *  lr 1.0e-03  1.38s  | diag outer F1 0.450 R 0.97/0.04/0.90/0.00
+    epoch   3  train 0.1605  inner-val 0.3268 *  lr 1.0e-03  1.50s  | diag outer F1 0.446 R 0.97/0.13/0.72/0.00
+    epoch   4  train 0.1456  inner-val 0.3850    lr 1.0e-03  1.41s  | diag outer F1 0.455 R 0.97/0.09/0.86/0.00
+    epoch   5  train 0.1340  inner-val 0.3798    lr 1.0e-03  1.44s  | diag outer F1 0.482 R 0.97/0.15/0.86/0.00
+    epoch   6  train 0.1222  inner-val 0.4174    lr 1.0e-03  1.36s  | diag outer F1 0.512 R 0.96/0.23/0.92/0.00
+    epoch   7  train 0.1184  inner-val 0.5319    lr 5.0e-04  1.31s  | diag outer F1 0.462 R 0.97/0.07/0.89/0.00
+    epoch   8  train 0.1093  inner-val 0.4521    lr 5.0e-04  1.35s  | diag outer F1 0.522 R 0.97/0.31/0.85/0.00
+    epoch   9  train 0.1069  inner-val 0.4720    lr 5.0e-04  1.41s  | diag outer F1 0.536 R 0.96/0.33/0.90/0.00
+    epoch  10  train 0.1016  inner-val 0.4518    lr 5.0e-04  1.44s  | diag outer F1 0.511 R 0.97/0.25/0.85/0.00
+    epoch  11  train 0.0986  inner-val 0.4602    lr 2.5e-04  1.52s  | diag outer F1 0.528 R 0.97/0.29/0.90/0.00
+    epoch  12  train 0.0975  inner-val 0.4472    lr 2.5e-04  1.51s  | diag outer F1 0.529 R 0.97/0.29/0.91/0.00
+    epoch  13  train 0.0912  inner-val 0.4481    lr 2.5e-04  1.50s  | diag outer F1 0.531 R 0.97/0.29/0.91/0.00
+    epoch  14  train 0.0937  inner-val 0.4554    lr 2.5e-04  1.49s  | diag outer F1 0.541 R 0.96/0.34/0.92/0.00
+    epoch  15  train 0.0923  inner-val 0.4487    lr 1.3e-04  1.39s  | diag outer F1 0.539 R 0.97/0.34/0.91/0.00
+    epoch  16  train 0.0885  inner-val 0.4624    lr 1.3e-04  1.44s  | diag outer F1 0.538 R 0.96/0.32/0.92/0.00
+    epoch  17  train 0.0894  inner-val 0.4819    lr 1.3e-04  1.44s  | diag outer F1 0.538 R 0.96/0.32/0.92/0.00
+    epoch  18  train 0.0894  inner-val 0.4861    lr 1.3e-04  1.48s  | diag outer F1 0.538 R 0.96/0.32/0.93/0.00
+    epoch  19  train 0.0874  inner-val 0.4769    lr 6.3e-05  1.50s  | diag outer F1 0.537 R 0.96/0.32/0.92/0.00
+    epoch  20  train 0.0872  inner-val 0.4874    lr 6.3e-05  1.51s  | diag outer F1 0.533 R 0.96/0.30/0.92/0.00
+  done: stopped at epoch 20 (best epoch 3), 30.8 s (1.44 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3268
+  outer fold (OOF) macro-F1 0.5328   macro-F1 (N/S/V) 0.7104   SVEB Se 0.3026 +P 0.4370   VEB Se 0.9160 +P 0.7174
+  cls       P       R      F1      n
+    N  0.9737  0.9641  0.9689  10622
+    S  0.4370  0.3026  0.3576    390
+    V  0.7174  0.9160  0.8046    643
+    F  0.0000  0.0000  0.0000      2
+  confusion (rows = true N/S/V/F, cols = pred):
+     10241    102    231     48
+       271    118      1      0
+         4     50    589      0
+         2      0      0      0
+
+[seed 42 fold 2] outer 10957  inner-train 31851  inner-val 7933  buffer 44
+  inner-train per class N 28664, S 564, V 2264, F 359 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.194, 1.383, 0.69, 1.733]  rr mu [0.7620000243186951, 0.7649999856948853, 0.7630000114440918, 0.9980000257492065] sigma [0.19200000166893005, 0.18700000643730164, 0.1550000011920929, 0.14100000262260437]
+    epoch   1  train 0.3443  inner-val 0.2785 *  lr 1.0e-03  1.54s  | diag outer F1 0.349 R 0.89/0.04/0.50/0.00
+    epoch   2  train 0.1499  inner-val 0.3028    lr 1.0e-03  1.48s  | diag outer F1 0.372 R 0.90/0.05/0.56/0.00
+    epoch   3  train 0.1121  inner-val 0.2862    lr 1.0e-03  1.48s  | diag outer F1 0.286 R 0.65/0.02/0.77/0.00
+    epoch   4  train 0.0992  inner-val 0.3060    lr 1.0e-03  1.45s  | diag outer F1 0.298 R 0.57/0.01/0.79/0.00
+    epoch   5  train 0.0851  inner-val 0.3340    lr 5.0e-04  1.44s  | diag outer F1 0.314 R 0.52/0.01/0.83/0.00
+    epoch   6  train 0.0791  inner-val 0.3009    lr 5.0e-04  1.44s  | diag outer F1 0.335 R 0.62/0.05/0.68/0.00
+    epoch   7  train 0.0748  inner-val 0.3091    lr 5.0e-04  1.44s  | diag outer F1 0.349 R 0.60/0.06/0.71/0.00
+    epoch   8  train 0.0736  inner-val 0.2685 *  lr 5.0e-04  1.41s  | diag outer F1 0.293 R 0.56/0.09/0.81/0.00
+    epoch   9  train 0.0718  inner-val 0.3022    lr 5.0e-04  1.43s  | diag outer F1 0.358 R 0.59/0.11/0.75/0.00
+    epoch  10  train 0.0683  inner-val 0.3055    lr 5.0e-04  1.44s  | diag outer F1 0.331 R 0.57/0.07/0.75/0.00
+    epoch  11  train 0.0665  inner-val 0.2719    lr 5.0e-04  1.43s  | diag outer F1 0.333 R 0.57/0.08/0.75/0.00
+    epoch  12  train 0.0606  inner-val 0.3131    lr 2.5e-04  1.51s  | diag outer F1 0.321 R 0.56/0.07/0.84/0.00
+    epoch  13  train 0.0621  inner-val 0.2994    lr 2.5e-04  1.51s  | diag outer F1 0.317 R 0.54/0.05/0.84/0.00
+    epoch  14  train 0.0595  inner-val 0.3277    lr 2.5e-04  1.51s  | diag outer F1 0.336 R 0.56/0.06/0.82/0.00
+    epoch  15  train 0.0614  inner-val 0.3092    lr 2.5e-04  1.55s  | diag outer F1 0.334 R 0.55/0.06/0.84/0.00
+    epoch  16  train 0.0576  inner-val 0.3126    lr 1.3e-04  1.54s  | diag outer F1 0.343 R 0.56/0.07/0.84/0.00
+    epoch  17  train 0.0557  inner-val 0.3034    lr 1.3e-04  1.60s  | diag outer F1 0.329 R 0.54/0.06/0.85/0.00
+    epoch  18  train 0.0545  inner-val 0.3371    lr 1.3e-04  1.52s  | diag outer F1 0.338 R 0.56/0.06/0.83/0.00
+    epoch  19  train 0.0582  inner-val 0.3215    lr 1.3e-04  1.54s  | diag outer F1 0.338 R 0.55/0.06/0.81/0.00
+    epoch  20  train 0.0552  inner-val 0.3095    lr 6.3e-05  1.54s  | diag outer F1 0.336 R 0.55/0.07/0.83/0.00
+  done: stopped at epoch 20 (best epoch 8), 31.6 s (1.49 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.2685
+  outer fold (OOF) macro-F1 0.3363   macro-F1 (N/S/V) 0.4484   SVEB Se 0.0703 +P 0.5625   VEB Se 0.8266 +P 0.3788
+  cls       P       R      F1      n
+    N  0.9733  0.5478  0.7010  10104
+    S  0.5625  0.0703  0.1250    128
+    V  0.3784  0.8266  0.5191    715
+    F  0.0000  0.0000  0.0000     10
+  confusion (rows = true N/S/V/F, cols = pred):
+      5535      7    890   3672
+        33      9     79      7
+       111      0    591     13
+         8      0      2      0
+
+[seed 42 fold 3] outer 8982  inner-train 33346  inner-val 8409  buffer 48
+  inner-train per class N 30089, S 570, V 2349, F 338 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.188, 1.366, 0.673, 1.774]  rr mu [0.7720000147819519, 0.7749999761581421, 0.7730000019073486, 0.9980000257492065] sigma [0.21799999475479126, 0.21400000154972076, 0.18000000715255737, 0.1589999943971634]
+    epoch   1  train 0.3498  inner-val 0.2355 *  lr 1.0e-03  1.62s  | diag outer F1 0.306 R 1.00/0.00/0.16/0.00
+    epoch   2  train 0.1739  inner-val 0.1706 *  lr 1.0e-03  1.63s  | diag outer F1 0.319 R 1.00/0.00/0.20/0.00
+    epoch   3  train 0.1386  inner-val 0.1563 *  lr 1.0e-03  1.59s  | diag outer F1 0.364 R 1.00/0.00/0.32/0.03
+    epoch   4  train 0.1209  inner-val 0.1071 *  lr 1.0e-03  1.56s  | diag outer F1 0.398 R 1.00/0.00/0.50/0.00
+    epoch   5  train 0.1137  inner-val 0.0928 *  lr 1.0e-03  1.52s  | diag outer F1 0.468 R 0.99/0.04/0.80/0.03
+    epoch   6  train 0.0989  inner-val 0.0856 *  lr 1.0e-03  1.54s  | diag outer F1 0.489 R 0.97/0.14/0.74/0.03
+    epoch   7  train 0.0961  inner-val 0.0908    lr 1.0e-03  1.46s  | diag outer F1 0.368 R 1.00/0.05/0.28/0.00
+    epoch   8  train 0.0946  inner-val 0.0841 *  lr 1.0e-03  1.48s  | diag outer F1 0.389 R 1.00/0.02/0.42/0.00
+    epoch   9  train 0.0869  inner-val 0.0654 *  lr 1.0e-03  1.50s  | diag outer F1 0.425 R 1.00/0.02/0.63/0.00
+    epoch  10  train 0.0812  inner-val 0.0667    lr 1.0e-03  1.53s  | diag outer F1 0.429 R 1.00/0.02/0.60/0.00
+    epoch  11  train 0.0757  inner-val 0.0801    lr 1.0e-03  1.58s  | diag outer F1 0.378 R 1.00/0.04/0.33/0.00
+    epoch  12  train 0.0799  inner-val 0.0622 *  lr 1.0e-03  1.62s  | diag outer F1 0.433 R 0.99/0.03/0.62/0.00
+    epoch  13  train 0.0792  inner-val 0.0695    lr 1.0e-03  1.60s  | diag outer F1 0.378 R 0.94/0.04/0.58/0.00
+    epoch  14  train 0.0683  inner-val 0.0704    lr 1.0e-03  1.59s  | diag outer F1 0.444 R 1.00/0.11/0.48/0.00
+    epoch  15  train 0.0713  inner-val 0.0662    lr 1.0e-03  1.63s  | diag outer F1 0.434 R 1.00/0.04/0.59/0.00
+    epoch  16  train 0.0663  inner-val 0.0610 *  lr 1.0e-03  1.61s  | diag outer F1 0.484 R 0.99/0.16/0.60/0.00
+    epoch  17  train 0.0670  inner-val 0.0705    lr 1.0e-03  1.69s  | diag outer F1 0.469 R 0.99/0.16/0.57/0.00
+    epoch  18  train 0.0651  inner-val 0.0626    lr 1.0e-03  1.60s  | diag outer F1 0.451 R 0.99/0.06/0.69/0.00
+    epoch  19  train 0.0629  inner-val 0.0639    lr 1.0e-03  1.57s  | diag outer F1 0.344 R 0.87/0.02/0.67/0.00
+    epoch  20  train 0.0583  inner-val 0.0574 *  lr 1.0e-03  1.55s  | diag outer F1 0.433 R 0.98/0.03/0.66/0.00
+  done: stopped at epoch 20 (best epoch 20), 33.1 s (1.57 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.0574
+  outer fold (OOF) macro-F1 0.4332   macro-F1 (N/S/V) 0.5776   SVEB Se 0.0259 +P 0.6250   VEB Se 0.6574 +P 0.8012
+  cls       P       R      F1      n
+    N  0.9510  0.9792  0.9649   7969
+    S  0.6250  0.0259  0.0498    193
+    V  0.7915  0.6574  0.7182    791
+    F  0.0000  0.0000  0.0000     29
+  confusion (rows = true N/S/V/F, cols = pred):
+      7803      0     58    108
+       115      5     71      2
+       266      3    520      2
+        21      0      8      0
+
+[seed 42 fold 4] outer 9876  inner-train 32720  inner-val 8141  buffer 48
+  inner-train per class N 29401, S 559, V 2394, F 366 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.193, 1.4, 0.677, 1.73]  rr mu [0.7850000262260437, 0.7879999876022339, 0.7860000133514404, 0.9990000128746033] sigma [0.21199999749660492, 0.20800000429153442, 0.17800000309944153, 0.15600000321865082]
+    epoch   1  train 0.3593  inner-val 0.3841 *  lr 1.0e-03  1.55s  | diag outer F1 0.463 R 0.99/0.01/0.75/0.00
+    epoch   2  train 0.1847  inner-val 0.3661 *  lr 1.0e-03  1.46s  | diag outer F1 0.468 R 1.00/0.01/0.76/0.00
+    epoch   3  train 0.1533  inner-val 0.4781    lr 1.0e-03  1.50s  | diag outer F1 0.464 R 1.00/0.03/0.71/0.00
+    epoch   4  train 0.1352  inner-val 0.3779    lr 1.0e-03  1.39s  | diag outer F1 0.466 R 1.00/0.02/0.73/0.00
+    epoch   5  train 0.1245  inner-val 0.3896    lr 1.0e-03  1.55s  | diag outer F1 0.466 R 0.99/0.03/0.73/0.00
+    epoch   6  train 0.1104  inner-val 0.3909    lr 5.0e-04  1.50s  | diag outer F1 0.459 R 0.97/0.03/0.75/0.00
+    epoch   7  train 0.1016  inner-val 0.4121    lr 5.0e-04  1.55s  | diag outer F1 0.449 R 0.93/0.03/0.72/0.00
+    epoch   8  train 0.0980  inner-val 0.3956    lr 5.0e-04  1.60s  | diag outer F1 0.465 R 0.99/0.03/0.75/0.00
+    epoch   9  train 0.0958  inner-val 0.3976    lr 5.0e-04  1.70s  | diag outer F1 0.448 R 0.92/0.03/0.73/0.00
+    epoch  10  train 0.0948  inner-val 0.4189    lr 2.5e-04  1.51s  | diag outer F1 0.458 R 0.96/0.03/0.74/0.00
+    epoch  11  train 0.0935  inner-val 0.3943    lr 2.5e-04  1.60s  | diag outer F1 0.453 R 0.93/0.03/0.74/0.00
+    epoch  12  train 0.0885  inner-val 0.3931    lr 2.5e-04  1.56s  | diag outer F1 0.460 R 0.95/0.03/0.77/0.00
+    epoch  13  train 0.0894  inner-val 0.3897    lr 2.5e-04  1.52s  | diag outer F1 0.455 R 0.94/0.03/0.75/0.00
+    epoch  14  train 0.0879  inner-val 0.4109    lr 1.3e-04  1.62s  | diag outer F1 0.454 R 0.93/0.03/0.75/0.00
+    epoch  15  train 0.0840  inner-val 0.4116    lr 1.3e-04  1.59s  | diag outer F1 0.453 R 0.92/0.03/0.75/0.00
+    epoch  16  train 0.0830  inner-val 0.4003    lr 1.3e-04  1.63s  | diag outer F1 0.452 R 0.91/0.04/0.75/0.00
+    epoch  17  train 0.0839  inner-val 0.4049    lr 1.3e-04  1.57s  | diag outer F1 0.458 R 0.95/0.03/0.76/0.00
+    epoch  18  train 0.0805  inner-val 0.4033    lr 6.3e-05  1.53s  | diag outer F1 0.457 R 0.95/0.03/0.75/0.00
+    epoch  19  train 0.0826  inner-val 0.4059    lr 6.3e-05  1.53s  | diag outer F1 0.456 R 0.94/0.03/0.75/0.00
+    epoch  20  train 0.0865  inner-val 0.3944    lr 6.3e-05  1.49s  | diag outer F1 0.459 R 0.95/0.03/0.77/0.00
+  done: stopped at epoch 20 (best epoch 2), 32.6 s (1.55 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3661
+  outer fold (OOF) macro-F1 0.4590   macro-F1 (N/S/V) 0.6120   SVEB Se 0.0303 +P 0.0060   VEB Se 0.7664 +P 0.9958
+  cls       P       R      F1      n
+    N  0.9742  0.9458  0.9598   9151
+    S  0.0060  0.0303  0.0100     99
+    V  0.9958  0.7664  0.8662    625
+    F  0.0000  0.0000  0.0000      1
+  confusion (rows = true N/S/V/F, cols = pred):
+      8655    493      1      2
+        95      3      1      0
+       133      8    479      5
+         1      0      0      0
+
+=== seed 42: pooled OOF over 5 folds ===
+macro-F1 0.4755   macro-F1 (N/S/V) 0.6340   SVEB Se 0.2376 +P 0.2457   VEB Se 0.8160 +P 0.6932
+cls       P       R      F1      n
+  N  0.9646  0.8766  0.9185  45703
+  S  0.2457  0.2376  0.2416    909
+  V  0.6803  0.8160  0.7420   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40065    602   1206   3830
+     532    216    152      9
+     611     61   3069     20
+     328      0     84      0
+--- seed 42, fixed 3 epochs: pooled OOF ---
+macro-F1 0.4298   macro-F1 (N/S/V) 0.5727   SVEB Se 0.1364 +P 0.3123   VEB Se 0.7134 +P 0.5190
+cls       P       R      F1      n
+  N  0.9592  0.9129  0.9355  45703
+  S  0.3123  0.1364  0.1899    909
+  V  0.5070  0.7134  0.5927   3761
+  F  0.0006  0.0024  0.0010    412
+confusion (rows = true N/S/V/F, cols = pred):
+   41723     95   2335   1550
+     625    124    152      8
+     860    178   2683     40
+     289      0    122      1
+--- seed 42, fixed 5 epochs: pooled OOF ---
+macro-F1 0.4795   macro-F1 (N/S/V) 0.6392   SVEB Se 0.1628 +P 0.3766   VEB Se 0.8556 +P 0.7169
+cls       P       R      F1      n
+  N  0.9709  0.8812  0.9239  45703
+  S  0.3766  0.1628  0.2273    909
+  V  0.6940  0.8556  0.7664   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40275    167   1077   4184
+     556    148    194     11
+     388     78   3218     77
+     263      0    148      1
+--- seed 42, fixed 8 epochs: pooled OOF ---
+macro-F1 0.4631   macro-F1 (N/S/V) 0.6175   SVEB Se 0.2486 +P 0.4162   VEB Se 0.7729 +P 0.5242
+cls       P       R      F1      n
+  N  0.9633  0.8902  0.9253  45703
+  S  0.4162  0.2486  0.3113    909
+  V  0.5119  0.7729  0.6159   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40683    238   2477   2305
+     517    226    162      4
+     754     79   2907     21
+     279      0    133      0
+--- seed 42, fixed 12 epochs: pooled OOF ---
+macro-F1 0.4719   macro-F1 (N/S/V) 0.6292   SVEB Se 0.2354 +P 0.2588   VEB Se 0.8304 +P 0.6452
+cls       P       R      F1      n
+  N  0.9668  0.8839  0.9235  45703
+  S  0.2588  0.2354  0.2465    909
+  V  0.6317  0.8304  0.7175   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40399    550   1549   3205
+     523    214    168      4
+     555     63   3123     20
+     308      0    104      0
+--- seed 42, fixed 16 epochs: pooled OOF ---
+macro-F1 0.4711   macro-F1 (N/S/V) 0.6282   SVEB Se 0.2761 +P 0.2069   VEB Se 0.7822 +P 0.6973
+cls       P       R      F1      n
+  N  0.9622  0.8759  0.9170  45703
+  S  0.2069  0.2761  0.2366    909
+  V  0.6859  0.7822  0.7309   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40032    897   1122   3652
+     496    251    155      7
+     735     65   2942     19
+     342      0     70      0
+--- seed 42, fixed 20 epochs: pooled OOF ---
+macro-F1 0.4755   macro-F1 (N/S/V) 0.6340   SVEB Se 0.2376 +P 0.2457   VEB Se 0.8160 +P 0.6932
+cls       P       R      F1      n
+  N  0.9646  0.8766  0.9185  45703
+  S  0.2457  0.2376  0.2416    909
+  V  0.6803  0.8160  0.7420   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40065    602   1206   3830
+     532    216    152      9
+     611     61   3069     20
+     328      0     84      0
+
+[seed 43 fold 0] outer 9313  inner-train 33101  inner-val 8324  buffer 47
+  inner-train per class N 30413, S 551, V 2100, F 37 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.098, 0.727, 0.372, 2.804]  rr mu [0.7770000100135803, 0.7789999842643738, 0.7770000100135803, 0.9990000128746033] sigma [0.21899999678134918, 0.2150000035762787, 0.1809999942779541, 0.1599999964237213]
+    epoch   1  train 0.3202  inner-val 0.3538 *  lr 1.0e-03  1.52s  | diag outer F1 0.545 R 1.00/0.30/0.63/0.00
+    epoch   2  train 0.1999  inner-val 0.3639    lr 1.0e-03  1.48s  | diag outer F1 0.628 R 1.00/0.58/0.72/0.00
+    epoch   3  train 0.1769  inner-val 0.3278 *  lr 1.0e-03  1.53s  | diag outer F1 0.700 R 1.00/0.81/0.98/0.00
+    epoch   4  train 0.1642  inner-val 0.3379    lr 1.0e-03  1.56s  | diag outer F1 0.692 R 1.00/0.87/0.92/0.00
+    epoch   5  train 0.1527  inner-val 0.3591    lr 1.0e-03  1.55s  | diag outer F1 0.699 R 1.00/0.88/0.94/0.00
+    epoch   6  train 0.1411  inner-val 0.3904    lr 1.0e-03  1.55s  | diag outer F1 0.705 R 1.00/0.86/0.98/0.00
+    epoch   7  train 0.1342  inner-val 0.4232    lr 5.0e-04  1.66s  | diag outer F1 0.658 R 1.00/0.87/0.64/0.00
+    epoch   8  train 0.1242  inner-val 0.3975    lr 5.0e-04  1.57s  | diag outer F1 0.706 R 1.00/0.87/0.97/0.00
+    epoch   9  train 0.1281  inner-val 0.4216    lr 5.0e-04  1.56s  | diag outer F1 0.698 R 1.00/0.88/0.96/0.00
+    epoch  10  train 0.1240  inner-val 0.4148    lr 5.0e-04  1.58s  | diag outer F1 0.692 R 1.00/0.87/0.91/0.00
+    epoch  11  train 0.1187  inner-val 0.4515    lr 2.5e-04  1.57s  | diag outer F1 0.705 R 1.00/0.85/0.97/0.00
+    epoch  12  train 0.1118  inner-val 0.4505    lr 2.5e-04  1.59s  | diag outer F1 0.697 R 1.00/0.88/0.92/0.00
+    epoch  13  train 0.1136  inner-val 0.4761    lr 2.5e-04  1.71s  | diag outer F1 0.693 R 1.00/0.87/0.84/0.00
+    epoch  14  train 0.1103  inner-val 0.4673    lr 2.5e-04  1.59s  | diag outer F1 0.698 R 1.00/0.87/0.93/0.00
+    epoch  15  train 0.1122  inner-val 0.4385    lr 1.3e-04  1.59s  | diag outer F1 0.690 R 1.00/0.87/0.88/0.00
+    epoch  16  train 0.1068  inner-val 0.4476    lr 1.3e-04  1.57s  | diag outer F1 0.680 R 1.00/0.88/0.82/0.00
+    epoch  17  train 0.1065  inner-val 0.4649    lr 1.3e-04  1.56s  | diag outer F1 0.689 R 1.00/0.89/0.90/0.00
+    epoch  18  train 0.1034  inner-val 0.4691    lr 1.3e-04  1.57s  | diag outer F1 0.681 R 1.00/0.88/0.84/0.00
+    epoch  19  train 0.1000  inner-val 0.4736    lr 6.3e-05  1.56s  | diag outer F1 0.693 R 1.00/0.89/0.90/0.00
+    epoch  20  train 0.1044  inner-val 0.4631    lr 6.3e-05  1.53s  | diag outer F1 0.686 R 1.00/0.90/0.88/0.00
+  done: stopped at epoch 20 (best epoch 3), 33.0 s (1.57 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3278
+  outer fold (OOF) macro-F1 0.6863   macro-F1 (N/S/V) 0.9151   SVEB Se 0.8990 +P 0.8900   VEB Se 0.8825 +P 0.9743
+  cls       P       R      F1      n
+    N  0.9524  0.9957  0.9736   7857
+    S  0.8900  0.8990  0.8945     99
+    V  0.8719  0.8825  0.8771    987
+    F  0.0000  0.0000  0.0000    370
+  confusion (rows = true N/S/V/F, cols = pred):
+      7823     11     23      0
+        10     89      0      0
+       116      0    871      0
+       265      0    105      0
+
+[seed 43 fold 1] outer 11657  inner-train 31270  inner-val 7813  buffer 45
+  inner-train per class N 28145, S 312, V 2449, F 364 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.176, 1.675, 0.598, 1.551]  rr mu [0.7820000052452087, 0.7820000052452087, 0.781000018119812, 1.0010000467300415] sigma [0.21199999749660492, 0.21199999749660492, 0.17900000512599945, 0.1509999930858612]
+    epoch   1  train 0.3580  inner-val 0.3347 *  lr 1.0e-03  1.42s  | diag outer F1 0.427 R 0.97/0.01/0.81/0.00
+    epoch   2  train 0.2073  inner-val 0.3179 *  lr 1.0e-03  1.42s  | diag outer F1 0.433 R 0.97/0.03/0.79/0.00
+    epoch   3  train 0.1689  inner-val 0.3408    lr 1.0e-03  1.51s  | diag outer F1 0.441 R 0.97/0.12/0.66/0.00
+    epoch   4  train 0.1585  inner-val 0.3703    lr 1.0e-03  1.52s  | diag outer F1 0.475 R 0.96/0.28/0.67/0.00
+    epoch   5  train 0.1442  inner-val 0.3807    lr 1.0e-03  1.50s  | diag outer F1 0.442 R 0.97/0.14/0.62/0.00
+    epoch   6  train 0.1368  inner-val 0.3568    lr 5.0e-04  1.50s  | diag outer F1 0.483 R 0.96/0.13/0.90/0.00
+    epoch   7  train 0.1287  inner-val 0.3366    lr 5.0e-04  1.49s  | diag outer F1 0.498 R 0.96/0.22/0.83/0.00
+    epoch   8  train 0.1272  inner-val 0.3604    lr 5.0e-04  1.50s  | diag outer F1 0.534 R 0.96/0.31/0.91/0.00
+    epoch   9  train 0.1174  inner-val 0.3792    lr 5.0e-04  1.43s  | diag outer F1 0.514 R 0.96/0.31/0.82/0.00
+    epoch  10  train 0.1153  inner-val 0.3625    lr 2.5e-04  1.39s  | diag outer F1 0.529 R 0.96/0.36/0.83/0.00
+    epoch  11  train 0.1086  inner-val 0.3605    lr 2.5e-04  1.44s  | diag outer F1 0.527 R 0.96/0.33/0.86/0.00
+    epoch  12  train 0.1047  inner-val 0.3510    lr 2.5e-04  1.45s  | diag outer F1 0.528 R 0.96/0.35/0.84/0.00
+    epoch  13  train 0.1113  inner-val 0.3556    lr 2.5e-04  1.44s  | diag outer F1 0.512 R 0.96/0.39/0.73/0.00
+    epoch  14  train 0.1123  inner-val 0.3717    lr 1.3e-04  1.41s  | diag outer F1 0.520 R 0.96/0.39/0.77/0.00
+    epoch  15  train 0.1049  inner-val 0.3651    lr 1.3e-04  1.47s  | diag outer F1 0.531 R 0.96/0.38/0.83/0.00
+    epoch  16  train 0.1031  inner-val 0.3673    lr 1.3e-04  1.48s  | diag outer F1 0.525 R 0.96/0.38/0.80/0.00
+    epoch  17  train 0.1059  inner-val 0.3634    lr 1.3e-04  1.43s  | diag outer F1 0.538 R 0.96/0.38/0.86/0.00
+    epoch  18  train 0.1009  inner-val 0.3777    lr 6.3e-05  1.38s  | diag outer F1 0.531 R 0.96/0.37/0.84/0.00
+    epoch  19  train 0.1011  inner-val 0.3707    lr 6.3e-05  1.49s  | diag outer F1 0.536 R 0.96/0.38/0.85/0.00
+    epoch  20  train 0.0985  inner-val 0.3748    lr 6.3e-05  1.41s  | diag outer F1 0.539 R 0.96/0.39/0.86/0.00
+  done: stopped at epoch 20 (best epoch 2), 30.9 s (1.45 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3179
+  outer fold (OOF) macro-F1 0.5392   macro-F1 (N/S/V) 0.7189   SVEB Se 0.3923 +P 0.4487   VEB Se 0.8600 +P 0.6956
+  cls       P       R      F1      n
+    N  0.9768  0.9613  0.9690  10622
+    S  0.4487  0.3923  0.4186    390
+    V  0.6956  0.8600  0.7691    643
+    F  0.0000  0.0000  0.0000      2
+  confusion (rows = true N/S/V/F, cols = pred):
+     10211    103    241     67
+       236    153      1      0
+         4     85    553      1
+         2      0      0      0
+
+[seed 43 fold 2] outer 10957  inner-train 31851  inner-val 7933  buffer 44
+  inner-train per class N 28664, S 564, V 2264, F 359 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.194, 1.383, 0.69, 1.733]  rr mu [0.7620000243186951, 0.7649999856948853, 0.7630000114440918, 0.9980000257492065] sigma [0.19200000166893005, 0.18700000643730164, 0.1550000011920929, 0.14100000262260437]
+    epoch   1  train 0.3133  inner-val 0.2700 *  lr 1.0e-03  1.49s  | diag outer F1 0.343 R 0.94/0.02/0.43/0.00
+    epoch   2  train 0.1475  inner-val 0.2458 *  lr 1.0e-03  1.44s  | diag outer F1 0.350 R 0.88/0.05/0.50/0.00
+    epoch   3  train 0.1220  inner-val 0.2660    lr 1.0e-03  1.40s  | diag outer F1 0.372 R 0.85/0.11/0.62/0.00
+    epoch   4  train 0.1045  inner-val 0.2464    lr 1.0e-03  1.38s  | diag outer F1 0.322 R 0.74/0.09/0.60/0.00
+    epoch   5  train 0.0962  inner-val 0.2613    lr 1.0e-03  1.48s  | diag outer F1 0.356 R 0.77/0.10/0.70/0.00
+    epoch   6  train 0.0913  inner-val 0.2920    lr 5.0e-04  1.44s  | diag outer F1 0.376 R 0.74/0.12/0.68/0.00
+    epoch   7  train 0.0798  inner-val 0.2821    lr 5.0e-04  1.56s  | diag outer F1 0.339 R 0.57/0.08/0.72/0.00
+    epoch   8  train 0.0790  inner-val 0.2981    lr 5.0e-04  1.51s  | diag outer F1 0.316 R 0.54/0.06/0.83/0.00
+    epoch   9  train 0.0787  inner-val 0.3162    lr 5.0e-04  1.57s  | diag outer F1 0.332 R 0.56/0.07/0.79/0.00
+    epoch  10  train 0.0754  inner-val 0.3046    lr 2.5e-04  1.56s  | diag outer F1 0.330 R 0.56/0.07/0.75/0.00
+    epoch  11  train 0.0685  inner-val 0.2876    lr 2.5e-04  1.59s  | diag outer F1 0.333 R 0.55/0.07/0.73/0.00
+    epoch  12  train 0.0670  inner-val 0.2992    lr 2.5e-04  1.60s  | diag outer F1 0.341 R 0.55/0.09/0.73/0.00
+    epoch  13  train 0.0714  inner-val 0.2962    lr 2.5e-04  1.48s  | diag outer F1 0.331 R 0.53/0.08/0.76/0.00
+    epoch  14  train 0.0678  inner-val 0.2950    lr 1.3e-04  1.54s  | diag outer F1 0.333 R 0.54/0.07/0.78/0.00
+    epoch  15  train 0.0666  inner-val 0.2875    lr 1.3e-04  1.61s  | diag outer F1 0.333 R 0.54/0.08/0.77/0.00
+    epoch  16  train 0.0660  inner-val 0.2920    lr 1.3e-04  1.55s  | diag outer F1 0.330 R 0.53/0.07/0.78/0.00
+    epoch  17  train 0.0700  inner-val 0.2936    lr 1.3e-04  1.56s  | diag outer F1 0.339 R 0.54/0.08/0.77/0.00
+    epoch  18  train 0.0676  inner-val 0.2905    lr 6.3e-05  1.59s  | diag outer F1 0.328 R 0.53/0.07/0.77/0.00
+    epoch  19  train 0.0682  inner-val 0.2954    lr 6.3e-05  1.65s  | diag outer F1 0.331 R 0.53/0.07/0.78/0.00
+    epoch  20  train 0.0628  inner-val 0.3013    lr 6.3e-05  1.56s  | diag outer F1 0.333 R 0.53/0.07/0.79/0.00
+  done: stopped at epoch 20 (best epoch 2), 32.4 s (1.53 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.2458
+  outer fold (OOF) macro-F1 0.3332   macro-F1 (N/S/V) 0.4443   SVEB Se 0.0703 +P 0.6429   VEB Se 0.7860 +P 0.3905
+  cls       P       R      F1      n
+    N  0.9651  0.5303  0.6845  10104
+    S  0.6429  0.0703  0.1268    128
+    V  0.3903  0.7860  0.5216    715
+    F  0.0000  0.0000  0.0000     10
+  confusion (rows = true N/S/V/F, cols = pred):
+      5358      5    801   3940
+        41      9     76      2
+       144      0    562      9
+         9      0      1      0
+
+[seed 43 fold 3] outer 8982  inner-train 33346  inner-val 8409  buffer 48
+  inner-train per class N 30089, S 570, V 2349, F 338 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.188, 1.366, 0.673, 1.774]  rr mu [0.7720000147819519, 0.7749999761581421, 0.7730000019073486, 0.9980000257492065] sigma [0.21799999475479126, 0.21400000154972076, 0.18000000715255737, 0.1589999943971634]
+    epoch   1  train 0.3287  inner-val 0.2065 *  lr 1.0e-03  1.64s  | diag outer F1 0.350 R 1.00/0.00/0.29/0.00
+    epoch   2  train 0.1757  inner-val 0.1634 *  lr 1.0e-03  1.62s  | diag outer F1 0.342 R 1.00/0.00/0.29/0.00
+    epoch   3  train 0.1435  inner-val 0.1507 *  lr 1.0e-03  1.65s  | diag outer F1 0.335 R 1.00/0.00/0.21/0.03
+    epoch   4  train 0.1282  inner-val 0.1260 *  lr 1.0e-03  1.60s  | diag outer F1 0.371 R 1.00/0.00/0.38/0.00
+    epoch   5  train 0.1223  inner-val 0.1013 *  lr 1.0e-03  1.54s  | diag outer F1 0.427 R 1.00/0.01/0.57/0.03
+    epoch   6  train 0.1088  inner-val 0.0976 *  lr 1.0e-03  1.58s  | diag outer F1 0.404 R 1.00/0.07/0.33/0.03
+    epoch   7  train 0.1029  inner-val 0.0794 *  lr 1.0e-03  1.64s  | diag outer F1 0.424 R 0.99/0.01/0.60/0.03
+    epoch   8  train 0.0986  inner-val 0.0760 *  lr 1.0e-03  1.62s  | diag outer F1 0.479 R 0.99/0.06/0.76/0.03
+    epoch   9  train 0.0917  inner-val 0.0774    lr 1.0e-03  1.60s  | diag outer F1 0.410 R 0.95/0.01/0.78/0.03
+    epoch  10  train 0.0886  inner-val 0.0635 *  lr 1.0e-03  1.57s  | diag outer F1 0.470 R 0.99/0.07/0.68/0.03
+    epoch  11  train 0.0838  inner-val 0.0662    lr 1.0e-03  1.62s  | diag outer F1 0.503 R 0.99/0.15/0.74/0.03
+    epoch  12  train 0.0764  inner-val 0.0560 *  lr 1.0e-03  1.56s  | diag outer F1 0.495 R 0.99/0.12/0.74/0.03
+    epoch  13  train 0.0774  inner-val 0.0675    lr 1.0e-03  1.55s  | diag outer F1 0.434 R 0.98/0.01/0.77/0.03
+    epoch  14  train 0.0750  inner-val 0.0620    lr 1.0e-03  1.58s  | diag outer F1 0.500 R 1.00/0.13/0.69/0.03
+    epoch  15  train 0.0744  inner-val 0.0654    lr 1.0e-03  1.60s  | diag outer F1 0.451 R 0.91/0.10/0.62/0.07
+    epoch  16  train 0.0753  inner-val 0.0570    lr 5.0e-04  1.54s  | diag outer F1 0.503 R 0.97/0.13/0.77/0.03
+    epoch  17  train 0.0706  inner-val 0.0532 *  lr 5.0e-04  1.50s  | diag outer F1 0.458 R 0.85/0.08/0.72/0.00
+    epoch  18  train 0.0696  inner-val 0.0530 *  lr 5.0e-04  1.63s  | diag outer F1 0.455 R 0.97/0.15/0.55/0.00
+    epoch  19  train 0.0626  inner-val 0.0522 *  lr 5.0e-04  1.61s  | diag outer F1 0.457 R 0.95/0.13/0.61/0.03
+    epoch  20  train 0.0650  inner-val 0.0517 *  lr 5.0e-04  1.55s  | diag outer F1 0.471 R 0.97/0.14/0.65/0.03
+  done: stopped at epoch 20 (best epoch 20), 33.4 s (1.59 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.0517
+  outer fold (OOF) macro-F1 0.4712   macro-F1 (N/S/V) 0.6253   SVEB Se 0.1399 +P 0.3140   VEB Se 0.6460 +P 0.8073
+  cls       P       R      F1      n
+    N  0.9627  0.9735  0.9681   7969
+    S  0.3140  0.1399  0.1935    193
+    V  0.7984  0.6460  0.7142    791
+    F  0.0051  0.0345  0.0088     29
+  confusion (rows = true N/S/V/F, cols = pred):
+      7758      0     21    190
+        61     27    101      4
+       219     59    511      2
+        21      0      7      1
+
+[seed 43 fold 4] outer 9876  inner-train 32720  inner-val 8141  buffer 48
+  inner-train per class N 29401, S 559, V 2394, F 366 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.193, 1.4, 0.677, 1.73]  rr mu [0.7850000262260437, 0.7879999876022339, 0.7860000133514404, 0.9990000128746033] sigma [0.21199999749660492, 0.20800000429153442, 0.17800000309944153, 0.15600000321865082]
+    epoch   1  train 0.3404  inner-val 0.3747 *  lr 1.0e-03  1.54s  | diag outer F1 0.475 R 1.00/0.00/0.84/0.00
+    epoch   2  train 0.1996  inner-val 0.4109    lr 1.0e-03  1.48s  | diag outer F1 0.459 R 1.00/0.01/0.71/0.00
+    epoch   3  train 0.1610  inner-val 0.3485 *  lr 1.0e-03  1.54s  | diag outer F1 0.463 R 1.00/0.01/0.73/0.00
+    epoch   4  train 0.1467  inner-val 0.3926    lr 1.0e-03  1.56s  | diag outer F1 0.460 R 1.00/0.01/0.72/0.00
+    epoch   5  train 0.1329  inner-val 0.3617    lr 1.0e-03  1.34s  | diag outer F1 0.465 R 0.99/0.02/0.76/0.00
+    epoch   6  train 0.1228  inner-val 0.3912    lr 1.0e-03  1.53s  | diag outer F1 0.466 R 1.00/0.01/0.75/0.00
+    epoch   7  train 0.1194  inner-val 0.3761    lr 5.0e-04  1.54s  | diag outer F1 0.466 R 1.00/0.02/0.74/0.00
+    epoch   8  train 0.1080  inner-val 0.3740    lr 5.0e-04  1.56s  | diag outer F1 0.470 R 0.99/0.03/0.75/0.00
+    epoch   9  train 0.1048  inner-val 0.3975    lr 5.0e-04  1.54s  | diag outer F1 0.465 R 0.99/0.03/0.74/0.00
+    epoch  10  train 0.1049  inner-val 0.3783    lr 5.0e-04  1.57s  | diag outer F1 0.467 R 1.00/0.02/0.74/0.00
+    epoch  11  train 0.0975  inner-val 0.3901    lr 2.5e-04  1.50s  | diag outer F1 0.464 R 0.98/0.03/0.75/0.00
+    epoch  12  train 0.0995  inner-val 0.3770    lr 2.5e-04  1.53s  | diag outer F1 0.465 R 0.99/0.02/0.75/0.00
+    epoch  13  train 0.0947  inner-val 0.3776    lr 2.5e-04  1.40s  | diag outer F1 0.466 R 0.99/0.03/0.75/0.00
+    epoch  14  train 0.0951  inner-val 0.3933    lr 2.5e-04  1.47s  | diag outer F1 0.462 R 0.99/0.02/0.74/0.00
+    epoch  15  train 0.0968  inner-val 0.3785    lr 1.3e-04  1.49s  | diag outer F1 0.464 R 0.99/0.02/0.75/0.00
+    epoch  16  train 0.0904  inner-val 0.3796    lr 1.3e-04  1.47s  | diag outer F1 0.467 R 0.99/0.03/0.76/0.00
+    epoch  17  train 0.0924  inner-val 0.3841    lr 1.3e-04  1.44s  | diag outer F1 0.465 R 0.98/0.03/0.75/0.00
+    epoch  18  train 0.0933  inner-val 0.3846    lr 1.3e-04  1.45s  | diag outer F1 0.465 R 0.98/0.03/0.75/0.00
+    epoch  19  train 0.0890  inner-val 0.3862    lr 6.3e-05  1.45s  | diag outer F1 0.467 R 0.99/0.03/0.75/0.00
+    epoch  20  train 0.0881  inner-val 0.3945    lr 6.3e-05  1.45s  | diag outer F1 0.466 R 0.99/0.03/0.75/0.00
+  done: stopped at epoch 20 (best epoch 3), 31.5 s (1.49 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3485
+  outer fold (OOF) macro-F1 0.4657   macro-F1 (N/S/V) 0.6209   SVEB Se 0.0303 +P 0.0229   VEB Se 0.7520 +P 0.9958
+  cls       P       R      F1      n
+    N  0.9739  0.9856  0.9797   9151
+    S  0.0229  0.0303  0.0261     99
+    V  0.9958  0.7520  0.8569    625
+    F  0.0000  0.0000  0.0000      1
+  confusion (rows = true N/S/V/F, cols = pred):
+      9019    126      1      5
+        95      3      1      0
+       146      2    470      7
+         1      0      0      0
+
+=== seed 43: pooled OOF over 5 folds ===
+macro-F1 0.5022   macro-F1 (N/S/V) 0.6694   SVEB Se 0.3091 +P 0.4182   VEB Se 0.7889 +P 0.7009
+cls       P       R      F1      n
+  N  0.9670  0.8789  0.9209  45703
+  S  0.4182  0.3091  0.3555    909
+  V  0.6827  0.7889  0.7320   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40169    245   1087   4202
+     443    281    179      6
+     629    146   2967     19
+     298      0    113      1
+--- seed 43, fixed 3 epochs: pooled OOF ---
+macro-F1 0.4566   macro-F1 (N/S/V) 0.6082   SVEB Se 0.1562 +P 0.2705   VEB Se 0.6535 +P 0.7059
+cls       P       R      F1      n
+  N  0.9550  0.9579  0.9565  45703
+  S  0.2705  0.1562  0.1980    909
+  V  0.6877  0.6535  0.6702   3761
+  F  0.0012  0.0024  0.0016    412
+confusion (rows = true N/S/V/F, cols = pred):
+   43781    208    917    797
+     655    142    107      5
+    1089    175   2458     39
+     319      0     92      1
+--- seed 43, fixed 5 epochs: pooled OOF ---
+macro-F1 0.4587   macro-F1 (N/S/V) 0.6112   SVEB Se 0.1749 +P 0.2373   VEB Se 0.7309 +P 0.6558
+cls       P       R      F1      n
+  N  0.9621  0.9380  0.9499  45703
+  S  0.2373  0.1749  0.2014    909
+  V  0.6397  0.7309  0.6823   3761
+  F  0.0008  0.0024  0.0012    412
+confusion (rows = true N/S/V/F, cols = pred):
+   42869    310   1284   1240
+     590    159    159      1
+     793    201   2749     18
+     306      0    105      1
+--- seed 43, fixed 8 epochs: pooled OOF ---
+macro-F1 0.5025   macro-F1 (N/S/V) 0.6698   SVEB Se 0.2530 +P 0.5867   VEB Se 0.8508 +P 0.6524
+cls       P       R      F1      n
+  N  0.9697  0.8872  0.9266  45703
+  S  0.5867  0.2530  0.3536    909
+  V  0.6378  0.8508  0.7291   3761
+  F  0.0003  0.0024  0.0005    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40548    104   1518   3533
+     487    230    187      5
+     480     58   3200     23
+     299      0    112      1
+--- seed 43, fixed 12 epochs: pooled OOF ---
+macro-F1 0.5067   macro-F1 (N/S/V) 0.6754   SVEB Se 0.2860 +P 0.4407   VEB Se 0.8046 +P 0.7253
+cls       P       R      F1      n
+  N  0.9671  0.8881  0.9259  45703
+  S  0.4407  0.2860  0.3469    909
+  V  0.7083  0.8046  0.7534   3761
+  F  0.0003  0.0024  0.0005    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40587    222    966   3928
+     463    260    180      6
+     605    108   3026     22
+     311      0    100      1
+--- seed 43, fixed 16 epochs: pooled OOF ---
+macro-F1 0.5011   macro-F1 (N/S/V) 0.6680   SVEB Se 0.3003 +P 0.4143   VEB Se 0.7881 +P 0.7054
+cls       P       R      F1      n
+  N  0.9663  0.8794  0.9208  45703
+  S  0.4143  0.3003  0.3482    909
+  V  0.6885  0.7881  0.7349   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40190    260   1085   4168
+     448    273    153     35
+     644    126   2964     27
+     308      0    103      1
+--- seed 43, fixed 20 epochs: pooled OOF ---
+macro-F1 0.5022   macro-F1 (N/S/V) 0.6694   SVEB Se 0.3091 +P 0.4182   VEB Se 0.7889 +P 0.7009
+cls       P       R      F1      n
+  N  0.9670  0.8789  0.9209  45703
+  S  0.4182  0.3091  0.3555    909
+  V  0.6827  0.7889  0.7320   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40169    245   1087   4202
+     443    281    179      6
+     629    146   2967     19
+     298      0    113      1
+
+[seed 44 fold 0] outer 9313  inner-train 33101  inner-val 8324  buffer 47
+  inner-train per class N 30413, S 551, V 2100, F 37 | inner-val N 7389, S 259, V 671, F 5
+  class weights [0.098, 0.727, 0.372, 2.804]  rr mu [0.7770000100135803, 0.7789999842643738, 0.7770000100135803, 0.9990000128746033] sigma [0.21899999678134918, 0.2150000035762787, 0.1809999942779541, 0.1599999964237213]
+    epoch   1  train 0.3240  inner-val 0.3288 *  lr 1.0e-03  1.55s  | diag outer F1 0.540 R 1.00/0.15/1.00/0.00
+    epoch   2  train 0.2046  inner-val 0.3224 *  lr 1.0e-03  1.64s  | diag outer F1 0.611 R 1.00/0.38/1.00/0.00
+    epoch   3  train 0.1810  inner-val 0.3594    lr 1.0e-03  1.56s  | diag outer F1 0.647 R 1.00/0.55/0.99/0.00
+    epoch   4  train 0.1706  inner-val 0.3619    lr 1.0e-03  1.49s  | diag outer F1 0.668 R 0.99/0.67/0.99/0.00
+    epoch   5  train 0.1611  inner-val 0.4339    lr 1.0e-03  1.51s  | diag outer F1 0.681 R 0.99/0.74/1.00/0.00
+    epoch   6  train 0.1470  inner-val 0.4218    lr 5.0e-04  1.61s  | diag outer F1 0.687 R 0.99/0.79/0.99/0.00
+    epoch   7  train 0.1420  inner-val 0.4566    lr 5.0e-04  1.55s  | diag outer F1 0.686 R 0.99/0.78/0.99/0.00
+    epoch   8  train 0.1348  inner-val 0.4166    lr 5.0e-04  1.38s  | diag outer F1 0.684 R 0.99/0.81/0.93/0.00
+    epoch   9  train 0.1351  inner-val 0.4479    lr 5.0e-04  1.54s  | diag outer F1 0.696 R 0.99/0.84/1.00/0.00
+    epoch  10  train 0.1324  inner-val 0.4687    lr 2.5e-04  1.53s  | diag outer F1 0.694 R 0.99/0.84/0.98/0.00
+    epoch  11  train 0.1248  inner-val 0.4769    lr 2.5e-04  1.53s  | diag outer F1 0.695 R 0.99/0.86/0.99/0.00
+    epoch  12  train 0.1216  inner-val 0.4827    lr 2.5e-04  1.47s  | diag outer F1 0.695 R 0.99/0.87/0.98/0.00
+    epoch  13  train 0.1222  inner-val 0.4721    lr 2.5e-04  1.50s  | diag outer F1 0.686 R 0.99/0.81/0.95/0.00
+    epoch  14  train 0.1194  inner-val 0.4562    lr 1.3e-04  1.47s  | diag outer F1 0.696 R 0.99/0.87/0.98/0.00
+    epoch  15  train 0.1175  inner-val 0.4772    lr 1.3e-04  1.46s  | diag outer F1 0.694 R 0.99/0.87/0.97/0.00
+    epoch  16  train 0.1210  inner-val 0.4578    lr 1.3e-04  1.38s  | diag outer F1 0.696 R 0.99/0.87/0.98/0.00
+    epoch  17  train 0.1164  inner-val 0.4820    lr 1.3e-04  1.46s  | diag outer F1 0.698 R 0.99/0.88/0.98/0.00
+    epoch  18  train 0.1148  inner-val 0.4917    lr 6.3e-05  1.43s  | diag outer F1 0.697 R 0.99/0.88/0.99/0.00
+    epoch  19  train 0.1124  inner-val 0.4801    lr 6.3e-05  1.47s  | diag outer F1 0.695 R 0.99/0.87/0.97/0.00
+    epoch  20  train 0.1128  inner-val 0.4822    lr 6.3e-05  1.50s  | diag outer F1 0.695 R 0.99/0.87/0.97/0.00
+  done: stopped at epoch 20 (best epoch 2), 31.6 s (1.50 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3224
+  outer fold (OOF) macro-F1 0.6951   macro-F1 (N/S/V) 0.9268   SVEB Se 0.8687 +P 0.9885   VEB Se 0.9666 +P 0.9200
+  cls       P       R      F1      n
+    N  0.9669  0.9893  0.9780   7857
+    S  0.9885  0.8687  0.9247     99
+    V  0.8037  0.9666  0.8776    987
+    F  0.0000  0.0000  0.0000    370
+  confusion (rows = true N/S/V/F, cols = pred):
+      7773      1     83      0
+        13     86      0      0
+        33      0    954      0
+       220      0    150      0
+
+[seed 44 fold 1] outer 11657  inner-train 31270  inner-val 7813  buffer 45
+  inner-train per class N 28145, S 312, V 2449, F 364 | inner-val N 6894, S 207, V 667, F 45
+  class weights [0.176, 1.675, 0.598, 1.551]  rr mu [0.7820000052452087, 0.7820000052452087, 0.781000018119812, 1.0010000467300415] sigma [0.21199999749660492, 0.21199999749660492, 0.17900000512599945, 0.1509999930858612]
+    epoch   1  train 0.3747  inner-val 0.4153 *  lr 1.0e-03  1.49s  | diag outer F1 0.439 R 0.97/0.00/0.99/0.00
+    epoch   2  train 0.2223  inner-val 0.3936 *  lr 1.0e-03  1.50s  | diag outer F1 0.443 R 0.97/0.01/0.98/0.00
+    epoch   3  train 0.1803  inner-val 0.4067    lr 1.0e-03  1.37s  | diag outer F1 0.467 R 0.97/0.07/0.96/0.00
+    epoch   4  train 0.1525  inner-val 0.3930 *  lr 1.0e-03  1.40s  | diag outer F1 0.486 R 0.96/0.14/0.88/0.00
+    epoch   5  train 0.1400  inner-val 0.5082    lr 1.0e-03  1.43s  | diag outer F1 0.487 R 0.96/0.12/0.95/0.00
+    epoch   6  train 0.1320  inner-val 0.4949    lr 1.0e-03  1.46s  | diag outer F1 0.514 R 0.96/0.23/0.95/0.00
+    epoch   7  train 0.1248  inner-val 0.5428    lr 1.0e-03  1.43s  | diag outer F1 0.508 R 0.96/0.18/0.96/0.00
+    epoch   8  train 0.1218  inner-val 0.5363    lr 5.0e-04  1.45s  | diag outer F1 0.542 R 0.96/0.30/0.96/0.00
+    epoch   9  train 0.1116  inner-val 0.5566    lr 5.0e-04  1.45s  | diag outer F1 0.529 R 0.96/0.26/0.95/0.00
+    epoch  10  train 0.1117  inner-val 0.5337    lr 5.0e-04  1.48s  | diag outer F1 0.529 R 0.96/0.29/0.91/0.00
+    epoch  11  train 0.1037  inner-val 0.5526    lr 5.0e-04  1.46s  | diag outer F1 0.534 R 0.96/0.33/0.90/0.00
+    epoch  12  train 0.1034  inner-val 0.5445    lr 2.5e-04  1.37s  | diag outer F1 0.537 R 0.96/0.32/0.93/0.00
+    epoch  13  train 0.0958  inner-val 0.5870    lr 2.5e-04  1.48s  | diag outer F1 0.533 R 0.96/0.27/0.96/0.00
+    epoch  14  train 0.0960  inner-val 0.5807    lr 2.5e-04  1.47s  | diag outer F1 0.535 R 0.96/0.29/0.94/0.00
+    epoch  15  train 0.0999  inner-val 0.5876    lr 2.5e-04  1.46s  | diag outer F1 0.544 R 0.96/0.33/0.95/0.00
+    epoch  16  train 0.0936  inner-val 0.5676    lr 1.3e-04  1.46s  | diag outer F1 0.539 R 0.96/0.31/0.94/0.00
+    epoch  17  train 0.0931  inner-val 0.5669    lr 1.3e-04  1.44s  | diag outer F1 0.534 R 0.96/0.30/0.93/0.00
+    epoch  18  train 0.0941  inner-val 0.5644    lr 1.3e-04  1.41s  | diag outer F1 0.534 R 0.96/0.31/0.93/0.00
+    epoch  19  train 0.0942  inner-val 0.5485    lr 1.3e-04  1.43s  | diag outer F1 0.538 R 0.96/0.33/0.92/0.00
+    epoch  20  train 0.0931  inner-val 0.5611    lr 6.3e-05  1.30s  | diag outer F1 0.534 R 0.96/0.31/0.92/0.00
+  done: stopped at epoch 20 (best epoch 4), 30.6 s (1.44 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3930
+  outer fold (OOF) macro-F1 0.5345   macro-F1 (N/S/V) 0.7126   SVEB Se 0.3103 +P 0.4416   VEB Se 0.9222 +P 0.7153
+  cls       P       R      F1      n
+    N  0.9741  0.9614  0.9677  10622
+    S  0.4416  0.3103  0.3645    390
+    V  0.7153  0.9222  0.8057    643
+    F  0.0000  0.0000  0.0000      2
+  confusion (rows = true N/S/V/F, cols = pred):
+     10212    106    235     69
+       268    121      1      0
+         2     47    593      1
+         2      0      0      0
+
+[seed 44 fold 2] outer 10957  inner-train 31851  inner-val 7933  buffer 44
+  inner-train per class N 28664, S 564, V 2264, F 359 | inner-val N 6895, S 217, V 779, F 42
+  class weights [0.194, 1.383, 0.69, 1.733]  rr mu [0.7620000243186951, 0.7649999856948853, 0.7630000114440918, 0.9980000257492065] sigma [0.19200000166893005, 0.18700000643730164, 0.1550000011920929, 0.14100000262260437]
+    epoch   1  train 0.3354  inner-val 0.2659 *  lr 1.0e-03  1.48s  | diag outer F1 0.245 R 0.66/0.00/0.63/0.00
+    epoch   2  train 0.1556  inner-val 0.2547 *  lr 1.0e-03  1.51s  | diag outer F1 0.275 R 0.67/0.01/0.73/0.00
+    epoch   3  train 0.1170  inner-val 0.2682    lr 1.0e-03  1.53s  | diag outer F1 0.296 R 0.58/0.05/0.75/0.00
+    epoch   4  train 0.1010  inner-val 0.2736    lr 1.0e-03  1.50s  | diag outer F1 0.289 R 0.55/0.04/0.80/0.00
+    epoch   5  train 0.0952  inner-val 0.2771    lr 1.0e-03  1.55s  | diag outer F1 0.285 R 0.53/0.06/0.84/0.00
+    epoch   6  train 0.0895  inner-val 0.2672    lr 5.0e-04  1.49s  | diag outer F1 0.294 R 0.52/0.06/0.77/0.00
+    epoch   7  train 0.0798  inner-val 0.2798    lr 5.0e-04  1.47s  | diag outer F1 0.323 R 0.50/0.07/0.87/0.00
+    epoch   8  train 0.0797  inner-val 0.2711    lr 5.0e-04  1.36s  | diag outer F1 0.321 R 0.51/0.08/0.88/0.00
+    epoch   9  train 0.0751  inner-val 0.3170    lr 5.0e-04  1.51s  | diag outer F1 0.344 R 0.52/0.07/0.88/0.00
+    epoch  10  train 0.0732  inner-val 0.3190    lr 2.5e-04  1.50s  | diag outer F1 0.321 R 0.52/0.07/0.88/0.00
+    epoch  11  train 0.0744  inner-val 0.3021    lr 2.5e-04  1.53s  | diag outer F1 0.306 R 0.50/0.06/0.89/0.10
+    epoch  12  train 0.0700  inner-val 0.3043    lr 2.5e-04  1.46s  | diag outer F1 0.321 R 0.50/0.07/0.90/0.00
+    epoch  13  train 0.0689  inner-val 0.3238    lr 2.5e-04  1.46s  | diag outer F1 0.338 R 0.49/0.07/0.89/0.00
+    epoch  14  train 0.0682  inner-val 0.3294    lr 1.3e-04  1.48s  | diag outer F1 0.325 R 0.47/0.06/0.88/0.10
+    epoch  15  train 0.0648  inner-val 0.3128    lr 1.3e-04  1.48s  | diag outer F1 0.307 R 0.49/0.06/0.89/0.00
+    epoch  16  train 0.0648  inner-val 0.3112    lr 1.3e-04  1.41s  | diag outer F1 0.303 R 0.49/0.06/0.90/0.00
+    epoch  17  train 0.0668  inner-val 0.3041    lr 1.3e-04  1.49s  | diag outer F1 0.332 R 0.50/0.07/0.88/0.00
+    epoch  18  train 0.0642  inner-val 0.2947    lr 6.3e-05  1.45s  | diag outer F1 0.328 R 0.50/0.07/0.89/0.00
+    epoch  19  train 0.0607  inner-val 0.2980    lr 6.3e-05  1.47s  | diag outer F1 0.331 R 0.50/0.07/0.89/0.00
+    epoch  20  train 0.0647  inner-val 0.3000    lr 6.3e-05  1.46s  | diag outer F1 0.333 R 0.50/0.07/0.89/0.00
+  done: stopped at epoch 20 (best epoch 2), 31.4 s (1.48 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.2547
+  outer fold (OOF) macro-F1 0.3331   macro-F1 (N/S/V) 0.4441   SVEB Se 0.0703 +P 0.7500   VEB Se 0.8853 +P 0.3937
+  cls       P       R      F1      n
+    N  0.9812  0.4964  0.6593  10104
+    S  0.7500  0.0703  0.1286    128
+    V  0.3932  0.8853  0.5445    715
+    F  0.0000  0.0000  0.0000     10
+  confusion (rows = true N/S/V/F, cols = pred):
+      5016      3    894   4191
+        34      9     81      4
+        54      0    633     28
+         8      0      2      0
+
+[seed 44 fold 3] outer 8982  inner-train 33346  inner-val 8409  buffer 48
+  inner-train per class N 30089, S 570, V 2349, F 338 | inner-val N 7599, S 146, V 620, F 44
+  class weights [0.188, 1.366, 0.673, 1.774]  rr mu [0.7720000147819519, 0.7749999761581421, 0.7730000019073486, 0.9980000257492065] sigma [0.21799999475479126, 0.21400000154972076, 0.18000000715255737, 0.1589999943971634]
+    epoch   1  train 0.3496  inner-val 0.2353 *  lr 1.0e-03  1.51s  | diag outer F1 0.457 R 0.99/0.00/0.86/0.00
+    epoch   2  train 0.1910  inner-val 0.1664 *  lr 1.0e-03  1.58s  | diag outer F1 0.424 R 0.99/0.00/0.64/0.03
+    epoch   3  train 0.1534  inner-val 0.1415 *  lr 1.0e-03  1.55s  | diag outer F1 0.426 R 0.96/0.00/0.81/0.03
+    epoch   4  train 0.1317  inner-val 0.1505    lr 1.0e-03  1.60s  | diag outer F1 0.322 R 1.00/0.00/0.21/0.00
+    epoch   5  train 0.1223  inner-val 0.1099 *  lr 1.0e-03  1.64s  | diag outer F1 0.400 R 1.00/0.01/0.45/0.03
+    epoch   6  train 0.1136  inner-val 0.1213    lr 1.0e-03  1.59s  | diag outer F1 0.326 R 1.00/0.01/0.20/0.00
+    epoch   7  train 0.1090  inner-val 0.0972 *  lr 1.0e-03  1.58s  | diag outer F1 0.438 R 1.00/0.15/0.40/0.00
+    epoch   8  train 0.1036  inner-val 0.0931 *  lr 1.0e-03  1.60s  | diag outer F1 0.374 R 1.00/0.07/0.29/0.00
+    epoch   9  train 0.0964  inner-val 0.1043    lr 1.0e-03  1.59s  | diag outer F1 0.362 R 1.00/0.01/0.33/0.00
+    epoch  10  train 0.0929  inner-val 0.0845 *  lr 1.0e-03  1.52s  | diag outer F1 0.457 R 0.97/0.03/0.76/0.10
+    epoch  11  train 0.0867  inner-val 0.0765 *  lr 1.0e-03  1.53s  | diag outer F1 0.365 R 0.88/0.12/0.49/0.00
+    epoch  12  train 0.0838  inner-val 0.0734 *  lr 1.0e-03  1.56s  | diag outer F1 0.462 R 0.99/0.12/0.61/0.00
+    epoch  13  train 0.0819  inner-val 0.0700 *  lr 1.0e-03  1.53s  | diag outer F1 0.505 R 0.96/0.20/0.65/0.00
+    epoch  14  train 0.0774  inner-val 0.0689 *  lr 1.0e-03  1.52s  | diag outer F1 0.465 R 0.99/0.10/0.56/0.07
+    epoch  15  train 0.0736  inner-val 0.0708    lr 1.0e-03  1.52s  | diag outer F1 0.459 R 0.99/0.12/0.57/0.00
+    epoch  16  train 0.0743  inner-val 0.0640 *  lr 1.0e-03  1.56s  | diag outer F1 0.409 R 0.91/0.06/0.78/0.03
+    epoch  17  train 0.0719  inner-val 0.0732    lr 1.0e-03  1.51s  | diag outer F1 0.417 R 0.96/0.06/0.49/0.07
+    epoch  18  train 0.0725  inner-val 0.0619 *  lr 1.0e-03  1.55s  | diag outer F1 0.481 R 0.98/0.16/0.62/0.00
+    epoch  19  train 0.0688  inner-val 0.0619 *  lr 1.0e-03  1.51s  | diag outer F1 0.442 R 0.99/0.16/0.44/0.00
+    epoch  20  train 0.0676  inner-val 0.0628    lr 1.0e-03  1.60s  | diag outer F1 0.435 R 0.92/0.13/0.70/0.03
+  done: stopped at epoch 20 (best epoch 19), 32.7 s (1.56 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.0619
+  outer fold (OOF) macro-F1 0.4351   macro-F1 (N/S/V) 0.5766   SVEB Se 0.1347 +P 0.9286   VEB Se 0.6966 +P 0.4677
+  cls       P       R      F1      n
+    N  0.9590  0.9158  0.9369   7969
+    S  0.9286  0.1347  0.2353    193
+    V  0.4650  0.6966  0.5577    791
+    F  0.0063  0.0345  0.0106     29
+  confusion (rows = true N/S/V/F, cols = pred):
+      7298      1    519    151
+        59     26    108      0
+       232      1    551      7
+        21      0      7      1
+
+[seed 44 fold 4] outer 9876  inner-train 32720  inner-val 8141  buffer 48
+  inner-train per class N 29401, S 559, V 2394, F 366 | inner-val N 7107, S 251, V 739, F 44
+  class weights [0.193, 1.4, 0.677, 1.73]  rr mu [0.7850000262260437, 0.7879999876022339, 0.7860000133514404, 0.9990000128746033] sigma [0.21199999749660492, 0.20800000429153442, 0.17800000309944153, 0.15600000321865082]
+    epoch   1  train 0.3638  inner-val 0.4183 *  lr 1.0e-03  1.53s  | diag outer F1 0.492 R 1.00/0.00/0.97/0.00
+    epoch   2  train 0.2084  inner-val 0.3956 *  lr 1.0e-03  1.54s  | diag outer F1 0.480 R 0.96/0.03/0.88/0.00
+    epoch   3  train 0.1703  inner-val 0.4317    lr 1.0e-03  1.51s  | diag outer F1 0.471 R 0.97/0.01/0.86/0.00
+    epoch   4  train 0.1522  inner-val 0.4309    lr 1.0e-03  1.56s  | diag outer F1 0.484 R 0.97/0.03/0.90/0.00
+    epoch   5  train 0.1389  inner-val 0.4703    lr 1.0e-03  1.51s  | diag outer F1 0.489 R 0.98/0.03/0.90/0.00
+    epoch   6  train 0.1268  inner-val 0.4676    lr 5.0e-04  1.47s  | diag outer F1 0.480 R 0.97/0.03/0.87/0.00
+    epoch   7  train 0.1227  inner-val 0.4466    lr 5.0e-04  1.57s  | diag outer F1 0.473 R 0.94/0.03/0.86/0.00
+    epoch   8  train 0.1211  inner-val 0.4434    lr 5.0e-04  1.54s  | diag outer F1 0.478 R 0.97/0.03/0.86/0.00
+    epoch   9  train 0.1142  inner-val 0.4883    lr 5.0e-04  1.54s  | diag outer F1 0.480 R 0.97/0.03/0.87/0.00
+    epoch  10  train 0.1091  inner-val 0.4552    lr 2.5e-04  1.55s  | diag outer F1 0.477 R 0.95/0.03/0.88/0.00
+    epoch  11  train 0.1078  inner-val 0.4841    lr 2.5e-04  1.49s  | diag outer F1 0.481 R 0.98/0.03/0.88/0.00
+    epoch  12  train 0.1033  inner-val 0.4922    lr 2.5e-04  1.49s  | diag outer F1 0.481 R 0.97/0.03/0.87/0.00
+    epoch  13  train 0.1058  inner-val 0.4921    lr 2.5e-04  1.47s  | diag outer F1 0.482 R 0.97/0.03/0.90/0.00
+    epoch  14  train 0.1055  inner-val 0.4918    lr 1.3e-04  1.38s  | diag outer F1 0.476 R 0.96/0.03/0.86/0.00
+    epoch  15  train 0.0998  inner-val 0.4919    lr 1.3e-04  1.51s  | diag outer F1 0.478 R 0.97/0.03/0.86/0.00
+    epoch  16  train 0.0989  inner-val 0.4844    lr 1.3e-04  1.46s  | diag outer F1 0.480 R 0.97/0.03/0.88/0.00
+    epoch  17  train 0.0988  inner-val 0.4899    lr 1.3e-04  1.54s  | diag outer F1 0.482 R 0.97/0.03/0.88/0.00
+    epoch  18  train 0.0953  inner-val 0.4944    lr 6.3e-05  1.52s  | diag outer F1 0.480 R 0.97/0.03/0.87/0.00
+    epoch  19  train 0.1003  inner-val 0.4926    lr 6.3e-05  1.53s  | diag outer F1 0.480 R 0.97/0.03/0.87/0.00
+    epoch  20  train 0.0933  inner-val 0.4937    lr 6.3e-05  1.49s  | diag outer F1 0.479 R 0.97/0.03/0.86/0.00
+  done: stopped at epoch 20 (best epoch 2), 31.9 s (1.51 s/epoch, train + inner-val only, diag excluded); best inner-val loss 0.3956
+  outer fold (OOF) macro-F1 0.4785   macro-F1 (N/S/V) 0.6381   SVEB Se 0.0303 +P 0.0130   VEB Se 0.8640 +P 0.9836
+  cls       P       R      F1      n
+    N  0.9833  0.9690  0.9761   9151
+    S  0.0130  0.0303  0.0182     99
+    V  0.9836  0.8640  0.9199    625
+    F  0.0000  0.0000  0.0000      1
+  confusion (rows = true N/S/V/F, cols = pred):
+      8867    223      3     58
+        90      3      6      0
+        60      5    540     20
+         1      0      0      0
+
+=== seed 44: pooled OOF over 5 folds ===
+macro-F1 0.4867   macro-F1 (N/S/V) 0.6488   SVEB Se 0.2695 +P 0.3877   VEB Se 0.8697 +P 0.6289
+cls       P       R      F1      n
+  N  0.9728  0.8570  0.9112  45703
+  S  0.3877  0.2695  0.3180    909
+  V  0.6103  0.8697  0.7172   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39166    334   1734   4469
+     464    245    196      4
+     381     53   3271     56
+     252      0    159      1
+--- seed 44, fixed 3 epochs: pooled OOF ---
+macro-F1 0.4430   macro-F1 (N/S/V) 0.5904   SVEB Se 0.0968 +P 0.3843   VEB Se 0.8809 +P 0.5834
+cls       P       R      F1      n
+  N  0.9734  0.8874  0.9284  45703
+  S  0.3843  0.0968  0.1547    909
+  V  0.5647  0.8809  0.6882   3761
+  F  0.0003  0.0024  0.0006    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40555    116   2131   2901
+     577     88    235      9
+     309     25   3313    114
+     223      0    188      1
+--- seed 44, fixed 5 epochs: pooled OOF ---
+macro-F1 0.4474   macro-F1 (N/S/V) 0.5963   SVEB Se 0.1463 +P 0.4836   VEB Se 0.8298 +P 0.5374
+cls       P       R      F1      n
+  N  0.9664  0.8823  0.9224  45703
+  S  0.4836  0.1463  0.2247    909
+  V  0.5234  0.8298  0.6419   3761
+  F  0.0004  0.0024  0.0006    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40322    117   2487   2777
+     570    133    200      6
+     576     25   3121     39
+     256      0    155      1
+--- seed 44, fixed 8 epochs: pooled OOF ---
+macro-F1 0.4750   macro-F1 (N/S/V) 0.6334   SVEB Se 0.2442 +P 0.3978   VEB Se 0.7793 +P 0.6240
+cls       P       R      F1      n
+  N  0.9632  0.8757  0.9174  45703
+  S  0.3978  0.2442  0.3027    909
+  V  0.6033  0.7793  0.6801   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40024    304   1594   3781
+     512    222    172      3
+     766     32   2931     32
+     251      0    161      0
+--- seed 44, fixed 12 epochs: pooled OOF ---
+macro-F1 0.4942   macro-F1 (N/S/V) 0.6589   SVEB Se 0.2717 +P 0.4372   VEB Se 0.8588 +P 0.6434
+cls       P       R      F1      n
+  N  0.9720  0.8719  0.9192  45703
+  S  0.4372  0.2717  0.3351    909
+  V  0.6233  0.8588  0.7224   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39849    268   1592   3994
+     457    247    198      7
+     442     50   3230     39
+     250      0    162      0
+--- seed 44, fixed 16 epochs: pooled OOF ---
+macro-F1 0.4739   macro-F1 (N/S/V) 0.6317   SVEB Se 0.2541 +P 0.3915   VEB Se 0.8958 +P 0.5578
+cls       P       R      F1      n
+  N  0.9747  0.8539  0.9103  45703
+  S  0.3915  0.2541  0.3082    909
+  V  0.5434  0.8958  0.6764   3761
+  F  0.0003  0.0024  0.0005    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39028    318   2470   3887
+     473    231    201      4
+     291     41   3369     60
+     251      0    160      1
+--- seed 44, fixed 20 epochs: pooled OOF ---
+macro-F1 0.4867   macro-F1 (N/S/V) 0.6488   SVEB Se 0.2695 +P 0.3877   VEB Se 0.8697 +P 0.6289
+cls       P       R      F1      n
+  N  0.9728  0.8570  0.9112  45703
+  S  0.3877  0.2695  0.3180    909
+  V  0.6103  0.8697  0.7172   3761
+  F  0.0002  0.0024  0.0004    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39166    334   1734   4469
+     464    245    196      4
+     381     53   3271     56
+     252      0    159      1
+
+=== fixed-epoch snapshots: pooled OOF macro-F1 (mean ± std over seeds) ===
+    3 epochs: macro-F1 0.4431 ± 0.0134  per seed [0.4298, 0.4566, 0.443]  N->F 1749
+    5 epochs: macro-F1 0.4619 ± 0.0163  per seed [0.4795, 0.4587, 0.4474]  N->F 2734
+    8 epochs: macro-F1 0.4802 ± 0.0202  per seed [0.4631, 0.5025, 0.475]  N->F 3206
+   12 epochs: macro-F1 0.4909 ± 0.0176  per seed [0.4719, 0.5067, 0.4942]  N->F 3709
+   16 epochs: macro-F1 0.4820 ± 0.0166  per seed [0.4711, 0.5011, 0.4739]  N->F 3902
+   20 epochs: macro-F1 0.4881 ± 0.0134  per seed [0.4755, 0.5022, 0.4867]  N->F 4167
+stop epoch: mean 20.0 ± 0.0 (min 20, max 20)
+
+=== A2b_focal_sqrtinv_lite_e20: OOF macro-F1 0.4881 ± 0.0134 (n seeds = 3) ===
+  N: precision 0.9681±0.0042  recall 0.8708±0.0121  f1 0.9169±0.0050
+  S: precision 0.3505±0.0920  recall 0.2721±0.0358  f1 0.3050±0.0580
+  V: precision 0.6578±0.0412  recall 0.8249±0.0411  f1 0.7304±0.0125
+  F: precision 0.0002±0.0001  recall 0.0016±0.0014  f1 0.0003±0.0002
+  macro-F1 N/S/V 0.6508±0.0178; SVEB Se 0.2721±0.0358 +P 0.3505±0.0920; VEB Se 0.8249±0.0411 +P 0.6744±0.0395
+
+saved -> E:\PROJECTS\1DCNN\results\2026-10-14_f47e032d_A2b_focal_sqrtinv_lite_e20

@@ -1,0 +1,113 @@
+run 2026-10-14_dc5ab63e_A2_focal_sqrtinv_lite, calibration max on 4000 inner-train beats per fold
+[seed 42 fold 0] act exps / weight exps per conv [(1, 3, 8), (3, 8, 9), (3, 7, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9866
+[seed 42 fold 1] act exps / weight exps per conv [(2, 3, 8), (3, 8, 9), (3, 7, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9943
+[seed 42 fold 2] act exps / weight exps per conv [(1, 3, 8), (2, 8, 9), (3, 7, 9), (3, 8, 10)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.8948
+[seed 42 fold 3] act exps / weight exps per conv [(2, 3, 8), (3, 8, 9), (3, 7, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9896
+[seed 42 fold 4] act exps / weight exps per conv [(1, 3, 8), (3, 8, 10), (3, 7, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9705
+seed 42: same argmax float/int8 0.9660; transition float -> int8 (rows float N/S/V/F):
+   41742      2     35     10
+     307    516      1      1
+     269     41   3925    703
+     343      3     14   2873
+
+=== seed 42 float (folded numpy) ===
+macro-F1 0.4717   macro-F1 (N/S/V) 0.6290   SVEB Se 0.2343 +P 0.2582   VEB Se 0.8301 +P 0.6458
+cls       P       R      F1      n
+  N  0.9668  0.8840  0.9235  45703
+  S  0.2582  0.2343  0.2457    909
+  V  0.6322  0.8301  0.7178   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40400    550   1544   3209
+     524    213    168      4
+     557     62   3122     20
+     308      0    104      0
+=== seed 42 int8 ===
+macro-F1 0.4894   macro-F1 (N/S/V) 0.6525   SVEB Se 0.2035 +P 0.3292   VEB Se 0.7987 +P 0.7640
+cls       P       R      F1      n
+  N  0.9626  0.8985  0.9295  45703
+  S  0.3292  0.2035  0.2515    909
+  V  0.7557  0.7987  0.7766   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   41065    301    787   3550
+     575    185    141      8
+     652     76   3004     29
+     369      0     43      0
+[seed 43 fold 0] act exps / weight exps per conv [(1, 4, 8), (2, 8, 9), (3, 8, 10), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9874
+[seed 43 fold 1] act exps / weight exps per conv [(1, 4, 8), (2, 8, 10), (3, 7, 9), (3, 8, 10)], rr_exp [6, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9876
+[seed 43 fold 2] act exps / weight exps per conv [(2, 4, 8), (3, 8, 10), (3, 8, 10), (3, 8, 9)], rr_exp [6, 6, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9858
+[seed 43 fold 3] act exps / weight exps per conv [(1, 4, 8), (3, 8, 9), (3, 8, 10), (3, 7, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9807
+[seed 43 fold 4] act exps / weight exps per conv [(1, 4, 8), (3, 8, 9), (3, 8, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9925
+seed 43: same argmax float/int8 0.9869; transition float -> int8 (rows float N/S/V/F):
+   41761     21     88     95
+      76    442     73      0
+     160     20   4075     17
+      80      0     35   3842
+
+=== seed 43 float (folded numpy) ===
+macro-F1 0.5066   macro-F1 (N/S/V) 0.6753   SVEB Se 0.2860 +P 0.4399   VEB Se 0.8046 +P 0.7251
+cls       P       R      F1      n
+  N  0.9671  0.8880  0.9259  45703
+  S  0.4399  0.2860  0.3467    909
+  V  0.7083  0.8046  0.7534   3761
+  F  0.0003  0.0024  0.0005    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40585    223    967   3928
+     463    260    180      6
+     605    108   3026     22
+     312      0     99      1
+=== seed 43 int8 ===
+macro-F1 0.4962   macro-F1 (N/S/V) 0.6611   SVEB Se 0.2387 +P 0.4493   VEB Se 0.7977 +P 0.7145
+cls       P       R      F1      n
+  N  0.9644  0.8879  0.9246  45703
+  S  0.4493  0.2387  0.3118    909
+  V  0.7024  0.7977  0.7470   3761
+  F  0.0008  0.0073  0.0014    412
+confusion (rows = true N/S/V/F, cols = pred):
+   40580    179   1023   3921
+     511    217    176      5
+     649     87   3000     25
+     337      0     72      3
+[seed 44 fold 0] act exps / weight exps per conv [(3, 5, 8), (3, 8, 10), (3, 7, 10), (3, 8, 10)], rr_exp [5, 6, 6, 5], fc1 a_out 5; argmax agreement int8 vs float 0.9969
+[seed 44 fold 1] act exps / weight exps per conv [(2, 5, 8), (3, 8, 10), (3, 7, 9), (4, 8, 10)], rr_exp [6, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9948
+[seed 44 fold 2] act exps / weight exps per conv [(2, 5, 7), (3, 8, 9), (3, 7, 9), (3, 8, 9)], rr_exp [6, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9696
+[seed 44 fold 3] act exps / weight exps per conv [(2, 5, 8), (3, 8, 9), (3, 7, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 3; argmax agreement int8 vs float 0.9576
+[seed 44 fold 4] act exps / weight exps per conv [(2, 5, 8), (3, 8, 9), (3, 8, 9), (3, 8, 9)], rr_exp [5, 5, 6, 5], fc1 a_out 4; argmax agreement int8 vs float 0.9909
+seed 44: same argmax float/int8 0.9824; transition float -> int8 (rows float N/S/V/F):
+   40621      4    328     45
+      82    475      8      0
+      61     14   5032     74
+     114      0    164   3763
+
+=== seed 44 float (folded numpy) ===
+macro-F1 0.4941   macro-F1 (N/S/V) 0.6589   SVEB Se 0.2717 +P 0.4372   VEB Se 0.8585 +P 0.6434
+cls       P       R      F1      n
+  N  0.9719  0.8719  0.9192  45703
+  S  0.4372  0.2717  0.3351    909
+  V  0.6232  0.8585  0.7222   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39848    268   1592   3995
+     457    247    198      7
+     443     50   3229     39
+     250      0    162      0
+=== seed 44 int8 ===
+macro-F1 0.4847   macro-F1 (N/S/V) 0.6463   SVEB Se 0.2519 +P 0.4645   VEB Se 0.8585 +P 0.5997
+cls       P       R      F1      n
+  N  0.9713  0.8688  0.9172  45703
+  S  0.4645  0.2519  0.3267    909
+  V  0.5837  0.8585  0.6949   3761
+  F  0.0000  0.0000  0.0000    412
+confusion (rows = true N/S/V/F, cols = pred):
+   39706    204   1959   3834
+     477    229    196      7
+     431     60   3229     41
+     264      0    148      0
+
+sanity: max |softmax(folded float) - saved OOF prob| = 4.04e-03
+argmax agreement int8 vs float per seed: [0.966, 0.9869, 0.9824]
+macro-F1 float 0.4908 ± 0.0177 | int8 0.4901 ± 0.0058 | drop per seed [-0.0177, 0.0104, 0.0094] mean +0.0007
+  SVEB Se/+P float 0.264/0.378 int8 0.231/0.414
+  VEB Se/+P float 0.831/0.671 int8 0.818/0.693
+QUANT GATE (mean drop <= 0.02): PASS

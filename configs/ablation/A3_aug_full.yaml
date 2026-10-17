@@ -1,0 +1,58 @@
+# Ablation A3 (full): training-time augmentation on the new base (ce, sqrt_inverse):
+# R jitter +-5 samples (crop of X_wide), baseline wander (0.1-0.5 Hz, <= 0.3 z), Gaussian noise sigma 0.05 z,
+# each with probability 0.5, then clip +-8. Evaluation/OOF use the cached centre window X (deployment pipeline).
+# 20 epochs, OOF snapshots 3/5/8/12/16/20; best snapshot vs base, paired by seed.
+name: A3_aug_full
+dataset: DS1
+beats_config: configs/beats.yaml
+model:
+  channels:
+  - 64
+  - 128
+  - 256
+  - 512
+  kernels:
+  - 7
+  - 5
+  - 3
+  - 3
+  hidden: 256
+  dropout_conv: 0.2
+  dropout_head: 0.5
+train:
+  batch_size: 256
+  max_epochs: 20
+  lr: 0.001
+  weight_decay: 0.01
+  class_weight: sqrt_inverse
+  plateau_factor: 0.5
+  plateau_patience: 3
+  early_stop_patience: 6
+  inner_val_frac: 0.2
+  inner_buffer_s: 1.0
+  early_stopping: false
+  snapshot_epochs:
+  - 3
+  - 5
+  - 8
+  - 12
+  - 16
+  - 20
+  augment: true
+  aug_p: 0.5
+  aug_jitter: 5
+  aug_noise_sigma: 0.05
+  aug_wander_amp: 0.3
+  aug_wander_hz:
+  - 0.1
+  - 0.5
+seeds:
+- 42
+- 43
+- 44
+folds:
+- 0
+- 1
+- 2
+- 3
+- 4

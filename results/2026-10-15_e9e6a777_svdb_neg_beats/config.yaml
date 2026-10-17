@@ -1,0 +1,25 @@
+name: svdb_beats
+beats:
+  rr_source: detector
+  half_window: 180
+  match_tol_ms: 150
+  rr_avg_n: 8
+  rr_clip_s:
+  - 0.2
+  - 3.0
+  beat_norm:
+    type: zscore
+    eps: 1.0e-06
+    clip: 8.0
+svdb:
+  version: svdb-neg-v1
+  channel_rule: A5b-negative-fallback
+  min_se_ppv: 0.97
+  resample:
+  - 45
+  - 16
+  gain: 200.0
+  symbol_remap:
+    B: Q
+  drop_ann_out_of_range: true
+  records: only records excluded by rule A
