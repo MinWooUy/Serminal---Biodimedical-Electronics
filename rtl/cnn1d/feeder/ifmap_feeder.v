@@ -1,7 +1,6 @@
 module ifmap_feeder #(
 	parameter DATA_W = 8,
 	parameter DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16,
 	parameter ARRAY_ROWS = 3,
 	parameter ROW_W = (ARRAY_ROWS <= 1) ? 1 : $clog2(ARRAY_ROWS + 1)
@@ -114,7 +113,6 @@ module ifmap_feeder #(
 			
 			feed_lane #(
 				.DATA_W(DATA_W),
-				.CNT_W(CNT_W),
 				.DEPTH(DEPTH),
 				.LANE_N(i)
 			) u_lane(

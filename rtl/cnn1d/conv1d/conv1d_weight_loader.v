@@ -36,6 +36,9 @@ module conv1d_weight_loader #(
 
     input wire [COL_W-1:0] i_active_cols,
 	
+    // Backpressure: cờ full của từng lane FIFO (từ weight_feeder.o_mem_full)
+    input wire [ARRAY_COLS-1:0] i_lane_full,
+
 	// WEIGHT SRAM READ INTERFACE
 
     output wire o_sram_rd_en,
@@ -71,6 +74,14 @@ module conv1d_weight_loader #(
 
     assign o_busy = (state_q != S_IDLE) && (state_q != S_DONE);
 	
+    // Current physical column (khai báo trước wr_ok vì wr_ok dùng nó).
+    // AGU sequence: window0 -> column0 FIFO, window1 -> column1 FIFO, ...
+    // For Weight, one AGU window = one output channel.
+    reg [COL_W-1:0] col_cnt_q;
+
+    // Lane đích còn chỗ thì mới ghi
+    wire wr_ok = ~i_lane_full[col_cnt_q];
+
 	// AGU
     wire [ADDR_W-1:0] agu_addr;
 
@@ -98,7 +109,7 @@ module conv1d_weight_loader #(
     wire agu_advance;
 
     assign agu_start = (state_q == S_IDLE) && i_start;
-    assign agu_advance = (state_q == S_WRITE);
+    assign agu_advance = (state_q == S_WRITE) && wr_ok;
 
 
     // =====================================================
@@ -164,21 +175,6 @@ module conv1d_weight_loader #(
 
 
     // =====================================================
-    // CURRENT PHYSICAL COLUMN
-    //
-    // AGU sequence:
-    //
-    // window0 -> column0 FIFO
-    // window1 -> column1 FIFO
-    // window2 -> column2 FIFO
-    //
-    // "window" here is simply reused AGU terminology.
-    // For Weight, one AGU window = one output channel.
-    // =====================================================
-
-    reg [COL_W-1:0] col_cnt_q;
-
-    // =====================================================
     // SRAM RESPONSE REGISTER
     // =====================================================
 
@@ -199,7 +195,7 @@ module conv1d_weight_loader #(
         o_wgt_wr_en = {ARRAY_COLS{1'b0}};
         o_wgt_wr_data = {ARRAY_COLS*DATA_W{1'b0}};
 
-        if(state_q == S_WRITE) begin
+        if(state_q == S_WRITE && wr_ok) begin
             o_wgt_wr_en[col_cnt_q] = 1'b1;
             o_wgt_wr_data[col_cnt_q*DATA_W +: DATA_W] = rd_data_q;
 
@@ -265,24 +261,26 @@ module conv1d_weight_loader #(
                 // =========================================
 
                 S_WRITE: begin
-                    // -------------------------------------
-                    // Last K element of current output
-                    // channel?
-                    // -------------------------------------
-                    if(agu_k_last) begin
-                        // ---------------------------------
-                        // Last active output channel?
-                        // ---------------------------------
-                        if(agu_window_last) begin
-                            state_q <= S_DONE;
+                    if(wr_ok) begin
+                        // -------------------------------------
+                        // Last K element of current output
+                        // channel?
+                        // -------------------------------------
+                        if(agu_k_last) begin
+                            // ---------------------------------
+                            // Last active output channel?
+                            // ---------------------------------
+                            if(agu_window_last) begin
+                                state_q <= S_DONE;
+                            end
+                            else begin
+                                col_cnt_q <= col_cnt_q + 1'b1;
+                                state_q <= S_REQ;
+                            end
                         end
                         else begin
-                            col_cnt_q <= col_cnt_q + 1'b1;
                             state_q <= S_REQ;
                         end
-                    end
-                    else begin
-                        state_q <= S_REQ;
                     end
                 end
 

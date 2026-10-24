@@ -205,6 +205,9 @@ module tb_conv1d_weight_loader;
 
         .i_active_cols(i_active_cols),
 
+        // Không có FIFO thật phía sau: lane luôn còn chỗ
+        .i_lane_full({ARRAY_COLS{1'b0}}),
+
         // SRAM
         .o_sram_rd_en(o_sram_rd_en),
         .o_sram_rd_addr(o_sram_rd_addr),

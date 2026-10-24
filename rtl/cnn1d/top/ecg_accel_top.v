@@ -41,7 +41,7 @@ module ecg_accel_top #(
         .active_rows(active_rows),.active_cols(active_cols),
         .tile_busy(tile_busy),.tile_done(tile_done),.tile_data(tile_data));
     conv1d_tile_top #(.IFMAP_MEM_DEPTH(MEM_DEPTH),.WGT_MEM_DEPTH(MEM_DEPTH),
-        .FEEDER_DEPTH(FEEDER_DEPTH),.CNT_W($clog2(FEEDER_DEPTH+1))) u_tile(
+        .FEEDER_DEPTH(FEEDER_DEPTH)) u_tile(
         .i_clk(clk),.i_reset(reset),.i_start(tile_start),.i_k_len(k_len),
         .i_window_step(window_step),.i_active_rows(active_rows),.i_active_cols(active_cols),
         .i_ifmap_base_addr(x_base),.i_wgt_base_addr(w_base),
