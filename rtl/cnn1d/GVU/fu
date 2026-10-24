@@ -1,0 +1,182 @@
+`timescale 1ns / 1ps
+
+module functional_unit #(
+    // --- Tham số cấu hình nhánh tính toán chính (Path 0) ---
+    parameter int M0_A_WIDTH     = 48,  // Mặc định: 48-bit
+    parameter int M0_B_WIDTH     = 40,  // Mặc định: 40-bit
+    parameter int ADD0_WIDTH     = 64,  // Mặc định: 64-bit
+    parameter int RS0_WIDTH      = 72,  // Mặc định: 72-bit
+    
+    // --- Tham số cấu hình nhánh SIMD / Phụ (Path 1) ---
+    parameter int M1_A_WIDTH     = 32,  // Mặc định: 32-bit
+    parameter int M1_B_WIDTH     = 32,  // Mặc định: 32-bit
+    parameter int ADD1_WIDTH     = 32,  // Mặc định: 32-bit
+    parameter int RS1_WIDTH      = 64,  // Mặc định: 64-bit
+
+    // --- Tham số cấu hình PSUM & LUT ---
+    parameter int PSUM_WIDTH     = 64,
+    parameter int LUT_ADDR_WIDTH = 8,
+    parameter int LUT_DATA_WIDTH = 16,
+    parameter int OUT_WIDTH      = 32
+)(
+    input  logic                          clk,
+    input  logic                          rst_n,
+    
+    // Điều khiển từ Pipeline Controller
+    input  logic [3:0]                    alu_op,          // Mã lệnh chọn chế độ tính toán
+    input  logic [1:0]                    lut_mode,        // 00: Direct, 01: Log, 10: PWL
+    input  logic [$clog2(RS0_WIDTH)-1:0]  shift_amount,
+    input  logic                          valid_in,
+    output logic                          valid_out,
+
+    // Giao tiếp với Stream Switch (Toán hạng vào)
+    input  logic [M0_A_WIDTH-1:0]         in_data_a0,
+    input  logic [M0_B_WIDTH-1:0]         in_data_b0,
+    input  logic [M1_A_WIDTH-1:0]         in_data_a1,
+    input  logic [M1_B_WIDTH-1:0]         in_data_b1,
+    
+    // Nhận dữ liệu Partial Sum (PSUM) tích lũy
+    input  logic [PSUM_WIDTH-1:0]         psum_in,
+
+    // Ghi dữ liệu kết quả ra SRAM C
+    output logic [OUT_WIDTH-1:0]          sram_c_data,
+    output logic                          sram_c_we
+);
+
+    // =========================================================================
+    // Stage 1: Pipeline Nhân (Multiplier Unit 0 & 1)
+    // =========================================================================
+    localparam int PROD0_WIDTH = M0_A_WIDTH + M0_B_WIDTH; // 48x40 = 88 bit
+    localparam int PROD1_WIDTH = M1_A_WIDTH + M1_B_WIDTH; // 32x32 = 64 bit
+
+    logic signed [PROD0_WIDTH-1:0] mult0_res;
+    logic signed [PROD1_WIDTH-1:0] mult1_res;
+    logic signed [PSUM_WIDTH-1:0] psum_d1;
+    logic [3:0] alu_op_d1;
+    logic [1:0] lut_mode_d1;
+    logic [$clog2(RS0_WIDTH)-1:0] shift_amount_d1;
+    logic valid_d1;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            mult0_res <= '0;
+            mult1_res <= '0;
+            psum_d1 <= '0;
+            alu_op_d1 <= '0;
+            lut_mode_d1 <= '0;
+            shift_amount_d1 <= '0;
+            valid_d1 <= 1'b0;
+        end else if (valid_in) begin
+            mult0_res <= $signed(in_data_a0) * $signed(in_data_b0);
+            mult1_res <= $signed(in_data_a1) * $signed(in_data_b1);
+            psum_d1 <= psum_in;
+            alu_op_d1 <= alu_op;
+            lut_mode_d1 <= lut_mode;
+            shift_amount_d1 <= shift_amount;
+            valid_d1 <= 1'b1;
+        end else begin
+            valid_d1 <= 1'b0;
+        end
+    end
+
+    // =========================================================================
+    // Stage 2: Bộ cộng & Tích lũy (Adder & Accumulator)
+    // =========================================================================
+    logic signed [ADD0_WIDTH-1:0] adder0_res;
+    logic signed [ADD1_WIDTH-1:0] adder1_res;
+    logic [3:0] alu_op_d2;
+    logic [1:0] lut_mode_d2;
+    logic [$clog2(RS0_WIDTH)-1:0] shift_amount_d2;
+    logic valid_d2;
+
+    // Cắt/Mở rộng bit của tích để khớp với độ rộng bộ cộng ADD0
+    wire signed [ADD0_WIDTH-1:0] prod0_truncated = $signed(mult0_res);
+    wire signed [ADD0_WIDTH-1:0] psum_aligned     = $signed(psum_d1);
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            adder0_res <= '0;
+            adder1_res <= '0;
+            alu_op_d2 <= '0;
+            lut_mode_d2 <= '0;
+            shift_amount_d2 <= '0;
+            valid_d2 <= 1'b0;
+        end else begin
+            adder0_res <= prod0_truncated + psum_aligned;
+            adder1_res <= $signed(mult1_res) + $signed(in_data_a1);
+            alu_op_d2 <= alu_op_d1;
+            lut_mode_d2 <= lut_mode_d1;
+            shift_amount_d2 <= shift_amount_d1;
+            valid_d2 <= valid_d1;
+        end
+    end
+
+    // =========================================================================
+    // Stage 3: Round-Shift, Compare/Clamp (Saturation & Quantization)
+    // =========================================================================
+    logic signed [RS0_WIDTH-1:0] rs0_stage;
+    logic signed [OUT_WIDTH-1:0] clamped_val;
+    localparam logic signed [RS0_WIDTH-1:0] RS_ONE = {{(RS0_WIDTH-1){1'b0}}, 1'b1};
+    localparam logic signed [RS0_WIDTH-1:0] CLAMP_MAX = (RS_ONE <<< (OUT_WIDTH - 1)) - RS_ONE;
+    localparam logic signed [RS0_WIDTH-1:0] CLAMP_MIN = -(RS_ONE <<< (OUT_WIDTH - 1));
+
+    always_comb begin
+        // Sign-extend lên độ rộng cấu hình của khối Round-Shift
+        rs0_stage = $signed(adder0_res);
+        
+        // Dịch làm tròn (Round & Arithmetic Shift)
+        if (shift_amount_d2 > 0) begin
+            rs0_stage = (rs0_stage + (RS_ONE <<< (shift_amount_d2 - 1))) >>> shift_amount_d2;
+        end
+
+        // Clamp / Bão hòa (Saturation logic) vào khoảng giá trị đầu ra
+        if (rs0_stage > CLAMP_MAX) begin
+            clamped_val = CLAMP_MAX;
+        end else if (rs0_stage < CLAMP_MIN) begin
+            clamped_val = CLAMP_MIN;
+        end else begin
+            clamped_val = rs0_stage[OUT_WIDTH-1:0];
+        end
+    end
+
+    // =========================================================================
+    // Khối Phi tuyến (LUT Unit - Direct, Log-scale, Piecewise Linear)
+    // =========================================================================
+    logic [LUT_DATA_WIDTH-1:0] lut_table [0:(2**LUT_ADDR_WIDTH)-1];
+    logic [LUT_DATA_WIDTH-1:0] lut_out;
+
+    integer lut_index;
+    initial begin
+        for (lut_index = 0; lut_index < (2**LUT_ADDR_WIDTH); lut_index = lut_index + 1) begin
+            lut_table[lut_index] = '0;
+        end
+    end
+
+    // Giả lập trỏ LUT theo các chế độ tra bảng
+    wire [LUT_ADDR_WIDTH-1:0] lut_addr = $unsigned(clamped_val);
+
+    always_comb begin
+        case (lut_mode_d2)
+            2'b00: lut_out = lut_table[lut_addr];
+            2'b01: lut_out = lut_table[lut_addr] >> 1;
+            2'b10: lut_out = lut_table[lut_addr] + clamped_val;
+            default: lut_out = '0;
+        endcase
+    end
+
+    // =========================================================================
+    // MUX Đầu ra & Giao tiếp SRAM C
+    // =========================================================================
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            sram_c_data <= '0;
+            sram_c_we   <= 1'b0;
+            valid_out   <= 1'b0;
+        end else begin
+            sram_c_we   <= valid_d2;
+            valid_out   <= valid_d2;
+            sram_c_data <= (alu_op_d2 == 4'b1111) ? $signed(lut_out) : clamped_val;
+        end
+    end
+
+endmodule
