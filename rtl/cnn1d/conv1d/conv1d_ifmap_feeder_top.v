@@ -5,7 +5,6 @@ module conv1d_ifmap_feeder_top #(
 	parameter ARRAY_ROWS = 3,
 	parameter ROW_W = (ARRAY_ROWS <= 1) ? 1 : $clog2(ARRAY_ROWS + 1),
 	parameter DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16
 )(
 	input wire i_clk,
@@ -75,6 +74,8 @@ module conv1d_ifmap_feeder_top #(
 		.i_window_step(i_window_step),
 		.i_active_rows(i_active_rows),
 		
+		.i_lane_full(feeder_mem_full),
+
 		// SRAM read
 		.o_sram_rd_en(o_sram_rd_en),
 		.o_sram_rd_addr(o_sram_rd_addr),
@@ -94,7 +95,6 @@ module conv1d_ifmap_feeder_top #(
 	ifmap_feeder #(
 		.DATA_W(DATA_W),
 		.DEPTH(DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W),
 		.ARRAY_ROWS(ARRAY_ROWS),
 		.ROW_W(ROW_W)

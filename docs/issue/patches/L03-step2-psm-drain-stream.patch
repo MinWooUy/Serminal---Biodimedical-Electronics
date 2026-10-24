@@ -1,0 +1,246 @@
+--- a/rtl/cnn1d/core/partial_sum_manager.v
++++ b/rtl/cnn1d/core/partial_sum_manager.v
+@@ -58,7 +58,17 @@
+ 	input wire [ACC_W-1:0] i_bias_rd_data,           // có ở chu kỳ sau o_bias_rd_en
+ 	output wire o_preload_shift,                     // dịch chuỗi shadow 1 lần
+ 	output wire [ARRAY_ROWS*ACC_W-1:0] o_preload_vec,
+-	output reg o_preload_done                        // xung, sau lần dịch cuối
++	output reg o_preload_done,                       // xung, sau lần dịch cuối
++
++	// =====================================================
++	// DRAIN (chiều đọc): stream mỗi lần dịch = 1 kênh x ARRAY_ROWS vị trí
++	// Bắt tay valid/ready; chuỗi shadow chỉ dịch khi được nhận (backpressure).
++	// =====================================================
++	input wire i_drain_ready,
++	output wire o_drain_valid,
++	output wire [COL_W-1:0] o_drain_idx,            // cột trong tile: ac-1 .. 0
++	output wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec,
++	output wire o_drain_shift                       // dịch chuỗi shadow 1 lần
+ );
+ 
+ 	// Đếm số cột đã capture
+@@ -118,6 +128,15 @@
+ 		.o_scan_pe(scan_pe)
+ 	);
+ 	
++	// Drain: FSM bật i_capture_en suốt S_DRAIN (cho phép drain);
++	// mỗi lần bắt tay = chụp vào o_tile + đẩy ra stream + dịch chuỗi đúng 1 lần.
++	wire drain_active = i_capture_en && !o_tile_valid && (active_rows_q != {ROW_W{1'b0}}) && (active_cols_q != {COL_W{1'b0}});
++	wire drain_fire = drain_active && i_drain_ready;
++	assign o_drain_valid = drain_active;
++	assign o_drain_idx = active_cols_q - 1'b1 - cap_cnt;
++	assign o_drain_vec = scan_pe;
++	assign o_drain_shift = drain_fire;
++
+ 	// Capture logic
+ 	// scan order:
+ 	// cycle 0: col = active_cols - 1
+@@ -150,7 +169,7 @@
+ 			end
+ 			
+ 			// Capture
+-			else if(i_capture_en && !o_tile_valid && (active_rows_q != {ROW_W{1'b0}}) && (active_cols_q != {COL_W{1'b0}})) begin
++			else if(drain_fire) begin
+ 				// Tất cả active row capture song song
+ 				for(r = 0; r < ARRAY_ROWS; r = r + 1) begin
+ 					if(r < active_rows_q) begin
+--- a/rtl/cnn1d/core/cnn_compute_core.v
++++ b/rtl/cnn1d/core/cnn_compute_core.v
+@@ -43,7 +43,13 @@
+ 	input wire i_preload_mode,
+ 	output wire o_bias_rd_en,
+ 	output wire [COL_W-1:0] o_bias_rd_idx,
+-	input wire [ACC_W-1:0] i_bias_rd_data
++	input wire [ACC_W-1:0] i_bias_rd_data,
++	
++	// Drain stream
++	input wire i_drain_ready,
++	output wire o_drain_valid,
++	output wire [COL_W-1:0] o_drain_idx,
++	output wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec
+ );
+ 
+ 	// ---------
+@@ -76,6 +82,7 @@
+ 	wire psm_capture_done;
+ 	wire preload_start, preload_done, preload_shift;
+ 	wire [ARRAY_ROWS*ACC_W-1:0] preload_vec;
++	wire drain_shift;
+ 	
+ 	assign o_feeder_start = feeder_start;
+ 	
+@@ -120,7 +127,7 @@
+ 		.i_reset(i_reset),
+ 		
+ 		.i_clear_acc(1'b0),
+-		.i_scan_en(scan_en | preload_shift),   // drain (FSM) hoặc preload (PSM)
++		.i_scan_en(drain_shift | preload_shift),   // PSM đếm chính xác cả hai chiều
+ 		.i_preload(preload_vec),
+ 		
+ 		// IFMAP stream
+@@ -195,7 +202,12 @@
+ 		.i_bias_rd_data(i_bias_rd_data),
+ 		.o_preload_shift(preload_shift),
+ 		.o_preload_vec(preload_vec),
+-		.o_preload_done(preload_done)
++		.o_preload_done(preload_done),
++		.i_drain_ready(i_drain_ready),
++		.o_drain_valid(o_drain_valid),
++		.o_drain_idx(o_drain_idx),
++		.o_drain_vec(o_drain_vec),
++		.o_drain_shift(drain_shift)
+ 	);
+ 
+ endmodule
+\ No newline at end of file
+--- a/rtl/cnn1d/conv1d/conv1d_tile_top.v
++++ b/rtl/cnn1d/conv1d/conv1d_tile_top.v
+@@ -121,7 +121,16 @@
+ 	input wire i_preload_mode,
+ 	output wire o_bias_rd_en,
+ 	output wire [COL_W-1:0] o_bias_rd_idx,
+-	input wire [ACC_W-1:0] i_bias_rd_data
++	input wire [ACC_W-1:0] i_bias_rd_data,
++
++	// =====================================================
++	// DRAIN STREAM: mỗi lần bắt tay = cột o_drain_idx (kênh col_base + idx), ARRAY_ROWS vị trí.
++	// i_drain_ready = 1 cố định thì hành vi giống hệt bản cũ.
++	// =====================================================
++	input wire i_drain_ready,
++	output wire o_drain_valid,
++	output wire [COL_W-1:0] o_drain_idx,
++	output wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec
+ );
+ 	reg cfg_err_q;
+ 	assign o_cfg_err = cfg_err_q;
+@@ -459,7 +468,12 @@
+ 		.i_preload_mode(i_preload_mode),
+ 		.o_bias_rd_en(o_bias_rd_en),
+ 		.o_bias_rd_idx(o_bias_rd_idx),
+-		.i_bias_rd_data(i_bias_rd_data)
++		.i_bias_rd_data(i_bias_rd_data),
++		
++		.i_drain_ready(i_drain_ready),
++		.o_drain_valid(o_drain_valid),
++		.o_drain_idx(o_drain_idx),
++		.o_drain_vec(o_drain_vec)
+ 	);
+ 	
+ 	// =====================================================
+--- a/rtl/cnn1d/tb/tb_conv1d_tile_top.v
++++ b/rtl/cnn1d/tb/tb_conv1d_tile_top.v
+@@ -167,7 +167,8 @@
+ 		
+ 		// Preload = 0: hành vi như trước khi có preload
+ 		.i_preload_mode(1'b0),
+-		.i_bias_rd_data(32'd0)
++		.i_bias_rd_data(32'd0),
++		.i_drain_ready(1'b1)
+ 	);
+ 	
+ 	
+--- a/rtl/cnn1d/tb/tb_conv1d_tile_corner.v
++++ b/rtl/cnn1d/tb/tb_conv1d_tile_corner.v
+@@ -20,9 +20,9 @@
+ 	// PRELOAD_BIAS = 0: khởi tạo 0 (hành vi cũ); 1: khởi tạo bằng bias qua chuỗi shadow
+ 	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11), .PRELOAD_BIAS(0))
+ 		u_d16   (.o_done(done16),   .o_errors(err16));
+-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(17), .PRELOAD_BIAS(1))
++	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(17), .PRELOAD_BIAS(1), .DRAIN_BP(1))
+ 		u_d16b  (.o_done(done16b),  .o_errors(err16b));
+-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23), .PRELOAD_BIAS(1))
++	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23), .PRELOAD_BIAS(1), .DRAIN_BP(1))
+ 		u_d1024 (.o_done(done1024), .o_errors(err1024));
+ 
+ 	initial begin
+@@ -31,8 +31,8 @@
+ 		$display("==============================================");
+ 		$display(" CONV1D TILE CORNER TEST SUMMARY");
+ 		$display("   FEEDER_DEPTH=16,   preload 0    : %0d loi", err16);
+-		$display("   FEEDER_DEPTH=16,   preload bias : %0d loi", err16b);
+-		$display("   FEEDER_DEPTH=1024, preload bias : %0d loi", err1024);
++		$display("   FEEDER_DEPTH=16,   preload bias, drain backpressure : %0d loi", err16b);
++		$display("   FEEDER_DEPTH=1024, preload bias, drain backpressure : %0d loi", err1024);
+ 		if (err16 == 0 && err16b == 0 && err1024 == 0)
+ 			$display(" RESULT : ALL TESTS PASSED");
+ 		else
+@@ -53,7 +53,8 @@
+ 	parameter MEM_DEPTH    = 256,
+ 	parameter N_RANDOM     = 20,
+ 	parameter SEED         = 1,
+-	parameter PRELOAD_BIAS = 0
++	parameter PRELOAD_BIAS = 0,
++	parameter DRAIN_BP     = 0      // 1: i_drain_ready bật/tắt ngẫu nhiên
+ )(
+ 	output reg        o_done,
+ 	output reg [31:0] o_errors
+@@ -92,6 +93,26 @@
+ 	wire [2:0] o_state_dbg, o_core_state_dbg, o_ifmap_loader_state, o_wgt_loader_state;
+ 	wire o_ifmap_read_bank, o_ifmap_write_bank, o_wgt_read_bank, o_wgt_write_bank;
+ 	wire o_bias_rd_en;
++	reg i_drain_ready;
++	wire o_drain_valid;
++	wire [COL_W-1:0] o_drain_idx;
++	wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec;
++
++	// Bộ thu stream drain: ghép lại thành ma trận để so với kỳ vọng
++	reg signed [ACC_W-1:0] str_c [0:ARRAY_ROWS*ARRAY_COLS-1];
++	integer str_cnt, str_r, bp_seed;
++	always @(posedge i_clk) begin
++		if (o_drain_valid && i_drain_ready) begin
++			for (str_r = 0; str_r < ARRAY_ROWS; str_r = str_r + 1)
++				str_c[str_r * ARRAY_COLS + o_drain_idx] = o_drain_vec[str_r * ACC_W +: ACC_W];
++			str_cnt = str_cnt + 1;
++		end
++	end
++	// Backpressure: ready ngẫu nhiên khoảng 40% chu kỳ
++	always @(negedge i_clk) begin
++		bp_seed = $random(bp_seed);
++		i_drain_ready = DRAIN_BP ? (bp_seed[2:0] < 3) : 1'b1;
++	end
+ 	wire [COL_W-1:0] o_bias_rd_idx;
+ 
+ 	// Bias RAM: địa chỉ = bias_base + idx (bias_base đóng vai cbase + col_base), đọc trễ 1 chu kỳ
+@@ -131,7 +152,9 @@
+ 		.o_wgt_read_bank(o_wgt_read_bank), .o_wgt_write_bank(o_wgt_write_bank),
+ 		.o_cfg_err(o_cfg_err),
+ 		.i_preload_mode(PRELOAD_BIAS[0]), .i_bias_rd_data(bias_q),
+-		.o_bias_rd_en(o_bias_rd_en), .o_bias_rd_idx(o_bias_rd_idx)
++		.o_bias_rd_en(o_bias_rd_en), .o_bias_rd_idx(o_bias_rd_idx),
++		.i_drain_ready(i_drain_ready), .o_drain_valid(o_drain_valid),
++		.o_drain_idx(o_drain_idx), .o_drain_vec(o_drain_vec)
+ 	);
+ 
+ 	// =====================================================
+@@ -296,6 +319,8 @@
+ 			i_k_len = k; i_window_step = step;
+ 			i_active_rows = ar; i_active_cols = ac;
+ 			i_ifmap_base_addr = ib; i_wgt_base_addr = wb;
++			str_cnt = 0;
++			for (idx = 0; idx < N_OUT; idx = idx + 1) str_c[idx] = 0;
+ 			i_start = 1'b1;
+ 			cyc = 0; saw_load = 1'b0; saw_busy = 1'b0;
+ 			while (o_done_dut !== 1'b1 && cyc < tmo) begin
+@@ -315,6 +340,13 @@
+ 			end else begin
+ 				if (o_cfg_err !== 1'b0)    fail("cau hinh hop le nhung o_cfg_err = 1");
+ 				if (o_tile_valid !== 1'b1) fail("done nhung o_tile_valid = 0");
++				if (str_cnt != ac) fail("so lan bat tay drain khac active_cols");
++				for (idx = 0; idx < N_OUT; idx = idx + 1)
++					if ((idx / ARRAY_COLS) < ar && (idx % ARRAY_COLS) < ac && str_c[idx] !== exp_c[idx]) begin
++						errors = errors + 1;
++						if (prints < 30) $display("[FAIL] D=%0d t=%0t stream C[%0d][%0d]=%0d, mong doi %0d", FEEDER_DEPTH, $time, idx / ARRAY_COLS, idx % ARRAY_COLS, str_c[idx], exp_c[idx]);
++						prints = prints + 1;
++					end
+ 				for (idx = 0; idx < N_OUT; idx = idx + 1) begin
+ 					act = o_tile[idx * ACC_W +: ACC_W];
+ 					if (act !== exp_c[idx]) begin
+@@ -371,6 +403,8 @@
+ 		o_done = 1'b0;
+ 		errors = 0; err_before = 0; prints = 0;
+ 		seed = SEED;
++		bp_seed = SEED + 1000;
++		str_cnt = 0;
+ 		bias_base = 0;
+ 		bias_reads = 0;
+ 		bias_q = 0;

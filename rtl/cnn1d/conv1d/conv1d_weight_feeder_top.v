@@ -6,7 +6,6 @@ module conv1d_weight_feeder_top#(
 	parameter ARRAY_COLS = 3,
 	
 	parameter DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16,
 	
 	parameter COL_W = (ARRAY_COLS <= 1) ? 1 : $clog2(ARRAY_COLS+1)
@@ -61,7 +60,10 @@ module conv1d_weight_feeder_top#(
 	// Loader --> weight feeder
 	wire [ARRAY_COLS-1:0] loader_wr_en;
 	wire signed [ARRAY_COLS*DATA_W-1:0] loader_wr_data;
-	
+
+	// Weight feeder --> loader: cờ full từng lane (backpressure)
+	wire [ARRAY_COLS-1:0] feeder_mem_full;
+
 	// K WIDTH ADAPTATION
 	wire [K_W-1:0] feeder_k_len;
 	
@@ -95,6 +97,8 @@ module conv1d_weight_feeder_top#(
       .i_k_len(i_k_len),
       .i_active_cols(i_active_cols),
 
+      .i_lane_full(feeder_mem_full),
+
 		// SRAM read
 
       .o_sram_rd_en(o_sram_rd_en),
@@ -117,7 +121,6 @@ module conv1d_weight_feeder_top#(
 	weight_feeder #(
 		.DATA_W(DATA_W),
       .DEPTH(DEPTH),
-      .CNT_W(CNT_W),
       .K_W(K_W),
 
       .ARRAY_COLS(ARRAY_COLS),
@@ -140,14 +143,15 @@ module conv1d_weight_feeder_top#(
 
 		// SA STREAM
       .o_data(o_data),
-		.o_valid(o_valid),
+			.o_valid(o_valid),
       .o_first(o_first),
       .o_last(o_last),
 
        // STATUS
        .o_ready(o_ready),
        .o_done(o_feed_done),
-       .o_mem_empty(o_mem_empty)
+       .o_mem_empty(o_mem_empty),
+       .o_mem_full(feeder_mem_full)
     );
 
 

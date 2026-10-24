@@ -1,7 +1,6 @@
 module weight_feeder #(
 	parameter DATA_W = 8,
 	parameter DEPTH = 16,
-	parameter CNT_W = 5,
 	parameter K_W = 16,
 	parameter ARRAY_COLS = 3,
 	parameter COL_W = (ARRAY_COLS <= 1) ? 1 : $clog2(ARRAY_COLS + 1)
@@ -115,7 +114,7 @@ module weight_feeder #(
 	generate 
 		for(i = 0; i < ARRAY_COLS; i=i+1) begin: g_lane
 			feed_lane#(
-				.DATA_W(DATA_W), .CNT_W(CNT_W), .DEPTH(DEPTH), .LANE_N(i)
+				.DATA_W(DATA_W), .DEPTH(DEPTH), .LANE_N(i)
 			) u_lane(
 				.clk(i_clk), .reset(i_reset),
 				

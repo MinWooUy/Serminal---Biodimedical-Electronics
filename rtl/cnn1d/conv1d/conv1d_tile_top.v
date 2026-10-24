@@ -30,8 +30,7 @@ module conv1d_tile_top #(
 	parameter IFMAP_MEM_DEPTH = 1024,
 	parameter WGT_MEM_DEPTH = 1024,
 	
-	parameter FEEDER_DEPTH = 16,
-	parameter CNT_W = 5,
+	parameter FEEDER_DEPTH = 1024,
 	parameter K_W = 16,
 	
 	parameter ARRAY_ROWS = 3,
@@ -112,8 +111,18 @@ module conv1d_tile_top #(
     input wire [ARRAY_COLS*8-1:0] i_post_shift,
     input wire i_post_relu,
     output wire [ARRAY_ROWS*ARRAY_COLS*8-1:0] o_post_tile,
-    output wire o_post_valid
+	output wire o_post_valid,
+
+	// =====================================================
+	// CONFIG ERROR
+	// 1 khi tile bị từ chối: k_len == 0 hoặc k_len > FEEDER_DEPTH.
+	// Tile không chạy, vẫn trả o_done. Giữ tới lần start hợp lệ tiếp theo.
+	// Khi o_cfg_err = 1, o_tile/o_tile_valid là của tile TRƯỚC, không được dùng.
+	// =====================================================
+	output wire o_cfg_err
 );
+	reg cfg_err_q;
+	assign o_cfg_err = cfg_err_q;
 
 	// =====================================================
 	// TILE FSM STATES
@@ -305,7 +314,6 @@ module conv1d_tile_top #(
 		.ROW_W(ROW_W),
 		
 		.DEPTH(FEEDER_DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W)
 	) u_ifmap_feeder_top(
 		.i_clk(i_clk),
@@ -357,7 +365,6 @@ module conv1d_tile_top #(
 		.ARRAY_COLS(ARRAY_COLS),
 		
 		.DEPTH(FEEDER_DEPTH),
-		.CNT_W(CNT_W),
 		.K_W(K_W),
 		
 		.COL_W(COL_W)
@@ -480,6 +487,7 @@ module conv1d_tile_top #(
 	always @(posedge i_clk or posedge i_reset) begin
 		if(i_reset) begin
 			state_q <= S_IDLE;
+			cfg_err_q <= 1'b0;
 		end else begin
 			case(state_q)
 				
@@ -488,7 +496,13 @@ module conv1d_tile_top #(
 				// -----------------------------------------
 				S_IDLE: begin
 					if(i_start) begin
-						state_q <= S_LOAD_START;
+						if(i_k_len == 0 || i_k_len > FEEDER_DEPTH) begin
+							cfg_err_q <= 1'b1;
+							state_q <= S_DONE; // Done không chạy loader
+						end else begin
+							cfg_err_q <= 1'b0;
+							state_q <= S_LOAD_START;
+						end
 					end
 				end
 				
@@ -566,4 +580,13 @@ module conv1d_tile_top #(
         assign o_post_tile=0;
         assign o_post_valid=0;
     end endgenerate
+
+	// synthesis translate_off
+	always @(posedge i_clk) begin
+		if(!i_reset && state_q == S_IDLE && i_start && (i_k_len == 0 || i_k_len > FEEDER_DEPTH)) begin
+			$display("[CFG] conv1d_tile_top t=%0t: tu choi tile, i_k_len=%0d (can 1..%0d)", $time, i_k_len, FEEDER_DEPTH);
+		end
+	end
+	// synthesis translate_on
+
 endmodule
