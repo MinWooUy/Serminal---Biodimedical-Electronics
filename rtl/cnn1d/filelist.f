@@ -51,3 +51,19 @@ conv1d/conv1d_ifmap_feeder_top.v
 conv1d/conv1d_weight_feeder_top.v
 conv1d/conv1d_tile_top.v
 conv1d/conv1d_layer_controller.v
+
+// Host UART 8N1, CRC and command transport
+comm/crc/crc16_ccitt_next.v
+comm/crc/crc_generator.v
+comm/crc/crc_checker.v
+comm/uart/uart_tx.v
+comm/uart/uart_rx.v
+comm/protocol/packet_rx.v
+comm/protocol/packet_tx.v
+comm/uart/uart_crc_top.v
+comm/protocol/host_command_controller.v
+top/ecg_accel_top.v
+
+// Quantized convolution output and streaming pooling
+post/conv1d_post_process.v
+post/maxpool1d2.v

@@ -70,6 +70,11 @@ module tb_conv1d_tile_top;
 	// =====================================================
 	wire [ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_tile;
 	wire o_tile_valid;
+    wire [71:0] post_tile;
+    wire post_valid;
+    integer post_checks=0;
+    integer pr,pc;
+    reg signed [63:0] post_expected;
 	
 	
 	// =====================================================
@@ -106,6 +111,7 @@ module tb_conv1d_tile_top;
 	// DUT
 	// =====================================================
 	conv1d_tile_top #(
+		.POST_ENABLE(1),
 		.DATA_W(DATA_W),
 		.ACC_W(ACC_W),
 		
@@ -152,6 +158,8 @@ module tb_conv1d_tile_top;
 		// Result
 		.o_tile(o_tile),
 		.o_tile_valid(o_tile_valid),
+        .i_post_bias({3{32'd2}}),.i_post_shift({3{8'd1}}),.i_post_relu(1'b1),
+        .o_post_tile(post_tile),.o_post_valid(post_valid),
 		
 		// Status
 		.o_busy(o_busy),
@@ -781,7 +789,8 @@ module tb_conv1d_tile_top;
 		$display("==============================================");
 		
 		if(errors == 0) begin
-			$display(" RESULT : ALL TESTS PASSED");
+			if(post_checks!=4) $fatal(1,"Expected one post output for each of 4 tiles, got %d",post_checks);
+            $display(" RESULT : ALL TESTS PASSED (including post processing)");
 		end else begin
 			$display(" RESULT : FAILED (%0d errors)", errors);
 		end
@@ -805,4 +814,16 @@ module tb_conv1d_tile_top;
 		$finish;
 	end
 
+    always @(negedge i_clk) if(post_valid) begin
+        post_checks=post_checks+1;
+        for(pr=0;pr<3;pr=pr+1) for(pc=0;pc<3;pc=pc+1) begin
+            post_expected=$signed(o_tile[(pr*3+pc)*32 +: 32]);
+            post_expected=(post_expected+3) >>> 1;
+            if(post_expected<0) post_expected=0;
+            if(post_expected>127) post_expected=127;
+            if(pr>=i_active_rows || pc>=i_active_cols) post_expected=0;
+            if($signed(post_tile[(pr*3+pc)*8 +: 8])!==post_expected)
+                $fatal(1,"Integrated post mismatch");
+        end
+    end
 endmodule

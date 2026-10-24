@@ -20,6 +20,7 @@
 //     └── partial_sum_manager
 
 module conv1d_tile_top #(
+	parameter POST_ENABLE = 0, // opt-in INT32 -> INT8 post processing
 	parameter DATA_W = 8,
 	parameter ACC_W = 32,
 	
@@ -104,7 +105,14 @@ module conv1d_tile_top #(
 	output wire o_ifmap_write_bank,
 	
 	output wire o_wgt_read_bank,
-	output wire o_wgt_write_bank
+	output wire o_wgt_write_bank,
+
+    // Sampled on accepted i_start. Used only with POST_ENABLE=1, ACC_W=32.
+    input wire [ARRAY_COLS*32-1:0] i_post_bias,
+    input wire [ARRAY_COLS*8-1:0] i_post_shift,
+    input wire i_post_relu,
+    output wire [ARRAY_ROWS*ARRAY_COLS*8-1:0] o_post_tile,
+    output wire o_post_valid
 );
 
 	// =====================================================
@@ -533,4 +541,29 @@ module conv1d_tile_top #(
 		end
 	end
 
+    generate if (POST_ENABLE) begin : g_post
+        reg [ARRAY_COLS*32-1:0] bias_q;
+        reg [ARRAY_COLS*8-1:0] shift_q;
+        reg relu_q, consumed;
+        always @(posedge i_clk or posedge i_reset) begin
+            if(i_reset) begin bias_q<=0; shift_q<=0; relu_q<=0; consumed<=0; end
+            else if(i_start && state_q==S_IDLE) begin
+                bias_q<=i_post_bias; shift_q<=i_post_shift;
+                relu_q<=i_post_relu; consumed<=0;
+            end else if(state_q==S_COMPUTE && o_tile_valid) consumed<=1;
+        end
+        conv1d_post_process #(.ROWS(ARRAY_ROWS),.COLS(ARRAY_COLS),
+            .ROW_W(ROW_W),.COL_W(COL_W)) u_post(
+            .i_clk(i_clk),.i_reset(i_reset),
+            .i_valid(state_q==S_COMPUTE && o_tile_valid && !consumed),
+            .i_tile(o_tile),.i_bias(bias_q),.i_shift(shift_q),.i_relu(relu_q),
+            .i_active_rows(active_rows_q),.i_active_cols(active_cols_q),
+            .o_tile(o_post_tile),.o_valid(o_post_valid));
+`ifndef SYNTHESIS
+        initial if(ACC_W!=32) $fatal(1,"Post processing requires ACC_W=32");
+`endif
+    end else begin : g_no_post
+        assign o_post_tile=0;
+        assign o_post_valid=0;
+    end endgenerate
 endmodule
