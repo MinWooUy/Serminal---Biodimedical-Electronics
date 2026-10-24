@@ -78,10 +78,13 @@ Ký hiệu ưu tiên:
   - [conv1d_tile_top.v:85](../../rtl/cnn1d/conv1d/conv1d_tile_top.v): kết quả chỉ được đưa ra cổng, không ghi về SRAM.
 - **Hậu quả:** không nối được nhiều lớp với nhau.
 - **Đề xuất:**
-  - Thêm `post_proc` (xem L07) với một trong hai cách giữ kết quả:
-    - Chốt `o_tile` vào thanh ghi đệm. Kích thước là ROWS × COLS × 32 bit, tức 512 bit với array 4×4.
-    - Hoặc dùng handshake `post_done`: layer controller chờ tín hiệu này rồi mới chạy tile sau.
-  - Thêm `output_writer`: ghi int8 vào bank đang ghi của ping-pong, rồi swap sau mỗi lớp.
+  - **PSM 2 chiều** trên chuỗi shadow scan có sẵn:
+    - *Chiều ghi (preload):* trước khi tính, bơm bias vào cột 0. MAC khởi tạo accumulator từ shadow thay cho hằng số 0, nên bias được cộng miễn phí. Bơm 0 thì giữ đúng hành vi cũ.
+    - *Chiều đọc (drain):* dịch shadow ra thành stream có valid/ready, mỗi chu kỳ một kênh × ROWS vị trí. Shadow chính là thanh ghi chốt, nên không cần chốt 512 bit và bỏ được bus `o_tile` (một phần L13).
+    - Cùng cổng ghi này về sau sẽ nạp lại tổng riêng phần khi chia K (cần cho CNN2D).
+  - `post_proc` là vector unit SIMD ROWS làn (requant → clamp → pool → GAP), không còn tầng bias. Thêm `output_writer` ghi vào bank đang ghi của ping-pong, rồi swap sau mỗi lớp.
+  - MaxPool cần ARRAY_ROWS chẵn (4×4). Khi đó cặp pool nằm sẵn trong một vector drain. Với 3 hàng, cặp pool vắt qua tile, mà layer controller chạy hết mọi Cout rồi mới sang nhóm vị trí sau.
+  - Giải thích chi tiết, interface và hướng dẫn 6 bước (bắt đầu bằng preload bias = 0 để chứng minh không đổi hành vi): [L03-post-processing.md](L03-post-processing.md).
 
 ### L04. Băng thông bộ nhớ thấp, load và compute nối tiếp
 

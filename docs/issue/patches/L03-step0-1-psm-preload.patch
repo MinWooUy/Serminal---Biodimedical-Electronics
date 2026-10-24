@@ -1,0 +1,442 @@
+--- a/rtl/cnn1d/pe/MAC.v
++++ b/rtl/cnn1d/pe/MAC.v
+@@ -3,6 +3,7 @@
+ 	input i_clear_acc, i_compute_en, i_acc_init,
+ 	
+ 	input wire[7:0] i_a, i_b,
++	input wire[31:0] i_init,     // giá trị khởi tạo accumulator (shadow của PE)
+ 	
+ 	output wire[31:0] o_mac
+ );
+@@ -34,7 +35,7 @@
+ 	assign expand_value = {{16{outResultMul_pipe[15]}}, outResultMul_pipe};
+ 	
+ 	// Mux 2:1
+-	assign acc_value = acc_init_q ? 32'b0 : o_mac;
++	assign acc_value = acc_init_q ? i_init : o_mac;
+ 	
+ 	// Adder
+ 	CarryLookaheadAdder_32_bit CLA_32bit(
+--- a/rtl/cnn1d/pe/ProcessingElement.v
++++ b/rtl/cnn1d/pe/ProcessingElement.v
+@@ -38,6 +38,7 @@
+ 		.i_clk(i_clk), .i_reset(i_reset), 
+ 		.i_clear_acc(i_clear_acc), .i_acc_init(i_acc_init), .i_compute_en(i_compute_en),
+ 		.i_a(i_weight), .i_b(i_image),
++		.i_init(o_pe),
+ 		.o_mac(mac_value)
+ 	);
+ 	
+--- a/rtl/cnn1d/core/pe_array.v
++++ b/rtl/cnn1d/core/pe_array.v
+@@ -13,6 +13,9 @@
+   input wire[ARRAY_ROWS-1:0] i_act_valid, i_act_first, i_act_last,
+   input wire[ARRAY_COLS-1:0] i_wgt_valid, i_wgt_first, i_wgt_last,
+   
++  // Preload: giá trị bơm vào cột 0 của từng hàng khi dịch chuỗi shadow
++  input wire [ARRAY_ROWS*ACC_W-1:0] i_preload,
++
+   input wire [ARRAY_ROWS*DATA_W-1:0] i_image,
+   input wire [ARRAY_COLS*DATA_W-1:0] i_weight,
+ 
+@@ -76,7 +79,7 @@
+ 				wire[ACC_W-1:0] local_scan_in;
+ 				
+ 				if(col == 0) begin: GEN_SCAN_FIRST
+-					assign local_scan_in = {ACC_W{1'b0}};
++					assign local_scan_in = i_preload[row*ACC_W +: ACC_W];
+ 				end else begin: GEN_SCAN_NEXT
+ 					assign local_scan_in = scan_link[(row*ARRAY_COLS+col-1)*ACC_W +: ACC_W];
+ 			end
+--- a/rtl/cnn1d/core/cnn_control_fsm.v
++++ b/rtl/cnn1d/core/cnn_control_fsm.v
+@@ -69,6 +69,10 @@
+ 	output reg o_psm_clr,
+ 	output reg o_psm_capture_en,
+ 	
++	// Preload (PSM tự đếm số lần dịch)
++	output reg o_preload_start,
++	input wire i_preload_done,
++	
+ 	// status
+ 	output reg busy,
+ 	output reg done,
+@@ -80,6 +84,8 @@
+ 	localparam S_COMPUTE = 3'd2;
+ 	localparam S_DRAIN = 3'd3;
+ 	localparam S_DONE = 3'd4;
++	localparam S_PRE_KICK = 3'd5; // phát xung preload_start cho PSM
++	localparam S_PRE_WAIT = 3'd6; // chờ PSM dịch xong ac lần
+ 	
+ 	reg[2:0] state;
+ 	
+@@ -93,6 +99,7 @@
+ 			o_scan_en <= 1'b0;
+ 			o_psm_clr <= 1'b0;
+ 			o_psm_capture_en <= 1'b0;
++			o_preload_start <= 1'b0;
+ 			
+ 			busy <= 1'b0;
+ 			done <= 1'b0;
+@@ -101,6 +108,7 @@
+ 			o_scan_en <= 1'b0;
+ 			o_psm_clr <= 1'b0;
+ 			o_psm_capture_en <= 1'b0;
++			o_preload_start <= 1'b0;
+ 			
+ 			busy <= 1'b0;
+ 			done <= 1'b0;
+@@ -116,12 +124,22 @@
+ 				
+ 				S_LOAD: begin
+ 					busy <= 1'b1;
+-					
+-					// pulse 1 cycle
+-					o_feeder_start <= 1'b1;
++					// psm_clr: PSM chốt active_rows/cols của tile mới
+ 					o_psm_clr <= 1'b1;
+-					
+-					state <= S_COMPUTE;
++					state <= S_PRE_KICK;
++				end
++				S_PRE_KICK: begin
++					busy <= 1'b1;
++					o_preload_start <= 1'b1;
++					state <= S_PRE_WAIT;
++				end
++				S_PRE_WAIT: begin
++					busy <= 1'b1;
++					// Shadow đã chứa giá trị khởi tạo -> mới cho feeder chạy
++					if(i_preload_done) begin
++						o_feeder_start <= 1'b1;
++						state <= S_COMPUTE;
++					end
+ 				end
+ 				
+ 				S_COMPUTE: begin
+--- a/rtl/cnn1d/core/partial_sum_manager.v
++++ b/rtl/cnn1d/core/partial_sum_manager.v
+@@ -45,7 +45,20 @@
+ 	// Tile result
+ 	output reg [ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_tile,
+ 	output reg o_tile_valid,
+-	output reg o_capture_done
++	output reg o_capture_done,
++
++	// =====================================================
++	// PRELOAD (chiều ghi): bơm giá trị khởi tạo vào cột 0
++	// Thứ tự: cột ac-1 trước, cột 0 sau cùng (giá trị vào trước đi xa nhất).
++	// =====================================================
++	input wire i_preload_start,                      // xung, sau i_clr
++	input wire i_preload_mode,                       // 0: ZERO, 1: BIAS (phát chung cho mọi hàng)
++	output wire o_bias_rd_en,                        // đọc bias RAM
++	output wire [COL_W-1:0] o_bias_rd_idx,           // cột trong tile: ac-1 .. 0
++	input wire [ACC_W-1:0] i_bias_rd_data,           // có ở chu kỳ sau o_bias_rd_en
++	output wire o_preload_shift,                     // dịch chuỗi shadow 1 lần
++	output wire [ARRAY_ROWS*ACC_W-1:0] o_preload_vec,
++	output reg o_preload_done                        // xung, sau lần dịch cuối
+ );
+ 
+ 	// Đếm số cột đã capture
+@@ -55,6 +68,42 @@
+ 	reg [ROW_W-1:0] active_rows_q;
+ 	reg [COL_W-1:0] active_cols_q;
+ 	
++	// =====================================================
++	// PRELOAD: 2 tầng pipeline
++	//   tầng đọc : pre_busy, phát địa chỉ cột (ac-1-pre_idx)
++	//   tầng dịch: pre_shift_q, dữ liệu bias đã về -> dịch chuỗi shadow
++	// PSM đếm chính xác ac lần dịch (FSM tạo scan_en qua thanh ghi nên dễ dịch lố).
++	// =====================================================
++	reg pre_busy, pre_shift_q, pre_last_q;
++	reg [COL_W-1:0] pre_idx;
++
++	assign o_bias_rd_en = pre_busy & i_preload_mode;
++	assign o_bias_rd_idx = active_cols_q - 1'b1 - pre_idx;
++	assign o_preload_shift = pre_shift_q;
++	// Ngoài lúc preload luôn bơm 0, kể cả khi FSM dịch lố trong S_DRAIN
++	assign o_preload_vec = (pre_shift_q && i_preload_mode) ? {ARRAY_ROWS{i_bias_rd_data}} : {(ARRAY_ROWS*ACC_W){1'b0}};
++
++	always @(posedge i_clk or posedge i_reset) begin
++		if(i_reset) begin
++			pre_busy <= 1'b0;
++			pre_idx <= {COL_W{1'b0}};
++			pre_shift_q <= 1'b0;
++			pre_last_q <= 1'b0;
++			o_preload_done <= 1'b0;
++		end else begin
++			pre_shift_q <= pre_busy;
++			pre_last_q <= pre_busy && (pre_idx == active_cols_q - 1'b1);
++			o_preload_done <= pre_last_q;
++			if(i_preload_start && !pre_busy) begin
++				pre_busy <= 1'b1;
++				pre_idx <= {COL_W{1'b0}};
++			end else if(pre_busy) begin
++				if(pre_idx == active_cols_q - 1'b1) pre_busy <= 1'b0;
++				else pre_idx <= pre_idx + 1'b1;
++			end
++		end
++	end
++
+ 	// MUX scan endpoint
+ 	wire [ARRAY_ROWS*ACC_W-1:0] scan_pe;
+ 	
+--- a/rtl/cnn1d/core/cnn_compute_core.v
++++ b/rtl/cnn1d/core/cnn_compute_core.v
+@@ -37,7 +37,13 @@
+ 	// Trạng thái
+ 	output wire o_busy,
+ 	output wire o_done,
+-	output wire [2:0] o_state_dbg
++	output wire [2:0] o_state_dbg,
++	
++	// Preload: chế độ + bias RAM (bên ngoài, đọc trễ 1 chu kỳ)
++	input wire i_preload_mode,
++	output wire o_bias_rd_en,
++	output wire [COL_W-1:0] o_bias_rd_idx,
++	input wire [ACC_W-1:0] i_bias_rd_data
+ );
+ 
+ 	// ---------
+@@ -68,6 +74,8 @@
+ 	wire psm_capture_en;
+ 	wire sa_tile_done;
+ 	wire psm_capture_done;
++	wire preload_start, preload_done, preload_shift;
++	wire [ARRAY_ROWS*ACC_W-1:0] preload_vec;
+ 	
+ 	assign o_feeder_start = feeder_start;
+ 	
+@@ -86,6 +94,8 @@
+ 		.o_scan_en(scan_en),
+ 		.o_psm_clr(psm_clr),
+ 		.o_psm_capture_en(psm_capture_en),
++		.o_preload_start(preload_start),
++		.i_preload_done(preload_done),
+ 		
+ 		.busy(o_busy),
+ 		.done(o_done),
+@@ -110,7 +120,8 @@
+ 		.i_reset(i_reset),
+ 		
+ 		.i_clear_acc(1'b0),
+-		.i_scan_en(scan_en),
++		.i_scan_en(scan_en | preload_shift),   // drain (FSM) hoặc preload (PSM)
++		.i_preload(preload_vec),
+ 		
+ 		// IFMAP stream
+ 		.i_act_valid(i_ifm_valid),
+@@ -176,7 +187,15 @@
+ 		
+ 		.o_tile(o_tile),
+ 		.o_tile_valid(o_tile_valid),
+-		.o_capture_done(psm_capture_done)
++		.o_capture_done(psm_capture_done),
++		.i_preload_start(preload_start),
++		.i_preload_mode(i_preload_mode),
++		.o_bias_rd_en(o_bias_rd_en),
++		.o_bias_rd_idx(o_bias_rd_idx),
++		.i_bias_rd_data(i_bias_rd_data),
++		.o_preload_shift(preload_shift),
++		.o_preload_vec(preload_vec),
++		.o_preload_done(preload_done)
+ 	);
+ 
+ endmodule
+\ No newline at end of file
+--- a/rtl/cnn1d/conv1d/conv1d_tile_top.v
++++ b/rtl/cnn1d/conv1d/conv1d_tile_top.v
+@@ -111,7 +111,17 @@
+ 	// Tile không chạy, vẫn trả o_done. Giữ tới lần start hợp lệ tiếp theo.
+ 	// Khi o_cfg_err = 1, o_tile/o_tile_valid là của tile TRƯỚC, không được dùng.
+ 	// =====================================================
+-	output wire o_cfg_err
++	output wire o_cfg_err,
++
++	// =====================================================
++	// PRELOAD / BIAS
++	// i_preload_mode: 0 = khởi tạo 0 (hành vi cũ), 1 = khởi tạo bằng bias.
++	// Bias RAM nằm ngoài: địa chỉ = (cbase + col_base) + o_bias_rd_idx, đọc trễ 1 chu kỳ.
++	// =====================================================
++	input wire i_preload_mode,
++	output wire o_bias_rd_en,
++	output wire [COL_W-1:0] o_bias_rd_idx,
++	input wire [ACC_W-1:0] i_bias_rd_data
+ );
+ 	reg cfg_err_q;
+ 	assign o_cfg_err = cfg_err_q;
+@@ -444,7 +454,12 @@
+ 		// Status
+ 		.o_busy(core_busy),
+ 		.o_done(core_done),
+-		.o_state_dbg(o_core_state_dbg)
++		.o_state_dbg(o_core_state_dbg),
++		
++		.i_preload_mode(i_preload_mode),
++		.o_bias_rd_en(o_bias_rd_en),
++		.o_bias_rd_idx(o_bias_rd_idx),
++		.i_bias_rd_data(i_bias_rd_data)
+ 	);
+ 	
+ 	// =====================================================
+--- a/rtl/cnn1d/tb/tb_conv1d_tile_top.v
++++ b/rtl/cnn1d/tb/tb_conv1d_tile_top.v
+@@ -163,7 +163,11 @@
+ 		.o_ifmap_read_bank(o_ifmap_read_bank),
+ 		.o_ifmap_write_bank(o_ifmap_write_bank),
+ 		.o_wgt_read_bank(o_wgt_read_bank),
+-		.o_wgt_write_bank(o_wgt_write_bank)
++		.o_wgt_write_bank(o_wgt_write_bank),
++		
++		// Preload = 0: hành vi như trước khi có preload
++		.i_preload_mode(1'b0),
++		.i_bias_rd_data(32'd0)
+ 	);
+ 	
+ 	
+--- a/rtl/cnn1d/tb/tb_conv1d_tile_corner.v
++++ b/rtl/cnn1d/tb/tb_conv1d_tile_corner.v
+@@ -14,22 +14,26 @@
+ `timescale 1ns/1ps
+ 
+ module tb_conv1d_tile_corner;
+-	wire done16, done1024;
+-	wire [31:0] err16, err1024;
++	wire done16, done16b, done1024;
++	wire [31:0] err16, err16b, err1024;
+ 
+-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11))
++	// PRELOAD_BIAS = 0: khởi tạo 0 (hành vi cũ); 1: khởi tạo bằng bias qua chuỗi shadow
++	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11), .PRELOAD_BIAS(0))
+ 		u_d16   (.o_done(done16),   .o_errors(err16));
+-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23))
++	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(17), .PRELOAD_BIAS(1))
++		u_d16b  (.o_done(done16b),  .o_errors(err16b));
++	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23), .PRELOAD_BIAS(1))
+ 		u_d1024 (.o_done(done1024), .o_errors(err1024));
+ 
+ 	initial begin
+-		wait(done16 && done1024);
++		wait(done16 && done16b && done1024);
+ 		#20;
+ 		$display("==============================================");
+ 		$display(" CONV1D TILE CORNER TEST SUMMARY");
+-		$display("   FEEDER_DEPTH=16   : %0d loi", err16);
+-		$display("   FEEDER_DEPTH=1024 : %0d loi", err1024);
+-		if (err16 == 0 && err1024 == 0)
++		$display("   FEEDER_DEPTH=16,   preload 0    : %0d loi", err16);
++		$display("   FEEDER_DEPTH=16,   preload bias : %0d loi", err16b);
++		$display("   FEEDER_DEPTH=1024, preload bias : %0d loi", err1024);
++		if (err16 == 0 && err16b == 0 && err1024 == 0)
+ 			$display(" RESULT : ALL TESTS PASSED");
+ 		else
+ 			$display(" RESULT : FAILED");
+@@ -48,7 +52,8 @@
+ 	parameter FEEDER_DEPTH = 16,
+ 	parameter MEM_DEPTH    = 256,
+ 	parameter N_RANDOM     = 20,
+-	parameter SEED         = 1
++	parameter SEED         = 1,
++	parameter PRELOAD_BIAS = 0
+ )(
+ 	output reg        o_done,
+ 	output reg [31:0] o_errors
+@@ -86,6 +91,21 @@
+ 	wire o_tile_valid, o_busy, o_done_dut, o_cfg_err;
+ 	wire [2:0] o_state_dbg, o_core_state_dbg, o_ifmap_loader_state, o_wgt_loader_state;
+ 	wire o_ifmap_read_bank, o_ifmap_write_bank, o_wgt_read_bank, o_wgt_write_bank;
++	wire o_bias_rd_en;
++	wire [COL_W-1:0] o_bias_rd_idx;
++
++	// Bias RAM: địa chỉ = bias_base + idx (bias_base đóng vai cbase + col_base), đọc trễ 1 chu kỳ
++	localparam BIAS_DEPTH = 64;
++	reg signed [ACC_W-1:0] bias_mem [0:BIAS_DEPTH-1];
++	reg signed [ACC_W-1:0] bias_q;
++	integer bias_base;
++	integer bias_reads;
++	always @(posedge i_clk) begin
++		if (o_bias_rd_en) begin
++			bias_q <= bias_mem[bias_base + o_bias_rd_idx];
++			bias_reads = bias_reads + 1;
++		end
++	end
+ 
+ 	conv1d_tile_top #(
+ 		.DATA_W(DATA_W), .ACC_W(ACC_W),
+@@ -109,7 +129,9 @@
+ 		.o_ifmap_loader_state(o_ifmap_loader_state), .o_wgt_loader_state(o_wgt_loader_state),
+ 		.o_ifmap_read_bank(o_ifmap_read_bank), .o_ifmap_write_bank(o_ifmap_write_bank),
+ 		.o_wgt_read_bank(o_wgt_read_bank), .o_wgt_write_bank(o_wgt_write_bank),
+-		.o_cfg_err(o_cfg_err)
++		.o_cfg_err(o_cfg_err),
++		.i_preload_mode(PRELOAD_BIAS[0]), .i_bias_rd_data(bias_q),
++		.o_bias_rd_en(o_bias_rd_en), .o_bias_rd_idx(o_bias_rd_idx)
+ 	);
+ 
+ 	// =====================================================
+@@ -219,6 +241,15 @@
+ 			i_ifmap_mem_swap = 1'b0; i_wgt_mem_swap = 1'b0;
+ 			x_rd_bank = ~x_rd_bank;
+ 			w_rd_bank = ~w_rd_bank;
++			// bias: base ngẫu nhiên, giá trị theo mode (1: -2^20, 3: +2^20, 4: 0, còn lại ngẫu nhiên ±2^20)
++			bias_base = rnd_range(0, BIAS_DEPTH - ARRAY_COLS);
++			for (a = 0; a < BIAS_DEPTH; a = a + 1)
++				case (mode)
++					1: bias_mem[a] = -(1 << 20);
++					3: bias_mem[a] = (1 << 20);
++					4: bias_mem[a] = 0;
++					default: bias_mem[a] = rnd_range(0, (1 << 21)) - (1 << 20);
++				endcase
+ 			if (o_ifmap_read_bank !== x_rd_bank || o_wgt_read_bank !== w_rd_bank)
+ 				fail("read bank cua DUT khac mo hinh sau swap");
+ 		end
+@@ -234,6 +265,7 @@
+ 			for (r = 0; r < ARRAY_ROWS; r = r + 1)
+ 				for (c = 0; c < ARRAY_COLS; c = c + 1) begin
+ 					acc = 0;
++					if (PRELOAD_BIAS && r < ar && c < ac) acc = bias_mem[bias_base + c];
+ 					if (r < ar && c < ac)
+ 						for (j = 0; j < k; j = j + 1) begin
+ 							xa = ib + r * step + j;
+@@ -339,6 +371,9 @@
+ 		o_done = 1'b0;
+ 		errors = 0; err_before = 0; prints = 0;
+ 		seed = SEED;
++		bias_base = 0;
++		bias_reads = 0;
++		bias_q = 0;
+ 		i_k_len = 0; i_window_step = 0; i_active_rows = 0; i_active_cols = 0;
+ 		i_ifmap_base_addr = 0; i_wgt_base_addr = 0;
+ 		i_ifmap_mem_wr_addr = 0; i_ifmap_mem_wr_data = 0;
+@@ -416,6 +451,22 @@
+ 		tile(5, 1, 3, 3, 0, 0, 0);
+ 		report("C15 reset giua luc load / compute roi chay tiep");
+ 
++		fill_and_swap(0, 0, 6, 1, 0);
++		i_k_len = 6; i_window_step = 1; i_active_rows = 3; i_active_cols = 3;
++		i_start = 1'b1; @(negedge i_clk); i_start = 1'b0;
++		while (o_core_state_dbg != 3'd6) @(negedge i_clk);   // core S_PRE_WAIT
++		do_reset;
++		tile(5, 1, 3, 3, 0, 0, 0);
++		report("C18 reset giua luc preload roi chay tiep");
++
++		if (PRELOAD_BIAS) begin
++			if (bias_reads == 0) fail("che do bias nhung chua doc bias RAM lan nao");
++			report("C19 che do bias: co doc bias RAM");
++		end else begin
++			if (bias_reads != 0) fail("che do 0 nhung van doc bias RAM");
++			report("C19 che do 0: khong doc bias RAM");
++		end
++
+ 		if (FEEDER_DEPTH >= 192) begin
+ 			tile(7, 1, 3, 3, 0, 0, 0);
+ 			tile(80, 16, 3, 3, 0, 0, 0);
+@@ -438,7 +489,7 @@
+ 		end
+ 		report("C17 cau hinh ngau nhien");
+ 
+-		$display("D=%0d: %0d loi", FEEDER_DEPTH, errors);
++		$display("D=%0d bias=%0d: %0d loi, %0d lan doc bias", FEEDER_DEPTH, PRELOAD_BIAS, errors, bias_reads);
+ 		o_errors = errors;
+ 		o_done = 1'b1;
+ 	end
