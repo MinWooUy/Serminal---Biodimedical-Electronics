@@ -61,6 +61,7 @@ module host_command_controller #(
         ((active_cols==1 && bias_valid[0]) ||
          (active_cols==2 && &bias_valid[1:0]) ||
          (active_cols==3 && &bias_valid[2:0]));
+         
     always @(posedge clk or posedge reset) begin
         if(reset) begin
             state<=IDLE;tx_start<=0;tx_cmd<=0;tx_seq<=0;tx_length<=0;tx_payload<=0;
