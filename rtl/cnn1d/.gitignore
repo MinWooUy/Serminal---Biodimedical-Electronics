@@ -1,3 +1,6 @@
 sim/out/
 transcript
 *.wlf
+docs/issue
+__pycache__/
+*.pyc
