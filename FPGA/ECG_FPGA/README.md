@@ -1,4 +1,4 @@
-# Gói bàn giao FPGA — CNN phân loại nhịp ECG (int8, giao thức v2)
+# Gói bàn giao FPGA CNN phân loại nhịp ECG (int8, giao thức v2)
 
 Gói: `ECG_FPGA_20261026_e64a4ab` · commit `e64a4aba7214` · WEIGHTS_CRC32 = **0x067B9985** · chi tiết trong `VERSION`.
 
