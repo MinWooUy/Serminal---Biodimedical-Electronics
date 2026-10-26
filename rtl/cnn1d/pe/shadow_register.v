@@ -1,8 +1,9 @@
+`default_nettype none
 module shadow_register(
-	input i_clk, i_reset,
+	input wire i_clk, i_reset,
 	
-	input i_scan_en, 		// lan truyen output qua SA tới PSM 
-	input i_capture_en,	// Chuyển psum từ acc vào shadow
+	input wire i_scan_en, 		// lan truyen output qua SA tới PSM 
+	input wire i_capture_en,	// Chuyển psum từ acc vào shadow
 	input wire[31:0] i_psum,
 	input wire[31:0] i_scan_in,
 	
@@ -20,3 +21,4 @@ module shadow_register(
 	end
 	
 endmodule
+`default_nettype wire

@@ -1,3 +1,4 @@
+`default_nettype none
 module weight_feeder #(
 	parameter DATA_W = 8,
 	parameter DEPTH = 16,
@@ -131,3 +132,4 @@ module weight_feeder #(
 		end
 	endgenerate
 endmodule
+`default_nettype wire

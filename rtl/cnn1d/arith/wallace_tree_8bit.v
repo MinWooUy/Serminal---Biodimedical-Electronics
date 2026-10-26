@@ -1,3 +1,4 @@
+`default_nettype none
 module wallace_tree_8bit(
   input wire[63:0] pp,
   output wire[15:0] sum,
@@ -382,3 +383,4 @@ module wallace_tree_8bit(
   assign sum = {1'b0, pp[63], s2_c13_0, s3_c12_0, s4_c11_0, s4_c10_0, s4_c9_0, s4_c8_0, s5_c7_0, s4_c6_0, s4_c5_0, s3_c4_0, s2_c3_0, s1_c2_0, pp[8], pp[0]};
   assign carry = {1'b0, c2_c14_0, c3_c13_0, c4_c12_0, c4_c11_0, c4_c10_0, c4_c9_0, c5_c8_0, 1'b0, c4_c6_0, 1'b0, 1'b0, 1'b0, 1'b0, pp[1], 1'b0};
 endmodule
+`default_nettype wire

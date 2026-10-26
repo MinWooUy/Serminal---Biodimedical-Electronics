@@ -1,3 +1,4 @@
+`default_nettype none
 module tensor_sram#(
 	parameter DATA_W = 8,
 	parameter DEPTH = 1024,
@@ -50,3 +51,4 @@ module tensor_sram#(
 		end
 	end
 endmodule
+`default_nettype wire

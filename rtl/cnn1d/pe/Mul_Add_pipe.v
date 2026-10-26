@@ -1,7 +1,8 @@
+`default_nettype none
 module Mul_Add_pipe(
-	input clk, reset,
+	input wire clk, reset,
 	
-	input i_acc_init, i_compute_en,
+	input wire i_acc_init, i_compute_en,
 	input wire[15:0] inResultMul,
 	
 	output reg acc_init_q, compute_en_q,
@@ -20,3 +21,4 @@ module Mul_Add_pipe(
 	end
 
 endmodule
+`default_nettype wire

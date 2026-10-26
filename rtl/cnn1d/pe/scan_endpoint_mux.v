@@ -1,3 +1,4 @@
+`default_nettype none
 module scan_endpoint_mux #(
 	parameter ACC_W = 32,
 	parameter ARRAY_ROWS = 3,
@@ -22,3 +23,4 @@ module scan_endpoint_mux #(
 	end
 
 endmodule
+`default_nettype wire

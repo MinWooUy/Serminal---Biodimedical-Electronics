@@ -1,14 +1,19 @@
+`default_nettype none
 module MAC(
-	input i_clk, i_reset, 
-	input i_clear_acc, i_compute_en, i_acc_init,
+	input wire i_clk, i_reset, 
+	input wire i_clear_acc, i_compute_en, i_acc_init,
 	
 	input wire[7:0] i_a, i_b,
-	
+	input wire[31:0] i_init,
+
 	output wire[31:0] o_mac
 );
 	wire acc_init_q, compute_en_q;
 	wire[15:0] ResultMul, outResultMul_pipe;
 	wire[31:0] FinalOutput, expand_value, acc_value;
+
+	// Mux 2:1: lần MAC đầu khởi tạo từ shadow (preload), các lần sau cộng dồn
+	assign acc_value = acc_init_q ? i_init : o_mac;
 
 //	WallaceTreeMultiplier_8x8 WLT_Mul(
 //		.A(A), .B(B),
@@ -33,9 +38,6 @@ module MAC(
 	// Signed Expand
 	assign expand_value = {{16{outResultMul_pipe[15]}}, outResultMul_pipe};
 	
-	// Mux 2:1
-	assign acc_value = acc_init_q ? 32'b0 : o_mac;
-	
 	// Adder
 	CarryLookaheadAdder_32_bit CLA_32bit(
 		.A(acc_value), .B(expand_value),
@@ -52,3 +54,4 @@ module MAC(
 		.o_mac(o_mac)
 	);
 endmodule
+`default_nettype wire

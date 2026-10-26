@@ -1,3 +1,4 @@
+`default_nettype none
 // conv1d_tile_top
 // │
 // ├── tensor_pingpong_buffer        <- raw X
@@ -61,6 +62,18 @@ module conv1d_tile_top #(
 	input wire [ADDR_W-1:0] i_wgt_base_addr,
 	
 	// =====================================================
+	// PSM: preload
+	// =====================================================
+	input wire i_preload_mode,
+	input wire [ACC_W-1:0] i_bias_rd_data,
+	// DRAIN STREAM: mỗi lần bắt tay = cột o_drain_idx(kênh col_base + idx), ARRAY_ROWS vị trí.
+	// i_drain_ready = 1 cố định thì hành vi giống hệt bản cũ
+	input wire i_drain_ready,
+	output wire o_drain_valid,
+	output wire [COL_W-1:0] o_drain_idx,
+	output wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec,
+
+	// =====================================================
 	// IFMAP SRAM LOAD PORT
 	// CPU / TB ghi raw input tensor vào write bank
 	// trước khi accelerator chạy
@@ -79,8 +92,11 @@ module conv1d_tile_top #(
 	input wire i_wgt_mem_swap,
 	
 	// =====================================================
-	// RESULT
+	// PSM: RESULT
 	// =====================================================
+	// Bias RAM bên ngoài: địa chỉ = (cbase + col_base) + o_bias_rd_idx, đọc trễ 1 chu kỳ
+	output wire o_bias_rd_en,
+	output wire [COL_W-1:0] o_bias_rd_idx,
 	output wire [ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_tile,
 	output wire o_tile_valid,
 	
@@ -419,6 +435,10 @@ module conv1d_tile_top #(
 		
 		.i_start(core_start),
 		
+		.i_preload_mode(i_preload_mode),
+		.i_bias_rd_data(i_bias_rd_data),
+		.i_drain_ready(i_drain_ready),
+
 		.i_active_rows(active_rows_q),
 		.i_active_cols(active_cols_q),
 		
@@ -440,6 +460,11 @@ module conv1d_tile_top #(
 		// Result
 		.o_tile(o_tile),
 		.o_tile_valid(o_tile_valid),
+		.o_bias_rd_idx(o_bias_rd_idx),
+		.o_bias_rd_en(o_bias_rd_en),
+		.o_drain_valid(o_drain_valid),
+		.o_drain_idx(o_drain_idx),
+		.o_drain_vec(o_drain_vec),
 		
 		// Status
 		.o_busy(core_busy),
@@ -556,3 +581,4 @@ module conv1d_tile_top #(
 	// synthesis translate_on
 
 endmodule
+`default_nettype wire

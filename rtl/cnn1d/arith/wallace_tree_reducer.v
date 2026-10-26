@@ -1,3 +1,4 @@
+`default_nettype none
 module wallace_tree_reducer#(
   parameter DATA_W = 4
 )(
@@ -16,3 +17,4 @@ module wallace_tree_reducer#(
     end
   endgenerate
 endmodule
+`default_nettype wire

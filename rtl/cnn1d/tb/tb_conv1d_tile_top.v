@@ -126,6 +126,11 @@ module tb_conv1d_tile_top;
 		.i_clk(i_clk),
 		.i_reset(i_reset),
 		
+		// Preload
+		.i_preload_mode(1'b0),
+		.i_bias_rd_data(32'b0),
+		.i_drain_ready(1'b1),
+
 		// Tile control
 		.i_start(i_start),
 		.i_k_len(i_k_len),

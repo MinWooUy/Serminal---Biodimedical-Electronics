@@ -1,3 +1,4 @@
+`default_nettype none
 module ifmap_feeder #(
 	parameter DATA_W = 8,
 	parameter DEPTH = 16,
@@ -138,3 +139,4 @@ module ifmap_feeder #(
 	endgenerate
 
 endmodule
+`default_nettype wire

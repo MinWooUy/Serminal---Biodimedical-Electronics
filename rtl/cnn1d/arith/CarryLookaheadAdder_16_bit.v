@@ -1,9 +1,10 @@
+`default_nettype none
 module CarryLookaheadAdder_16_bit(
 	input wire[15:0] A, B,
-	input Cin,
+	input wire Cin,
 	
 	output wire[15:0] S,
-	output Cout, G_out, P_out
+	output wire Cout, G_out, P_out
 );
 	
 	wire[2:0] C_out;
@@ -57,3 +58,4 @@ module CarryLookaheadAdder_16_bit(
 	
 	assign Cout = P_out & Cin | G_out;
 endmodule
+`default_nettype wire

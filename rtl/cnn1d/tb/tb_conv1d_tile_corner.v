@@ -14,22 +14,25 @@
 `timescale 1ns/1ps
 
 module tb_conv1d_tile_corner;
-	wire done16, done1024;
-	wire [31:0] err16, err1024;
+	wire done16, done16b, done1024;
+	wire [31:0] err16, err16b, err1024;
 
-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11))
+	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11), .PRELOAD_BIAS(0))
 		u_d16   (.o_done(done16),   .o_errors(err16));
-	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23))
+	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11), .PRELOAD_BIAS(1), .DRAIN_BP(1))
+		u_d16b  (.o_done(done16b),  .o_errors(err16b));
+	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23), .PRELOAD_BIAS(1), .DRAIN_BP(1))
 		u_d1024 (.o_done(done1024), .o_errors(err1024));
 
 	initial begin
-		wait(done16 && done1024);
+		wait(done16 && done16b && done1024);
 		#20;
 		$display("==============================================");
 		$display(" CONV1D TILE CORNER TEST SUMMARY");
 		$display("   FEEDER_DEPTH=16   : %0d loi", err16);
-		$display("   FEEDER_DEPTH=1024 : %0d loi", err1024);
-		if (err16 == 0 && err1024 == 0)
+		$display("   FEEDER_DEPTH=16b,	preload bias, 	drain backpressure  : %0d loi", err16b);
+		$display("   FEEDER_DEPTH=1024,	preload bias, 	drain backpressure  : %0d loi", err1024);
+		if (err16 == 0 && err16b == 0 && err1024 == 0)
 			$display(" RESULT : ALL TESTS PASSED");
 		else
 			$display(" RESULT : FAILED");
@@ -48,7 +51,9 @@ module tb_conv1d_tile_corner_unit #(
 	parameter FEEDER_DEPTH = 16,
 	parameter MEM_DEPTH    = 256,
 	parameter N_RANDOM     = 20,
-	parameter SEED         = 1
+	parameter SEED         = 1,
+	parameter PRELOAD_BIAS = 0,
+	parameter DRAIN_BP     = 0 // 1: i_drain_ready bật tắt ngẫu nhiên
 )(
 	output reg        o_done,
 	output reg [31:0] o_errors
@@ -87,6 +92,44 @@ module tb_conv1d_tile_corner_unit #(
 	wire [2:0] o_state_dbg, o_core_state_dbg, o_ifmap_loader_state, o_wgt_loader_state;
 	wire o_ifmap_read_bank, o_ifmap_write_bank, o_wgt_read_bank, o_wgt_write_bank;
 
+	wire o_bias_rd_en;
+	wire [COL_W-1:0] o_bias_rd_idx;
+	reg i_drain_ready;
+	wire o_drain_valid;
+	wire [COL_W-1:0] o_drain_idx;
+	wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec;
+
+	// Bộ thu stream drain: ghép lại thành ma trận để so với kỳ vọng
+	reg signed [ACC_W-1:0] str_c [0:ARRAY_ROWS*ARRAY_COLS-1];
+	integer str_cnt, str_r, bp_seed;
+	always @(posedge i_clk) begin
+		if (o_drain_valid && i_drain_ready) begin
+			for (str_r = 0; str_r < ARRAY_ROWS; str_r = str_r + 1)
+				str_c[str_r * ARRAY_COLS + o_drain_idx] = o_drain_vec[str_r * ACC_W +: ACC_W];
+			str_cnt = str_cnt + 1;
+		end
+	end
+	// Backpressure: ready ngẫu nhiên khoảng 40% chu kỳ
+	always @(negedge i_clk) begin
+		bp_seed = $random(bp_seed);
+		i_drain_ready = DRAIN_BP ? (bp_seed[2:0] < 3) : 1'b1;
+	end
+
+	// BISA RAM: địa chỉ = bias_base + idx (bias_base đóng vai cbase + col_base), đọc trễ 1 chu kỳ
+	localparam BIAS_DEPTH = 64;
+	reg signed [ACC_W-1:0] bias_mem [0:BIAS_DEPTH-1];
+	reg signed [ACC_W-1:0] bias_q;
+
+	integer bias_base;
+	integer bias_reads;
+
+	always @(posedge i_clk) begin
+		if(o_bias_rd_en) begin
+			bias_q <= bias_mem[bias_base + o_bias_rd_idx];
+			bias_reads = bias_reads + 1;	
+		end
+	end
+
 	conv1d_tile_top #(
 		.DATA_W(DATA_W), .ACC_W(ACC_W),
 		.ADDR_W(ADDR_W), .CFG_W(CFG_W),
@@ -103,6 +146,10 @@ module tb_conv1d_tile_corner_unit #(
 		.i_ifmap_mem_wr_data(i_ifmap_mem_wr_data), .i_ifmap_mem_swap(i_ifmap_mem_swap),
 		.i_wgt_mem_wr_en(i_wgt_mem_wr_en), .i_wgt_mem_wr_addr(i_wgt_mem_wr_addr),
 		.i_wgt_mem_wr_data(i_wgt_mem_wr_data), .i_wgt_mem_swap(i_wgt_mem_swap),
+		.i_preload_mode(PRELOAD_BIAS[0]), .i_bias_rd_data(bias_q),
+		.o_bias_rd_en(o_bias_rd_en), .o_bias_rd_idx(o_bias_rd_idx),
+		.i_drain_ready(i_drain_ready), .o_drain_valid(o_drain_valid),
+		.o_drain_idx(o_drain_idx), .o_drain_vec(o_drain_vec),
 		.o_tile(o_tile), .o_tile_valid(o_tile_valid),
 		.o_busy(o_busy), .o_done(o_done_dut),
 		.o_state_dbg(o_state_dbg), .o_core_state_dbg(o_core_state_dbg),
@@ -219,6 +266,16 @@ module tb_conv1d_tile_corner_unit #(
 			i_ifmap_mem_swap = 1'b0; i_wgt_mem_swap = 1'b0;
 			x_rd_bank = ~x_rd_bank;
 			w_rd_bank = ~w_rd_bank;
+			// bias: base ngẫu nhiên, giá trị theo mode (1: -2^30, 3: +2^30, 4: 0, còn lại ngẫu nhiên ±2^20)
+			bias_base = rnd_range(0, BIAS_DEPTH - ARRAY_COLS);
+			for(a = 0; a < BIAS_DEPTH; a = a + 1) begin
+				case(mode)
+					1: bias_mem[a] = -(1 << 20);
+					2: bias_mem[a] = (1 << 20);
+					4: bias_mem[a] = 0;
+					default: bias_mem[a] = rnd_range(0, (1 << 21)) - (1 << 20);
+				endcase
+			end
 			if (o_ifmap_read_bank !== x_rd_bank || o_wgt_read_bank !== w_rd_bank)
 				fail("read bank cua DUT khac mo hinh sau swap");
 		end
@@ -234,6 +291,7 @@ module tb_conv1d_tile_corner_unit #(
 			for (r = 0; r < ARRAY_ROWS; r = r + 1)
 				for (c = 0; c < ARRAY_COLS; c = c + 1) begin
 					acc = 0;
+					if (PRELOAD_BIAS && r < ar && c < ac) acc = bias_mem[bias_base + c];
 					if (r < ar && c < ac)
 						for (j = 0; j < k; j = j + 1) begin
 							xa = ib + r * step + j;
@@ -264,6 +322,8 @@ module tb_conv1d_tile_corner_unit #(
 			i_k_len = k; i_window_step = step;
 			i_active_rows = ar; i_active_cols = ac;
 			i_ifmap_base_addr = ib; i_wgt_base_addr = wb;
+			str_cnt = 0;
+			for(idx = 0; idx < N_OUT; idx = idx + 1) str_c[idx] = 0;
 			i_start = 1'b1;
 			cyc = 0; saw_load = 1'b0; saw_busy = 1'b0;
 			while (o_done_dut !== 1'b1 && cyc < tmo) begin
@@ -283,6 +343,13 @@ module tb_conv1d_tile_corner_unit #(
 			end else begin
 				if (o_cfg_err !== 1'b0)    fail("cau hinh hop le nhung o_cfg_err = 1");
 				if (o_tile_valid !== 1'b1) fail("done nhung o_tile_valid = 0");
+				if (str_cnt != ac) fail("so lan bat tay drain khac active_cols");
+				for (idx = 0; idx < N_OUT; idx = idx + 1)
+					if ((idx / ARRAY_COLS) < ar && (idx % ARRAY_COLS) < ac && str_c[idx] !== exp_c[idx]) begin
+						errors = errors + 1;
+						if (prints < 30) $display("[FAIL] D=%0d t=%0t stream C[%0d][%0d]=%0d, mong doi %0d", FEEDER_DEPTH, $time, idx / ARRAY_COLS, idx % ARRAY_COLS, str_c[idx], exp_c[idx]);
+						prints = prints + 1;
+					end
 				for (idx = 0; idx < N_OUT; idx = idx + 1) begin
 					act = o_tile[idx * ACC_W +: ACC_W];
 					if (act !== exp_c[idx]) begin
@@ -339,6 +406,11 @@ module tb_conv1d_tile_corner_unit #(
 		o_done = 1'b0;
 		errors = 0; err_before = 0; prints = 0;
 		seed = SEED;
+		bp_seed = SEED + 1000;
+		str_cnt = 0;
+		bias_base = 0;
+		bias_reads = 0;
+		bias_q = 0;
 		i_k_len = 0; i_window_step = 0; i_active_rows = 0; i_active_cols = 0;
 		i_ifmap_base_addr = 0; i_wgt_base_addr = 0;
 		i_ifmap_mem_wr_addr = 0; i_ifmap_mem_wr_data = 0;
@@ -416,6 +488,21 @@ module tb_conv1d_tile_corner_unit #(
 		tile(5, 1, 3, 3, 0, 0, 0);
 		report("C15 reset giua luc load / compute roi chay tiep");
 
+		fill_and_swap(0, 0, 6, 1, 0);
+		i_k_len = 6; i_window_step = 1; i_active_rows = 3; i_active_cols = 3;
+		i_start = 1'b1; @(negedge i_clk); i_start = 1'b0;
+		while (o_core_state_dbg != 3'd6) @(negedge i_clk);   // core S_PRE_WAIT
+		do_reset;
+		tile(5, 1, 3, 3, 0, 0, 0);
+		report("C18 reset giua luc preload roi chay tiep");
+		if (PRELOAD_BIAS) begin
+			if (bias_reads == 0) fail("che do bias nhung chua doc bias RAM lan nao");
+			report("C19 che do bias: co doc bias RAM");
+		end else begin
+			if (bias_reads != 0) fail("che do 0 nhung van doc bias RAM");
+			report("C19 che do 0: khong doc bias RAM");
+		end
+
 		if (FEEDER_DEPTH >= 192) begin
 			tile(7, 1, 3, 3, 0, 0, 0);
 			tile(80, 16, 3, 3, 0, 0, 0);
@@ -438,7 +525,7 @@ module tb_conv1d_tile_corner_unit #(
 		end
 		report("C17 cau hinh ngau nhien");
 
-		$display("D=%0d: %0d loi", FEEDER_DEPTH, errors);
+		$display("D=%0d bias=%0d: %0d loi, %0d lan doc bias", FEEDER_DEPTH, PRELOAD_BIAS, errors, bias_reads);
 		o_errors = errors;
 		o_done = 1'b1;
 	end

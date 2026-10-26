@@ -1,3 +1,4 @@
+`default_nettype none
 // start_tile + k_len
 //
 // Feeder tự:
@@ -58,6 +59,7 @@ module cnn_control_fsm (
 	// Completion
 	input wire i_sa_tile_done,
 	input wire i_psm_capture_done,
+	input wire i_preload_done,
 	
 	// Feeder
 	output reg o_feeder_start,
@@ -68,6 +70,8 @@ module cnn_control_fsm (
 	// PSM
 	output reg o_psm_clr,
 	output reg o_psm_capture_en,
+	// PSM tự đếm sô lân dịch
+	output reg o_preload_start,
 	
 	// status
 	output reg busy,
@@ -80,6 +84,8 @@ module cnn_control_fsm (
 	localparam S_COMPUTE = 3'd2;
 	localparam S_DRAIN = 3'd3;
 	localparam S_DONE = 3'd4;
+	localparam S_PRE_KICK = 3'd5; // Phát xung preload_start cho PSM
+	localparam S_PRE_WAIT = 3'd6; // Chờ PSM dịch xong ac lần
 	
 	reg[2:0] state;
 	
@@ -93,7 +99,8 @@ module cnn_control_fsm (
 			o_scan_en <= 1'b0;
 			o_psm_clr <= 1'b0;
 			o_psm_capture_en <= 1'b0;
-			
+			o_preload_start <= 1'b0;
+
 			busy <= 1'b0;
 			done <= 1'b0;
 		end else begin
@@ -101,6 +108,7 @@ module cnn_control_fsm (
 			o_scan_en <= 1'b0;
 			o_psm_clr <= 1'b0;
 			o_psm_capture_en <= 1'b0;
+			o_preload_start <= 1'b0;
 			
 			busy <= 1'b0;
 			done <= 1'b0;
@@ -116,14 +124,26 @@ module cnn_control_fsm (
 				
 				S_LOAD: begin
 					busy <= 1'b1;
-					
-					// pulse 1 cycle
-					o_feeder_start <= 1'b1;
+					// psm_clr: PSM chốt active_rows/cols của tile mới
 					o_psm_clr <= 1'b1;
-					
-					state <= S_COMPUTE;
+					state <= S_PRE_KICK;
+				end
+
+				S_PRE_KICK: begin
+					busy <= 1'b1;
+					o_preload_start <= 1'b1;
+					state <= S_PRE_WAIT;
 				end
 				
+				S_PRE_WAIT: begin
+					busy <= 1'b1;
+					// Shadow đã chứa giá trị khởi tạo thì mới cho feeder chạy
+					if(i_preload_done)begin
+						o_feeder_start <= 1'b1;
+						state <= S_COMPUTE;
+					end
+				end
+
 				S_COMPUTE: begin
 					busy <= 1'b1;
 					
@@ -161,3 +181,4 @@ module cnn_control_fsm (
 	end
 endmodule
  
+`default_nettype wire

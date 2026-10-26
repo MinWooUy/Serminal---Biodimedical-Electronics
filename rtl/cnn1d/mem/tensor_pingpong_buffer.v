@@ -1,3 +1,4 @@
+`default_nettype none
 // Khối này sẽ là SRAM n bank buffer
 // 
 // Bọc 2 khối tensor_sram --> double buffer
@@ -131,3 +132,4 @@ module tensor_pingpong_buffer#(
 	assign o_rd_valid = bank0_rd_valid | bank1_rd_valid;
 	assign o_rd_data = bank0_rd_valid ? bank0_rd_data : bank1_rd_valid ? bank1_rd_data : {DATA_W{1'b0}};
 endmodule
+`default_nettype wire

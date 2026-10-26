@@ -1,3 +1,4 @@
+`default_nettype none
 module full_adder(
 	input wire A, B, CarryIn,
 	output wire Y, CarryOut
@@ -5,3 +6,4 @@ module full_adder(
 	assign Y = A ^ B ^ CarryIn;
 	assign CarryOut = B & CarryIn | A & CarryIn | A & B;
 endmodule
+`default_nettype wire

@@ -1,3 +1,4 @@
+`default_nettype none
 // Dùng tích hợp conv1d
 module cnn_compute_core #(
 	parameter DATA_W = 8,
@@ -26,10 +27,23 @@ module cnn_compute_core #(
 	input wire [ARRAY_COLS-1:0] i_wgt_valid,
 	input wire [ARRAY_COLS-1:0] i_wgt_first,
 	input wire [ARRAY_COLS-1:0] i_wgt_last,
-	
+
+	//------
+	// PSM
+	//------
+	input wire i_preload_mode,
+	input wire [ACC_W-1:0] i_bias_rd_data,
+	//Drain stream
+	input wire i_drain_ready,
+	output wire o_drain_valid,
+	output wire [COL_W-1:0] o_drain_idx,
+	output wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec,
+
 	// Start cho các feeder bên ngoài
 	output wire o_feeder_start,
-	
+	output wire o_bias_rd_en,
+	output wire [COL_W-1:0] o_bias_rd_idx,
+
 	// Kết quả tile
 	output wire [ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_tile,
 	output wire o_tile_valid,
@@ -68,6 +82,11 @@ module cnn_compute_core #(
 	wire psm_capture_en;
 	wire sa_tile_done;
 	wire psm_capture_done;
+	wire drain_shift;
+
+	// preload signal
+	wire preload_start, preload_done, preload_shift;
+	wire[ARRAY_ROWS*ACC_W-1:0] preload_vec;
 	
 	assign o_feeder_start = feeder_start;
 	
@@ -81,7 +100,9 @@ module cnn_compute_core #(
 		.i_start(i_start),
 		.i_sa_tile_done(sa_tile_done),
 		.i_psm_capture_done(psm_capture_done),
-		
+		.i_preload_done(preload_done),
+
+		.o_preload_start(preload_start),
 		.o_feeder_start(feeder_start),
 		.o_scan_en(scan_en),
 		.o_psm_clr(psm_clr),
@@ -110,7 +131,8 @@ module cnn_compute_core #(
 		.i_reset(i_reset),
 		
 		.i_clear_acc(1'b0),
-		.i_scan_en(scan_en),
+		.i_scan_en(drain_shift | preload_shift),
+		.i_preload(preload_vec),
 		
 		// IFMAP stream
 		.i_act_valid(i_ifm_valid),
@@ -124,7 +146,7 @@ module cnn_compute_core #(
 		
 		.i_image(i_ifm_data),
 		.i_weight(i_wgt_data),
-		
+
 		.o_scan_out(sa_scan_taps),
 		.o_capture_done(sa_capture_done),
 		
@@ -173,10 +195,26 @@ module cnn_compute_core #(
 		.i_active_cols(active_cols_q),
 		
 		.i_scan_taps(sa_scan_taps),
-		
+		.i_drain_ready(i_drain_ready),
+
+		.i_preload_start(preload_start),
+		.i_preload_mode(i_preload_mode),
+		.i_bias_rd_data(i_bias_rd_data),
+
+		.o_bias_rd_en(o_bias_rd_en),
+		.o_bias_rd_idx(o_bias_rd_idx),
+		.o_preload_shift(preload_shift),
+		.o_preload_vec(preload_vec),
+		.o_preload_done(preload_done),
+		.o_drain_valid(o_drain_valid),
+		.o_drain_idx(o_drain_idx),
+		.o_drain_vec(o_drain_vec),
+		.o_drain_shift(drain_shift),
+
 		.o_tile(o_tile),
 		.o_tile_valid(o_tile_valid),
 		.o_capture_done(psm_capture_done)
 	);
 
 endmodule
+`default_nettype wire

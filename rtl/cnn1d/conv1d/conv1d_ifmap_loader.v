@@ -1,3 +1,4 @@
+`default_nettype none
 module conv1d_ifmap_loader #(
 	parameter DATA_W = 8,
 	parameter ADDR_W = 16,
@@ -181,3 +182,4 @@ module conv1d_ifmap_loader #(
 	end
 
 endmodule
+`default_nettype wire

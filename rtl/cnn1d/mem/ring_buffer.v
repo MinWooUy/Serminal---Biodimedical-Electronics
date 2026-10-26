@@ -1,3 +1,4 @@
+`default_nettype none
 // FIFO vòng tròn: dữ liệu nằm yên trong RAM, hai con trỏ chạy vòng (map vào M9K).
 // DEPTH phải là lũy thừa của 2. Đọc trễ 1 chu kỳ: rd_en ở chu kỳ n -> rd_data ở n+1.
 // Giải thích: docs/issue/L01-ring-buffer.md
@@ -58,3 +59,4 @@ module ring_buffer #(
   end
 
 endmodule
+`default_nettype wire
