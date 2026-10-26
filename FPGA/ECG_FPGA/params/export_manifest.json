@@ -1,0 +1,530 @@
+{
+  "model": "2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3",
+  "proto_ver": 2,
+  "weights_crc32": "0x067B9985",
+  "n_beats": 1306,
+  "selected_beats": 80,
+  "selected_per_class": {
+    "N": 20,
+    "S": 20,
+    "V": 20,
+    "F": 20
+  },
+  "param_order": [
+    "00_conv0_w",
+    "01_conv0_b",
+    "02_conv0_shift",
+    "03_conv1_w",
+    "04_conv1_b",
+    "05_conv1_shift",
+    "06_conv2_w",
+    "07_conv2_b",
+    "08_conv2_shift",
+    "09_conv3_w",
+    "10_conv3_b",
+    "11_conv3_shift",
+    "12_fc1_wg",
+    "13_fc1_wr",
+    "14_fc1_b",
+    "15_fc1_shift_g",
+    "16_fc1_shift_r",
+    "17_fc1_shift_out",
+    "18_fc2_w",
+    "19_fc2_b"
+  ],
+  "files": {
+    "ecg_params.vh": {
+      "meaning": "localparams",
+      "sha256": "ea7692e83074f2bc785d19ce13280d09808d492a1e501d2a097cad79ec115c7e"
+    },
+    "mem/00_conv0_w.hex": {
+      "bits": 8,
+      "shape": [
+        16,
+        1,
+        7
+      ],
+      "meaning": "conv0_w",
+      "sha256": "d9592f7ff6a22f10a317c7ed226058c5e63eb12d363c55369e93e1d3750651c5"
+    },
+    "mem/00_conv0_w.mif": {
+      "bits": 8,
+      "shape": [
+        16,
+        1,
+        7
+      ],
+      "meaning": "conv0_w",
+      "sha256": "25dd32fd3bfb53570918cc7b052742ec4520c056c5e01d3eb3cf2359b3a7967e"
+    },
+    "mem/01_conv0_b.hex": {
+      "bits": 32,
+      "shape": [
+        16
+      ],
+      "meaning": "conv0_b",
+      "sha256": "3c5b2dbd3cbd411656ee0829b6febe01f6c68380a00f35f7b1b027636d98015a"
+    },
+    "mem/01_conv0_b.mif": {
+      "bits": 32,
+      "shape": [
+        16
+      ],
+      "meaning": "conv0_b",
+      "sha256": "7d5d99404133d7f866a716966fa6eadd7e757b2c0d1bd017209c2d567fc31100"
+    },
+    "mem/02_conv0_shift.hex": {
+      "bits": 8,
+      "shape": [
+        16
+      ],
+      "meaning": "conv0_shift",
+      "sha256": "0443481fae29924e87716298620c39ef3bb5510ffa3819745c8b80dad2641b72"
+    },
+    "mem/02_conv0_shift.mif": {
+      "bits": 8,
+      "shape": [
+        16
+      ],
+      "meaning": "conv0_shift",
+      "sha256": "219b606f9ae43a7c98c373010af10cfef5d19aeb663595c7650382ba03b1285c"
+    },
+    "mem/03_conv1_w.hex": {
+      "bits": 8,
+      "shape": [
+        32,
+        16,
+        5
+      ],
+      "meaning": "conv1_w",
+      "sha256": "a2e9ba52ffe2e7c9d4702d6578f8ec09d252c50a2b3cb24a81b455de7dd5855e"
+    },
+    "mem/03_conv1_w.mif": {
+      "bits": 8,
+      "shape": [
+        32,
+        16,
+        5
+      ],
+      "meaning": "conv1_w",
+      "sha256": "3481db8cc1b0828d5371a670014306ce507a593b7820b92e4afc30ce9e03f4d9"
+    },
+    "mem/04_conv1_b.hex": {
+      "bits": 32,
+      "shape": [
+        32
+      ],
+      "meaning": "conv1_b",
+      "sha256": "0ecbb818dad88645d4a15f2d88a7de2d8d8326631e9efef163158175f7f48d06"
+    },
+    "mem/04_conv1_b.mif": {
+      "bits": 32,
+      "shape": [
+        32
+      ],
+      "meaning": "conv1_b",
+      "sha256": "54bd6de2cba3c7dbd49bf9764d861bdb043396a238531983c2ff89fafa33362b"
+    },
+    "mem/05_conv1_shift.hex": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "conv1_shift",
+      "sha256": "327e7618f969b576a3a13d93b7f955ab5593cedb28bb566706bda07d6e653fc2"
+    },
+    "mem/05_conv1_shift.mif": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "conv1_shift",
+      "sha256": "dc31f6f5ac49bd632c864643ed3ba84d8a305a5890b679c8adcb6373c8515bc6"
+    },
+    "mem/06_conv2_w.hex": {
+      "bits": 8,
+      "shape": [
+        64,
+        32,
+        3
+      ],
+      "meaning": "conv2_w",
+      "sha256": "7b7cc25ebe421e749b998ee41c3f53bf36783e1f6544215f08cb423c0aefb0d0"
+    },
+    "mem/06_conv2_w.mif": {
+      "bits": 8,
+      "shape": [
+        64,
+        32,
+        3
+      ],
+      "meaning": "conv2_w",
+      "sha256": "77159795ec56829873852882596148c9af63c8466cd44de6d6b53c1260abb6e1"
+    },
+    "mem/07_conv2_b.hex": {
+      "bits": 32,
+      "shape": [
+        64
+      ],
+      "meaning": "conv2_b",
+      "sha256": "ba8fa6ec9c23bec1e03fdd5b8bf1b4f89166d70831ef4b26372f8a89042c474b"
+    },
+    "mem/07_conv2_b.mif": {
+      "bits": 32,
+      "shape": [
+        64
+      ],
+      "meaning": "conv2_b",
+      "sha256": "b48659fad860886035bc2ed1d2d48e482bd78d482a45aa86e84035ab6acb206f"
+    },
+    "mem/08_conv2_shift.hex": {
+      "bits": 8,
+      "shape": [
+        64
+      ],
+      "meaning": "conv2_shift",
+      "sha256": "e228b495f65a4aafd6e3fb45134da9e7e8519ab6b92ed7be3ca13ac913a75b7f"
+    },
+    "mem/08_conv2_shift.mif": {
+      "bits": 8,
+      "shape": [
+        64
+      ],
+      "meaning": "conv2_shift",
+      "sha256": "96e20dd08557148191ef6436723c0963c39d2d5f4ff2d2f6d2bd28b0760aadb8"
+    },
+    "mem/09_conv3_w.hex": {
+      "bits": 8,
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "meaning": "conv3_w",
+      "sha256": "5cc61fc9cfea2365b45ee6db5517f376619a2808ddbcdffd21aaaea9df58f2c8"
+    },
+    "mem/09_conv3_w.mif": {
+      "bits": 8,
+      "shape": [
+        64,
+        64,
+        3
+      ],
+      "meaning": "conv3_w",
+      "sha256": "6dd468c0d8e6c5f73320d385cef92d0b24276156a0bcc295b1863e5e626ba7f7"
+    },
+    "mem/10_conv3_b.hex": {
+      "bits": 32,
+      "shape": [
+        64
+      ],
+      "meaning": "conv3_b",
+      "sha256": "fb15e6d71f4ceb6dd1b779f6abbafc1277ba5b673f94e193366ad0ef11c104b8"
+    },
+    "mem/10_conv3_b.mif": {
+      "bits": 32,
+      "shape": [
+        64
+      ],
+      "meaning": "conv3_b",
+      "sha256": "f09c67221bf9cb0c49098a9b4abc08c6b8403c558f27d37d9cc49ed85fc5cdcc"
+    },
+    "mem/11_conv3_shift.hex": {
+      "bits": 8,
+      "shape": [
+        64
+      ],
+      "meaning": "conv3_shift",
+      "sha256": "9cdf7c8b217e15e764dbf2a8d9b62027ef86abaca610fb5d4f00cac70ac65180"
+    },
+    "mem/11_conv3_shift.mif": {
+      "bits": 8,
+      "shape": [
+        64
+      ],
+      "meaning": "conv3_shift",
+      "sha256": "1e0968d0dc1962358438f577eaffee7679fb170035c8dd6cfc9f7d2095043496"
+    },
+    "mem/12_fc1_wg.hex": {
+      "bits": 8,
+      "shape": [
+        32,
+        64
+      ],
+      "meaning": "fc1_wg",
+      "sha256": "fc3a48d7cbb9ab15523c47e72bab923cfce9359f7099400ad97c9ef95f91e145"
+    },
+    "mem/12_fc1_wg.mif": {
+      "bits": 8,
+      "shape": [
+        32,
+        64
+      ],
+      "meaning": "fc1_wg",
+      "sha256": "ff1c4823093a1bb9d8cd79c3ee4a79872a4f9105c21fb1da29145e8d7ab30100"
+    },
+    "mem/13_fc1_wr.hex": {
+      "bits": 8,
+      "shape": [
+        32,
+        4
+      ],
+      "meaning": "fc1_wr",
+      "sha256": "35e9234ee76219f822ee96eb8a3c7b16c99817a1b8f602b2ddcf12797c2f2201"
+    },
+    "mem/13_fc1_wr.mif": {
+      "bits": 8,
+      "shape": [
+        32,
+        4
+      ],
+      "meaning": "fc1_wr",
+      "sha256": "376f88eeb3e941934d312317cc417df71833160198facc77ac33461e0353db59"
+    },
+    "mem/14_fc1_b.hex": {
+      "bits": 32,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_b",
+      "sha256": "254464ea644afc80e02694b26ee3f585291da302bce55df9981fa8a75a889ed1"
+    },
+    "mem/14_fc1_b.mif": {
+      "bits": 32,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_b",
+      "sha256": "00f72c52c84b14c6184a6f37d21d9e965467b4f4522aae1c1dc8ac1d3af0c6fb"
+    },
+    "mem/15_fc1_shift_g.hex": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_g",
+      "sha256": "a40184598f2ea6d23090ee0b43dca41260992c5172b8c63a9c074d1676829e7b"
+    },
+    "mem/15_fc1_shift_g.mif": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_g",
+      "sha256": "71b9cbb1b742929e7d0deff6deab89278cf179f9909ef188ad8ec359b4e79ed9"
+    },
+    "mem/16_fc1_shift_r.hex": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_r",
+      "sha256": "7958c9821662ce61cd6aeca1e307657cd9af0c69864c9e7ce2676c77f666d9c4"
+    },
+    "mem/16_fc1_shift_r.mif": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_r",
+      "sha256": "58beefb8d4bfdcfa275bffbc546bd43985782f3371ad8eb1178ee56d81334674"
+    },
+    "mem/17_fc1_shift_out.hex": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_out",
+      "sha256": "4bc18000ef6735be3ed83496792db9093ec5e67134684f794c2a0ee50c7f5324"
+    },
+    "mem/17_fc1_shift_out.mif": {
+      "bits": 8,
+      "shape": [
+        32
+      ],
+      "meaning": "fc1_shift_out",
+      "sha256": "b0ce49fd038cf615206e83da5e9b66875ec05fd617302328d0efdfdc0bac32fe"
+    },
+    "mem/18_fc2_w.hex": {
+      "bits": 8,
+      "shape": [
+        4,
+        32
+      ],
+      "meaning": "fc2_w",
+      "sha256": "3ae5bffbc06fde7bf08ae6db08f3456d6403a72818d59f10c1a5b5de6409a2d2"
+    },
+    "mem/18_fc2_w.mif": {
+      "bits": 8,
+      "shape": [
+        4,
+        32
+      ],
+      "meaning": "fc2_w",
+      "sha256": "559fa0696c5303905bcdb79668250e71a67e9730a5bef3cb002b05c9a56de1ac"
+    },
+    "mem/19_fc2_b.hex": {
+      "bits": 32,
+      "shape": [
+        4
+      ],
+      "meaning": "fc2_b",
+      "sha256": "6943bf0035e3868d91fc6b1a7212e0aef150d4f77b0ae4d4fde1ad684558075a"
+    },
+    "mem/19_fc2_b.mif": {
+      "bits": 32,
+      "shape": [
+        4
+      ],
+      "meaning": "fc2_b",
+      "sha256": "d3172d67da0009c420bcbcd31bb51e02dd17fcd8a48f9031924031f51ce76612"
+    },
+    "golden/beats_sel.hex": {
+      "bits": 32,
+      "shape": [
+        80
+      ],
+      "meaning": "beat_id of the beats in the per-layer files",
+      "sha256": "2feadbe8d9b662cf34c272ad6e4eb2e1aa39fe2c5be6da13d267f5198466c6df"
+    },
+    "golden/zq.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        360
+      ],
+      "meaning": "z_q of the selected beats, beat-major, then c -> t",
+      "sha256": "203acf216e3a81489145d666321bbfa040490022da49e76ad3539f1eabe00a31"
+    },
+    "golden/rrq.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        4
+      ],
+      "meaning": "rr_q of the selected beats, beat-major, then c -> t",
+      "sha256": "7139d8e1d4375b5b57756e8953016bccb4d2a5b37fc56ab99b4b6fe9428e162f"
+    },
+    "golden/conv0.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        16,
+        360
+      ],
+      "meaning": "conv0 of the selected beats, beat-major, then c -> t",
+      "sha256": "3b9249a75844994462b9cb7b368f838766e70a55da646e06158434eb838b94b4"
+    },
+    "golden/pool0.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        16,
+        180
+      ],
+      "meaning": "pool0 of the selected beats, beat-major, then c -> t",
+      "sha256": "55003f33f5ae4ec9c44bedb96842e9c3c9af0a7e5050c1d32a9ec1fffa10f73b"
+    },
+    "golden/conv1.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        32,
+        180
+      ],
+      "meaning": "conv1 of the selected beats, beat-major, then c -> t",
+      "sha256": "ece96e2d55fc4ad6c2c855a877268c496c0d3cb3eb0d0e96ffaea9e732d71a87"
+    },
+    "golden/pool1.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        32,
+        90
+      ],
+      "meaning": "pool1 of the selected beats, beat-major, then c -> t",
+      "sha256": "428320ad66f8ebf3cb0db2314c34ee82f6460f4cceb63b69782c480d06ada6ab"
+    },
+    "golden/conv2.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        64,
+        90
+      ],
+      "meaning": "conv2 of the selected beats, beat-major, then c -> t",
+      "sha256": "eb6175c9b771119e0a4c6bff2f077d01933a81c5244c2869f0de06f31daabe2b"
+    },
+    "golden/pool2.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        64,
+        45
+      ],
+      "meaning": "pool2 of the selected beats, beat-major, then c -> t",
+      "sha256": "f389b19a1f72e8744065e4d2e6073b5e774b9d6b0b2a31f4161762b7046ca080"
+    },
+    "golden/conv3.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        64,
+        45
+      ],
+      "meaning": "conv3 of the selected beats, beat-major, then c -> t",
+      "sha256": "e4222e4b7611ac4d2f3c43305c618d2f03cb27970e6aba1d0e1b2191bd2fefd6"
+    },
+    "golden/gap.hex": {
+      "bits": 32,
+      "shape": [
+        80,
+        64
+      ],
+      "meaning": "gap of the selected beats, beat-major, then c -> t",
+      "sha256": "0077c27ea04c3ac4858ae3550de058b63d511ac1aa787889c25eb89b586d359c"
+    },
+    "golden/fc1.hex": {
+      "bits": 8,
+      "shape": [
+        80,
+        32
+      ],
+      "meaning": "fc1 of the selected beats, beat-major, then c -> t",
+      "sha256": "103924bc263b611cf96ce7d8343f52f11b66be3eb10dfed9ee45136cf72f0c11"
+    },
+    "golden/logits.hex": {
+      "bits": 32,
+      "shape": [
+        1306,
+        4
+      ],
+      "meaning": "FC2 logits of all beats (beat_id order)",
+      "sha256": "30adc773e6a1112e56a1917da6c81198567ff95332afe60eae53537452837f99"
+    },
+    "golden/pred.hex": {
+      "bits": 8,
+      "shape": [
+        1306
+      ],
+      "meaning": "argmax of the logits, all beats",
+      "sha256": "6b1b114f05004a17b45ad5b22c9593e67d4b44081fd558640934fb5625905bc2"
+    },
+    "golden/result_expected.hex": {
+      "bits": 32,
+      "shape": [
+        1306,
+        6
+      ],
+      "meaning": "per beat: beat_id, logit0..3, pred (32-bit words; cycles not included)",
+      "sha256": "5ba889f44bd35f9865f49f61b95ac525f7f7490725361e6fec8ef8f033bed312"
+    },
+    "golden/uart_in.bin": {
+      "shape": [
+        1306
+      ],
+      "meaning": "BEAT_IN frames, beat_id 0..n-1",
+      "sha256": "309eff7e14ffddac3c4a62f3e417c01c2ad1ef0ff2c3b1fc4a393045642ba11d"
+    }
+  }
+}

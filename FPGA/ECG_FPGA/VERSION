@@ -1,0 +1,12 @@
+package: ECG_FPGA_20261026_e64a4ab
+date: 2026-10-26
+git_commit: e64a4aba7214a32468abe18d556d54a87cfe1bf5
+proto_ver: 2
+mode: 1
+model_dir: 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3
+lite_int8_sha256: 4940bef2dc096a2c64ec6d7f5041776bfa7eb77d3c25db2e6f7745db5e55da35
+weights_crc32: 0x067B9985
+weights_bytes: 24528
+golden_beats: 1306
+export: exported -> C:\Users\HUNG\AppData\Local\Temp\tmpm1ktbd1m\rtl: 20 parameter arrays (24528 B, WEIGHTS_CRC32 0x067B9985), 80 beats with every layer {'N': 20, 'S': 20, 'V': 20, 'F': 20}, 1306 beats in logits / pred / result_expected / uart_in (489750 B)
+generated_by: scripts/make_fpga_handoff.py
