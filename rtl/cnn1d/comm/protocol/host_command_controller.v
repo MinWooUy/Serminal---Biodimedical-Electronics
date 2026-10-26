@@ -1,18 +1,23 @@
 // Stop-and-wait host protocol. No pipelined requests or implicit RUN retries.
 // Fixed accelerator geometry: INT8, INT32, 3x3, 16-bit addresses/config.
 module host_command_controller #(
-    parameter MAX_PAYLOAD=256, MEM_DEPTH=1024, FEEDER_DEPTH=16, BIAS_COUNT=3
+    parameter MAX_PAYLOAD=256, MEM_DEPTH=1024, FEEDER_DEPTH=16, BIAS_COUNT=3,
+    parameter POST_ENABLE=0
 )(
     input wire clk, reset,
+
     output wire rx_enable,
+    
     input wire [7:0] rx_cmd, rx_seq,
     input wire [15:0] rx_length,
     input wire [MAX_PAYLOAD*8-1:0] rx_payload,
     input wire rx_valid, rx_error,
+    
     output reg tx_start,
     output reg [7:0] tx_cmd, tx_seq,
     output reg [15:0] tx_length,
     output reg [MAX_PAYLOAD*8-1:0] tx_payload,
+    
     input wire tx_busy,
     output wire x_wr_en, w_wr_en,
     output wire [15:0] wr_addr,
@@ -24,6 +29,11 @@ module host_command_controller #(
     output wire x_swap, w_swap, tile_start,
     output reg [15:0] k_len, window_step, x_base, w_base,
     output reg [1:0] active_rows, active_cols,
+    input wire post_ready,
+    input wire [71:0] post_data,
+    output reg[23:0] post_shift,
+    output reg post_relu,
+    output reg post_configured,
     input wire tile_busy, tile_done,
     input wire [287:0] tile_data
 );
@@ -36,15 +46,18 @@ module host_command_controller #(
     reg write_weight, configured, x_dirty, w_dirty;
     reg [MEM_DEPTH-1:0] x_stage_map,w_stage_map,x_active_map,w_active_map;
     reg [BIAS_COUNT-1:0] bias_valid;
+    
     wire [15:0] req_addr=rx_payload[15:0];
     wire [15:0] cfg_k=rx_payload[15:0];
     wire [15:0] cfg_step=rx_payload[31:16];
     wire [7:0] cfg_rows=rx_payload[39:32], cfg_cols=rx_payload[47:40];
     wire [15:0] cfg_x=rx_payload[63:48], cfg_w=rx_payload[79:64];
     wire [7:0] cfg_preload=rx_payload[87:80];
+   
     reg [1:0] check_lane;
     wire [31:0] check_x_addr={16'b0,x_base}+check_lane*{16'b0,window_step}+index;
     wire [31:0] check_w_addr={16'b0,w_base}+check_lane*{16'b0,k_len}+index;
+    
     // Validate one address per clock to avoid dozens of parallel bitmap muxes.
     assign rx_enable=(state==IDLE);
     assign x_wr_en=(state==WRITE)&&!write_weight;
@@ -57,6 +70,7 @@ module host_command_controller #(
     assign x_swap=(state==SWAP)&&x_dirty;
     assign w_swap=(state==SWAP)&&w_dirty;
     assign tile_start=(state==START);
+    
     wire bias_ready = !preload_bias_en ||
         ((active_cols==1 && bias_valid[0]) ||
          (active_cols==2 && &bias_valid[1:0]) ||
@@ -70,6 +84,10 @@ module host_command_controller #(
             x_stage_map<=0;w_stage_map<=0;x_active_map<=0;w_active_map<=0;
             bias_valid<=0;
             k_len<=0;window_step<=0;x_base<=0;w_base<=0;active_rows<=0;active_cols<=0;
+
+            post_shift <= 0;
+            post_relu <= 0;
+            post_configured <= 0;
         end else begin
             tx_start<=0;
             case(state)
@@ -115,7 +133,8 @@ module host_command_controller #(
                         end
                         8'h04: begin
                             if(rx_length!=0) begin tx_cmd<=8'h81;tx_payload[15:8]<=2; end
-                            else if(!configured || tile_busy || tile_done || !bias_ready) begin
+                            else if(!configured || tile_busy || tile_done || !bias_ready ||
+                                    (POST_ENABLE && !post_configured)) begin
                                 tx_cmd<=8'h81;tx_payload[15:8]<=3;
                             end else begin state<=CHECK_X;index<=0;check_lane<=0;end
                         end
@@ -123,7 +142,18 @@ module host_command_controller #(
                             if(rx_length!=0) begin tx_cmd<=8'h81;tx_payload[15:8]<=2; end
                             else begin
                                 tx_length<=3;
-                                tx_payload[23:16]<={4'b0,preload_bias_en,w_dirty,x_dirty,configured};
+                                tx_payload[23:16]<={3'b0,post_configured,preload_bias_en,w_dirty,x_dirty,configured};
+                            end
+                        end
+                        
+                        8'h07: begin
+                            if(rx_length != 4 || rx_payload[31:25] != 0) begin
+                                tx_cmd <= 8'h81;
+                                tx_payload[15:8] <= 2;
+                            end else begin
+                                post_shift <= rx_payload[23:0];
+                                post_relu <= rx_payload[24];
+                                post_configured <= 1'b1;
                             end
                         end
                         default: begin tx_cmd<=8'h81;tx_payload[15:8]<=4; end
@@ -165,11 +195,23 @@ module host_command_controller #(
                     if(w_dirty) begin w_active_map<=w_stage_map;w_stage_map<=0;w_dirty<=0;end
                     state<=START;
                 end
-                START: state<=WAIT_TILE;
-                WAIT_TILE: if(tile_done) begin
-                    tx_cmd<=8'h82;tx_length<=36;tx_payload<=0;
-                    tx_payload[287:0]<=tile_data;state<=SEND;
-                end
+                START: 
+                    state<=WAIT_TILE;
+
+                WAIT_TILE: 
+                    if(tile_done && (!POST_ENABLE || post_ready)) begin
+                        tx_cmd<=8'h82;
+                        tx_payload <= 0;
+                        if(POST_ENABLE) begin
+                            tx_length<=45;
+                            tx_payload[287:0]<=tile_data;
+                            tx_payload[359:288] <=post_data;
+                        end else begin
+                            tx_length <= 36;
+                            tx_payload[287:0] <= tile_data;
+                        end
+                        state<=SEND;
+                    end
                 SEND: if(!tx_busy) begin tx_start<=1;state<=TX_LAUNCH;end
                 TX_LAUNCH: state<=TX_WAIT;
                 TX_WAIT: if(!tx_busy) state<=IDLE;

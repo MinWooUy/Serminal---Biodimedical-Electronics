@@ -69,11 +69,17 @@ module tb_conv1d_tile_top;
 	// =====================================================
 	wire [ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_tile;
 	wire o_tile_valid;
-    wire [71:0] post_tile;
-    wire post_valid;
-    integer post_checks=0;
-    integer pr,pc;
-    reg signed [63:0] post_expected;
+	wire [71:0] post_tile;
+	wire post_valid;
+	wire o_drain_valid;
+	wire [COL_W-1:0] o_drain_idx;
+	wire [ARRAY_ROWS*ACC_W-1:0] o_drain_vec;
+	wire o_bias_rd_en;
+	wire [COL_W-1:0] o_bias_rd_idx;
+	wire o_cfg_err;
+	integer post_checks = 0;
+	integer pr, pc;
+	reg signed [63:0] post_expected;
 	
 	
 	// =====================================================
@@ -136,6 +142,9 @@ module tb_conv1d_tile_top;
 		.i_preload_mode(1'b0),
 		.i_bias_rd_data(32'b0),
 		.i_drain_ready(1'b1),
+		.o_drain_valid(o_drain_valid),
+		.o_drain_idx(o_drain_idx),
+		.o_drain_vec(o_drain_vec),
 
 		// Tile control
 		.i_start(i_start),
@@ -161,8 +170,13 @@ module tb_conv1d_tile_top;
 		// Result
 		.o_tile(o_tile),
 		.o_tile_valid(o_tile_valid),
-        .i_post_bias({3{32'd2}}),.i_post_shift({3{8'd1}}),.i_post_relu(1'b1),
-        .o_post_tile(post_tile),.o_post_valid(post_valid),
+		.o_bias_rd_en(o_bias_rd_en),
+		.o_bias_rd_idx(o_bias_rd_idx),
+		.i_post_shift({3{8'd1}}),
+		.i_post_relu(1'b1),
+		.o_post_tile(post_tile),
+		.o_post_valid(post_valid),
+		.o_cfg_err(o_cfg_err),
 		
 		// Status
 		.o_busy(o_busy),
@@ -821,7 +835,7 @@ module tb_conv1d_tile_top;
         post_checks=post_checks+1;
         for(pr=0;pr<3;pr=pr+1) for(pc=0;pc<3;pc=pc+1) begin
             post_expected=$signed(o_tile[(pr*3+pc)*32 +: 32]);
-            post_expected=(post_expected+3) >>> 1;
+            post_expected=(post_expected+1) >>> 1;
             if(post_expected<0) post_expected=0;
             if(post_expected>127) post_expected=127;
             if(pr>=i_active_rows || pc>=i_active_cols) post_expected=0;

@@ -123,7 +123,6 @@ module conv1d_tile_top #(
 	output wire o_wgt_write_bank,
 
   // Sampled on accepted i_start. Used only with POST_ENABLE=1, ACC_W=32.
-  input wire [ARRAY_COLS*32-1:0] i_post_bias,
   input wire [ARRAY_COLS*8-1:0] i_post_shift,
   input wire i_post_relu,
   output wire [ARRAY_ROWS*ARRAY_COLS*8-1:0] o_post_tile,
@@ -581,21 +580,30 @@ module conv1d_tile_top #(
 	end
 
     generate if (POST_ENABLE) begin : g_post
-        reg [ARRAY_COLS*32-1:0] bias_q;
         reg [ARRAY_COLS*8-1:0] shift_q;
-        reg relu_q, consumed;
+        reg relu_q, tile_valid_d;
         always @(posedge i_clk or posedge i_reset) begin
-            if(i_reset) begin bias_q<=0; shift_q<=0; relu_q<=0; consumed<=0; end
+            if(i_reset) begin
+                shift_q<=0;
+                relu_q<=0;
+                tile_valid_d<=0;
+            end
             else if(i_start && state_q==S_IDLE) begin
-                bias_q<=i_post_bias; shift_q<=i_post_shift;
-                relu_q<=i_post_relu; consumed<=0;
-            end else if(state_q==S_COMPUTE && o_tile_valid) consumed<=1;
+                shift_q<=i_post_shift;
+                relu_q<=i_post_relu;
+                tile_valid_d<=o_tile_valid;
+            end else begin
+                // o_tile_valid remains high after a capture. Trigger post only
+                // on the new tile's rising edge, never on stale tile data.
+                tile_valid_d<=o_tile_valid;
+            end
         end
+        wire post_fire = (state_q==S_COMPUTE) && o_tile_valid && !tile_valid_d;
         conv1d_post_process #(.ROWS(ARRAY_ROWS),.COLS(ARRAY_COLS),
             .ROW_W(ROW_W),.COL_W(COL_W)) u_post(
             .i_clk(i_clk),.i_reset(i_reset),
-            .i_valid(state_q==S_COMPUTE && o_tile_valid && !consumed),
-            .i_tile(o_tile),.i_bias(bias_q),.i_shift(shift_q),.i_relu(relu_q),
+            .i_valid(post_fire),
+            .i_tile(o_tile),.i_shift(shift_q),.i_relu(relu_q),
             .i_active_rows(active_rows_q),.i_active_cols(active_cols_q),
             .o_tile(o_post_tile),.o_valid(o_post_valid));
 `ifndef SYNTHESIS

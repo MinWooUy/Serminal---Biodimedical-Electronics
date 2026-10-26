@@ -6,7 +6,7 @@ module tb_uart_crc_top;
     wire tx;
     always #5 clk=~clk;
     ecg_accel_top #(.CLK_FREQ(1600000),.BAUD_RATE(100000),
-        .MEM_DEPTH(64),.RX_TIMEOUT_CLKS(800)) dut(clk,reset,rx,tx);
+        .MEM_DEPTH(64),.RX_TIMEOUT_CLKS(800),.POST_ENABLE(1)) dut(clk,reset,rx,tx);
     reg [7:0] body[0:255];
     reg [7:0] reply[0:255];
     reg [7:0] b,rcmd,rseq,l0,l1,c0,c1;
@@ -122,17 +122,37 @@ module tb_uart_crc_top;
             exchange(3,11,0,wanted);
         end
     endtask
+    task configure_post;
+        input [7:0] wanted;
+        begin
+            // Per-column right shifts [1,2,0], ReLU enabled.
+            body[0]=1;body[1]=2;body[2]=0;body[3]=1;
+            exchange(7,4,0,wanted);
+        end
+    endtask
     task check_result;
         input integer rows,cols;
         reg signed [31:0] actual;
-        integer n;
+        integer n,post_actual,post_expected;
         begin
-            if(len!=36) $fatal(1,"FAIL result length");
+            if(len!=45) $fatal(1,"FAIL result length");
             for(n=0;n<9;n=n+1) begin
                 actual={reply[n*4+3],reply[n*4+2],reply[n*4+1],reply[n*4]};
                 if(n/3<rows && n%3<cols) begin
                     if(actual!==expected[n]) $fatal(1,"FAIL result %0d got %0d expected %0d",n,actual,expected[n]);
                 end else if(actual!==0) $fatal(1,"FAIL inactive cell");
+                post_expected=expected[n];
+                case(n%3)
+                    0: post_expected=(post_expected+1) >>> 1;
+                    1: post_expected=(post_expected+2) >>> 2;
+                    default: post_expected=post_expected;
+                endcase
+                if(post_expected<0) post_expected=0;
+                if(post_expected>127) post_expected=127;
+                if(n/3>=rows || n%3>=cols) post_expected=0;
+                post_actual=$signed(reply[36+n]);
+                if(post_actual!==post_expected)
+                    $fatal(1,"FAIL post %0d got %0d expected %0d",n,post_actual,post_expected);
             end
         end
     endtask
@@ -163,6 +183,7 @@ module tb_uart_crc_top;
         body[8]=-1;body[9]=2;body[10]=0;
         exchange(2,11,0,8'h80);
         configure(3,3,3,8'h80);
+        configure_post(8'h80);
         expected[0]=13;expected[1]=2;expected[2]=-5;
         expected[3]=5;expected[4]=5;expected[5]=8;
         expected[6]=-1;expected[7]=6;expected[8]=5;

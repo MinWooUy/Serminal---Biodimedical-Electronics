@@ -155,17 +155,20 @@ a lost response to RUN must not trigger a blind retry.
 | `04 RUN_TILE` | Empty | RESULT after computation, or NACK; no preliminary ACK |
 | `05 GET_STATUS` | Empty | ACK with one additional flags byte |
 | `06 WRITE_BIAS` | `base:u16`, followed by 1–3 signed little-endian INT32 biases | ACK after writes complete |
+| `07 CONFIG_POST` | `shift_ch0:i8, shift_ch1:i8, shift_ch2:i8, relu:u8` (`relu` must be 0 or 1) | ACK |
 
 Response commands:
 
 - `80 ACK`: payload `[original_CMD, 00]`; GET_STATUS adds flags at byte 2:
   bit 0 = configuration valid, bit 1 = input staging bank dirty,
- bit 2 = weight staging bank dirty; bit 3 = bias preload enabled; bits 7:4 reserved zero.
+ bit 2 = weight staging bank dirty; bit 3 = bias preload enabled; bit 4 = post configured; bits 7:5 reserved zero.
 - `81 NACK`: payload `[original_CMD, error]`:
   `01` CRC/oversized packet, `02` invalid length/config/address,
   `03` unconfigured/not runnable/missing tensor data, `04` unknown command.
-- `82 RESULT`: exactly 36 bytes, nine signed little-endian INT32 values in
-  physical row-major order: `(row*3+col)*4`. Inactive rows/columns are zero.
+- `82 RESULT`: with post disabled, exactly 36 bytes: nine signed little-endian
+  INT32 values in physical row-major order `(row*3+col)*4`. With the top-level
+  `POST_ENABLE=1`, exactly 45 bytes: those 36 raw bytes followed by nine signed
+  INT8 post values in the same row-major order. Inactive rows/columns are zero.
 
 For default parameters, `1 <= K <= 16`, `1 <= rows,cols <= 3`,
 `window_step > 0`. All input/weight addresses must fit the 1024-byte SRAM banks.
