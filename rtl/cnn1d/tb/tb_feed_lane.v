@@ -3,7 +3,7 @@ module tb_feed_lane();
 
   parameter DATA_W = 8;
   parameter DEPTH  = 16;
-  parameter LANE_N = 2;          // test trễ 2 nhịp
+  parameter LANE_N = 2;          
 
   reg                  clk, reset;
   reg                  wr_en, rd_en;
