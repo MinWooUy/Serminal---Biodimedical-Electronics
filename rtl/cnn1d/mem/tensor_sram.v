@@ -26,29 +26,29 @@ module tensor_sram#(
 	output reg o_rd_valid, 
 	output reg signed [DATA_W-1:0] o_rd_data
 );
-	// memory
-	reg signed[DATA_W-1:0] mem[0:DEPTH-1];
-	
-	// Synchronous write
+	// Simple dual-port M9K template:
+	// - port A: write-only
+	// - port B: registered read, latency = 1 cycle
+	//
+	// Keep both accesses in one clocked process.  Quartus 18.1 otherwise
+	// classifies this RAM as having asynchronous read logic and implements
+	// every 1024x8 bank with registers/muxes instead of an M9K.
+	// The two ports access separate ping-pong banks, so same-address
+	// read-during-write is architecturally impossible.
+	(* ramstyle = "M9K, no_rw_check" *)
+	reg signed [DATA_W-1:0] mem [0:DEPTH-1];
+
 	always @(posedge i_clk) begin
-		if(i_wr_en) begin
+		if (i_wr_en)
 			mem[i_wr_addr] <= i_wr_data;
-		end
-	end
-	
-	// Synchronous read
-	// Read latency = 1 clock
-	
-	always @(posedge i_clk) begin
-		if(i_reset) begin
-			o_rd_data <= {DATA_W{1'b0}};
+
+		if (i_rd_en)
+			o_rd_data <= mem[i_rd_addr];
+
+		if (i_reset)
 			o_rd_valid <= 1'b0;
-		end else begin
+		else
 			o_rd_valid <= i_rd_en;
-			if(i_rd_en) begin
-				o_rd_data <= mem[i_rd_addr];
-			end
-		end
 	end
 endmodule
 `default_nettype wire
