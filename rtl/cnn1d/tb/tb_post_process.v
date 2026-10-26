@@ -3,18 +3,23 @@ module tb_post_process;
     reg clk=0, reset=1, valid=0, relu=0;
     always #5 clk=~clk;
     reg [287:0] tile=0;
-    reg [95:0] bias=0;
     reg [23:0] shift=0;
     reg [1:0] rows=3, cols=3;
     wire [71:0] result;
     wire out_valid;
-    conv1d_post_process dut(clk,reset,valid,tile,bias,shift,relu,rows,cols,result,out_valid);
+
+    conv1d_post_process dut(
+        .i_clk(clk),.i_reset(reset),.i_valid(valid),.i_tile(tile),
+        .i_shift(shift),.i_relu(relu),
+        .i_active_rows(rows),.i_active_cols(cols),
+        .o_tile(result),.o_valid(out_valid)
+    );
     reg pv=0, clear=0;
     reg [23:0] pd=0;
     wire [23:0] po;
     wire pov;
     maxpool1d2 pool(clk,reset,clear,pv,pd,po,pov);
-    integer fd,n,acc,b,s,act,want,i;
+    integer fd,n,acc,s,act,want,i;
     reg [1023:0] path;
     initial begin
         if(!$value$plusargs("vectors=%s",path)) $fatal(1,"Missing vectors");
@@ -22,22 +27,22 @@ module tb_post_process;
         if(!fd) $fatal(1,"Cannot open vectors");
         #12; reset=0;
         while(!$feof(fd)) begin
-            n=$fscanf(fd,"%d %d %d %d %d\n",acc,b,s,act,want);
-            if(n!=5) $fatal(1,"Bad vector");
+            n=$fscanf(fd,"%d %d %d %d\n",acc,s,act,want);
+            if(n!=4) $fatal(1,"Bad vector");
             @(negedge clk); valid=1; relu=act;
             for(i=0;i<9;i=i+1) tile[i*32 +: 32]=acc;
-            for(i=0;i<3;i=i+1) begin bias[i*32 +: 32]=b; shift[i*8 +: 8]=s; end
+            for(i=0;i<3;i=i+1) begin shift[i*8 +: 8]=s; end
             @(posedge clk); #1;
             if(!out_valid) $fatal(1,"Missing valid");
             for(i=0;i<9;i=i+1)
                 if($signed(result[i*8 +: 8])!==want)
-                    $fatal(1,"Mismatch acc=%d bias=%d shift=%d relu=%d actual=%d want=%d",acc,b,s,act,$signed(result[i*8 +: 8]),want);
+                    $fatal(1,"Mismatch acc=%d shift=%d relu=%d actual=%d want=%d",acc,s,act,$signed(result[i*8 +: 8]),want);
         end
         // Distinct channel parameters, partial rows and columns.
         @(negedge clk); rows=2; cols=2; relu=1;
-        tile={9{32'd20}}; bias={32'd100,32'd4,32'd2}; shift={8'd0,8'd2,8'd1};
+        tile={9{32'd20}}; shift={8'd0,8'd2,8'd1};
         @(posedge clk); #1;
-        if(result!==72'h00000000060b00060b) $fatal(1,"Channel mapping/masking");
+        if(result!==72'h00000000050a00050a) $fatal(1,"Channel mapping/masking");
         @(negedge clk); valid=0;
         @(posedge clk); #1; if(out_valid) $fatal(1,"Valid bubble");
         // Pool across a bubble; signed comparisons on independent channels.

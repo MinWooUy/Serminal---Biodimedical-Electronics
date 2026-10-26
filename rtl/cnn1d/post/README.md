@@ -34,7 +34,6 @@ Reset bất đồng bộ active-high xóa dữ liệu và valid.
 
 Đặt parameter `POST_ENABLE=1` (mặc định 0), `ACC_W=32`, nối:
 
-- `i_post_bias`: `ARRAY_COLS` bias INT32 của các kênh tile hiện tại.
 - `i_post_shift`: `ARRAY_COLS` shift signed 8 bit, lấy từ model.
 - `i_post_relu`: bật cho các block Conv1D.
 - `o_post_tile`: tile INT8 theo cùng thứ tự với `o_tile`.
@@ -46,8 +45,9 @@ lần xử lý duy nhất. Dùng `o_post_valid` để nhận đầu ra INT8; kh�
 `o_done` hoặc `o_tile_valid` thay cho nó. `o_tile`, `o_done` và giao diện INT32
 cũ giữ nguyên. Khi POST_ENABLE=0, hai đầu ra post bằng 0; có thể bỏ nối đầu vào.
 
-`ecg_accel_top` hiện vẫn dùng chế độ mặc định và UART trả INT32 thô. Chưa có
-lệnh UART nạp bias/shift hay nhận INT8. Khối mới dùng được qua giao diện RTL
+Bias Conv1D được nạp vào accumulator qua preload; post block chỉ thực hiện
+round/shift, ReLU và saturate. `ecg_accel_top` dùng `POST_ENABLE` để chọn chế độ
+raw hoặc raw + INT8 post result; `CONFIG_POST` (`0x07`) nạp shift và ReLU qua UART.
 của tile; muốn bật qua host cần mở rộng command controller và host protocol.
 Chỉ áp dụng post sau khi cộng đủ mọi partial sum của một output; không cộng
 bias hay requantize riêng từng lát K rồi cộng các kết quả INT8.

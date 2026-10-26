@@ -1,4 +1,4 @@
-// One registered tile: bias -> round/shift -> optional ReLU -> symmetric INT8.
+// One registered tile: acc -> round/shift -> optional ReLU -> symmetric INT8.
 // Rows are positions, columns are output channels. No backpressure.
 module conv1d_post_process #(
     parameter ROWS=3, COLS=3,
@@ -6,7 +6,6 @@ module conv1d_post_process #(
 )(
     input wire i_clk, i_reset, i_valid,
     input wire [ROWS*COLS*32-1:0] i_tile,
-    input wire [COLS*32-1:0] i_bias,
     input wire [COLS*8-1:0] i_shift, // signed: k + a_in - a_out
     input wire i_relu,
     input wire [ROW_W-1:0] i_active_rows,
@@ -15,14 +14,13 @@ module conv1d_post_process #(
     output reg o_valid
 );
     function [7:0] quantize;
-        input signed [31:0] acc, bias;
+        input signed [31:0] acc;
         input signed [7:0] shift;
         input relu;
         reg signed [63:0] value;
         begin
             // Widen BEFORE addition: no wrap at the INT32 boundary.
             value = {{32{acc[31]}},acc};
-            value = value + {{32{bias[31]}},bias};
             if (shift > 0) begin
                 if (shift >= 34) value = 0;
                 else value = (value + (64'sd1 <<< (shift-1))) >>> shift;
@@ -39,6 +37,7 @@ module conv1d_post_process #(
             quantize = value[7:0];
         end
     endfunction
+    
     integer r,c;
     always @(posedge i_clk or posedge i_reset) begin
         if (i_reset) begin o_valid<=0; o_tile<=0; end
@@ -50,7 +49,7 @@ module conv1d_post_process #(
                         if (r<i_active_rows && c<i_active_cols)
                             o_tile[(r*COLS+c)*8 +: 8] <= quantize(
                                 i_tile[(r*COLS+c)*32 +: 32],
-                                i_bias[c*32 +: 32],i_shift[c*8 +: 8],i_relu);
+                                i_shift[c*8 +: 8],i_relu);
                         else o_tile[(r*COLS+c)*8 +: 8] <= 0;
             end
         end

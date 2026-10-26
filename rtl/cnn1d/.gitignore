@@ -4,3 +4,4 @@ transcript
 docs/issue
 __pycache__/
 *.pyc
+.ini
