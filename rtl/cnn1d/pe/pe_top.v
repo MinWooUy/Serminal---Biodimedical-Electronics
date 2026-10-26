@@ -1,3 +1,4 @@
+`default_nettype none
 module pe_top #(
 	parameter DATA_W = 8,
 	parameter ACC_W = 32
@@ -106,3 +107,4 @@ module pe_top #(
 	// o_capture_done = bao sau canh CLK la capture xong
 	assign o_capture_done = capture_done_q1;// Total delay 3 cycles
 endmodule
+`default_nettype wire

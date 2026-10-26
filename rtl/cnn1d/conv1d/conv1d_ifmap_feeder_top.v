@@ -1,3 +1,4 @@
+`default_nettype none
 module conv1d_ifmap_feeder_top #(
 	parameter DATA_W = 8,
 	parameter ADDR_W = 16,
@@ -127,3 +128,4 @@ module conv1d_ifmap_feeder_top #(
 	);
 
 endmodule
+`default_nettype wire

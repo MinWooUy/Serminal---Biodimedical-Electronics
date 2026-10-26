@@ -1,3 +1,4 @@
+`default_nettype none
 module half_adder(
 	input wire A, B,
 	output wire S, Cout
@@ -7,3 +8,4 @@ module half_adder(
 	assign Cout= A & B;
 
 endmodule
+`default_nettype wire

@@ -1,3 +1,4 @@
+`default_nettype none
 //Tile 0:
 //IFMAP base = X_base
 //W base     = W_base
@@ -303,3 +304,4 @@ module conv1d_layer_controller #(
 	end
 
 endmodule
+`default_nettype wire

@@ -1,3 +1,4 @@
+`default_nettype none
 module final_carry_lookahead_adder #(
   parameter DATA_W = 8
 )(
@@ -35,3 +36,4 @@ module final_carry_lookahead_adder #(
     end
   endgenerate
 endmodule
+`default_nettype wire

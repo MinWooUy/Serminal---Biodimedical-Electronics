@@ -1,9 +1,10 @@
+`default_nettype none
 module CarryLookaheadAdder_8_bit(
 	input wire[7:0] A, B,
-	input Cin,
+	input wire Cin,
 	
 	output wire[7:0] S,
-	output Cout, G_out, P_out
+	output wire Cout, G_out, P_out
 );
 	wire[1:0] P, G;
 	wire C_next;
@@ -33,3 +34,4 @@ module CarryLookaheadAdder_8_bit(
 	
 	assign Cout = P_out & Cin | G_out;
 endmodule
+`default_nettype wire

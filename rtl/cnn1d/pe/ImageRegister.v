@@ -1,5 +1,6 @@
+`default_nettype none
 module ImageRegister(
-	input clk, reset,
+	input wire clk, reset,
 	input wire[7:0] inImage,
 	output reg[7:0] outImage
 ); 
@@ -9,3 +10,4 @@ module ImageRegister(
 	end
 
 endmodule
+`default_nettype wire

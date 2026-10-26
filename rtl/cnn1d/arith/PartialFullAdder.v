@@ -1,3 +1,4 @@
+`default_nettype none
 module PartialFullAdder(
 	input wire A, B, CarryIn,
 	output wire S, P, G
@@ -8,3 +9,4 @@ module PartialFullAdder(
 	assign S = P ^ CarryIn;
 
 endmodule
+`default_nettype wire

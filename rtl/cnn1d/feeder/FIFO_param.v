@@ -1,3 +1,4 @@
+`default_nettype none
 module FIFO_param #(
 	parameter CNT_W = 5,
 	parameter DATA_W = 8,
@@ -40,3 +41,4 @@ module FIFO_param #(
 	end
 
 endmodule
+`default_nettype wire

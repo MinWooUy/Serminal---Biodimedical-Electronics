@@ -1,5 +1,6 @@
+`default_nettype none
 module WeightRegister(
-	input clk, reset,
+	input wire clk, reset,
 	input wire[7:0] inWeight,
 	output reg[7:0] outWeight
 );
@@ -10,3 +11,4 @@ module WeightRegister(
 	end
 
 endmodule
+`default_nettype wire

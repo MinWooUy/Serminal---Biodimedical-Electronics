@@ -1,3 +1,4 @@
+`default_nettype none
 module baugh_wooley_partial_product#(
   parameter DATA_W = 4
 )(
@@ -21,3 +22,4 @@ module baugh_wooley_partial_product#(
     end
   endgenerate
 endmodule
+`default_nettype wire

@@ -1,6 +1,7 @@
+`default_nettype none
 module Accumulator(
-	input i_clk, i_reset, 
-	input i_clear_acc, i_compute_en,
+	input wire i_clk, i_reset, 
+	input wire i_clear_acc, i_compute_en,
 	
 	input wire[31:0] i_psum,
 	
@@ -17,3 +18,4 @@ module Accumulator(
 	end
 
 endmodule
+`default_nettype wire

@@ -1,3 +1,4 @@
+`default_nettype none
 module pe_array#(
   parameter DATA_W = 8,
   parameter ACC_W = 32,
@@ -15,6 +16,9 @@ module pe_array#(
   
   input wire [ARRAY_ROWS*DATA_W-1:0] i_image,
   input wire [ARRAY_COLS*DATA_W-1:0] i_weight,
+	
+	// Giá trị bơm vào cột 0 cho từng hàng khi dịch chuỗi shadow
+	input wire [ARRAY_ROWS*ACC_W-1:0] i_preload,
 
   // scan output of all PEs
   output wire[ARRAY_ROWS*ARRAY_COLS*ACC_W-1:0] o_scan_out,
@@ -76,7 +80,7 @@ module pe_array#(
 				wire[ACC_W-1:0] local_scan_in;
 				
 				if(col == 0) begin: GEN_SCAN_FIRST
-					assign local_scan_in = {ACC_W{1'b0}};
+					assign local_scan_in = i_preload[row*ACC_W +: ACC_W];
 				end else begin: GEN_SCAN_NEXT
 					assign local_scan_in = scan_link[(row*ARRAY_COLS+col-1)*ACC_W +: ACC_W];
 			end
@@ -135,3 +139,4 @@ module pe_array#(
      end
    endgenerate
 endmodule
+`default_nettype wire

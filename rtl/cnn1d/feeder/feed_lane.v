@@ -1,9 +1,10 @@
+`default_nettype none
 module feed_lane#(
 	parameter DATA_W = 8,
 	parameter DEPTH = 256,
 	parameter LANE_N = 0
 )(
-	input clk, reset,
+	input wire clk, reset,
 	
 	input wire wr_en, rd_en,
 	input wire i_first, i_last,
@@ -61,3 +62,4 @@ module feed_lane#(
 		.o_data(o_data)
 	);
 endmodule
+`default_nettype wire

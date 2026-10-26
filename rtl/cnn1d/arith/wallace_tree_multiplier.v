@@ -1,3 +1,4 @@
+`default_nettype none
 module wallace_tree_multiplier#(
   parameter DATA_W = 8
 )(
@@ -38,3 +39,4 @@ module wallace_tree_multiplier#(
   assign o_p[(2*DATA_W-2):0] = r_p[(2*DATA_W-2):0];
   assign o_p[(2*DATA_W-1)] = ~r_p[(2*DATA_W)-1];
 endmodule
+`default_nettype wire

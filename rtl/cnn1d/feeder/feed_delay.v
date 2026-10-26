@@ -1,8 +1,9 @@
+`default_nettype none
 module feed_delay#(
 	parameter DATA_W = 8,
 	parameter LANE_N = 0
 )(
-	input clk, reset,
+	input wire clk, reset,
 	
 	input wire i_valid,
 	input wire i_first,
@@ -57,3 +58,4 @@ generate
 endgenerate
 
 endmodule
+`default_nettype wire

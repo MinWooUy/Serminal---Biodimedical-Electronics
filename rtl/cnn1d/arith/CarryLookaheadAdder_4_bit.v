@@ -1,3 +1,4 @@
+`default_nettype none
 module CarryLookaheadAdder_4_bit(
 	input wire Cin,
 	input wire[3:0] A, B,
@@ -36,3 +37,4 @@ module CarryLookaheadAdder_4_bit(
 	assign P_out = P[0] & P[1] & P[2] & P[3];
 	 
 endmodule
+`default_nettype wire

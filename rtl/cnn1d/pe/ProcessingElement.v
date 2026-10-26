@@ -1,15 +1,16 @@
+`default_nettype none
 module ProcessingElement #(
 	parameter DATA_W = 8,
 	parameter ACC_W = 32
 )
 (
-	input i_clk, i_reset, 
+	input wire i_clk, i_reset, 
 	
-	input i_clear_acc, 
-	input i_scan_en, 
-	input i_capture_en, 
-	input i_compute_en,
-	input i_acc_init,
+	input wire i_clear_acc, 
+	input wire i_scan_en, 
+	input wire i_capture_en, 
+	input wire i_compute_en,
+	input wire i_acc_init,
 	
 	input wire[DATA_W-1:0] i_image, i_weight,
 	input wire[ACC_W-1:0] i_pe,
@@ -37,7 +38,7 @@ module ProcessingElement #(
 	MAC mac(
 		.i_clk(i_clk), .i_reset(i_reset), 
 		.i_clear_acc(i_clear_acc), .i_acc_init(i_acc_init), .i_compute_en(i_compute_en),
-		.i_a(i_weight), .i_b(i_image),
+		.i_a(i_weight), .i_b(i_image), .i_init(o_pe),
 		.o_mac(mac_value)
 	);
 	
@@ -50,3 +51,4 @@ module ProcessingElement #(
 		.o_scan_out(o_pe)
 	);
 endmodule
+`default_nettype wire

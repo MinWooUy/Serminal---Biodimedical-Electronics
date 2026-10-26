@@ -1,3 +1,4 @@
+`default_nettype none
 module conv1d_address_generating #(
 	parameter ADDR_W = 16,
 	parameter CFG_W = 16
@@ -132,3 +133,4 @@ module conv1d_address_generating #(
 		end
 	end
 endmodule
+`default_nettype wire
