@@ -4,7 +4,7 @@
 // Giải thích: docs/issue/L01-ring-buffer.md
 module ring_buffer #(
 	parameter DATA_W = 8,
-	parameter DEPTH = 16,
+	parameter DEPTH = 16
 )(
 	input wire clk, reset,
 
