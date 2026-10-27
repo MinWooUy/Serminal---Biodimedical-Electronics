@@ -1,7 +1,7 @@
 // Host-facing wrapper for one Conv1D tile. reset is active high.
 module ecg_accel_top #(
     parameter CLK_FREQ=50000000, BAUD_RATE=115200,
-    parameter MEM_DEPTH=1024, FEEDER_DEPTH=16, MAX_PAYLOAD=256,
+    parameter MEM_DEPTH=1024, FEEDER_DEPTH=1024, MAX_PAYLOAD=256,
     parameter RX_TIMEOUT_CLKS=CLK_FREQ/10, POST_ENABLE=0
 )(input wire clk, reset, uart_rx, output wire uart_tx);
 

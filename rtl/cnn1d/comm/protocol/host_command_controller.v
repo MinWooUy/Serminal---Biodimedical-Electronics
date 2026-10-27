@@ -1,7 +1,10 @@
 // Stop-and-wait host protocol. No pipelined requests or implicit RUN retries.
 // Fixed accelerator geometry: INT8, INT32, 3x3, 16-bit addresses/config.
 module host_command_controller #(
-    parameter MAX_PAYLOAD=256, MEM_DEPTH=1024, FEEDER_DEPTH=16, BIAS_COUNT=3,
+    parameter MAX_PAYLOAD=256,
+    parameter MEM_DEPTH=1024, 
+    parameter FEEDER_DEPTH=1024, 
+    parameter BIAS_COUNT=3,
     parameter POST_ENABLE=0
 )(
     input wire clk, reset,
