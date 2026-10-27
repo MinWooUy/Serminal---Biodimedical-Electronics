@@ -33,7 +33,6 @@ core/cnn_control_fsm.v
 core/cnn_compute_core.v
 
 // Feeder ifmap/weight
-feeder/FIFO_param.v
 feeder/feed_delay.v
 feeder/feed_lane.v
 feeder/ifmap_feeder.v
