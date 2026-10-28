@@ -48,7 +48,9 @@ cũ giữ nguyên. Khi POST_ENABLE=0, hai đầu ra post bằng 0; có thể b�
 Bias Conv1D được nạp vào accumulator qua preload; post block chỉ thực hiện
 round/shift, ReLU và saturate. `ecg_accel_top` dùng `POST_ENABLE` để chọn chế độ
 raw hoặc raw + INT8 post result; `CONFIG_POST` (`0x07`) nạp shift và ReLU qua UART.
-của tile; muốn bật qua host cần mở rộng command controller và host protocol.
+`host_command_controller` đã hỗ trợ lệnh này. Script smoke `comm/host/ecg_host.py`
+hiện chỉ parse response raw 36 byte; cần mở rộng host để gửi `CONFIG_POST` và
+parse response post 45 byte khi chạy trên board.
 Chỉ áp dụng post sau khi cộng đủ mọi partial sum của một output; không cộng
 bias hay requantize riêng từng lát K rồi cộng các kết quả INT8.
 

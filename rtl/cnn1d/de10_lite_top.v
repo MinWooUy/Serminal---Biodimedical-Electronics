@@ -11,7 +11,9 @@ module de10_lite_top(
 	
 	ecg_accel_top #(
 		.CLK_FREQ(50000000),
-		.BAUD_RATE(115200)
+		.BAUD_RATE(115200),
+		.POST_ENABLE(1),
+		.FEEDER_DEPTH(1024)
 	) u_ecg_accel(
 		.clk(MAX10_CLK1_50),
 		.reset(reset),

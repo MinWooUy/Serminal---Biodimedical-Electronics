@@ -5,6 +5,7 @@ results/img
 rtl/cnn1d/output_files
 rtl/cnn1d/incremental_db
 rtl/cnn1d/db
+results/hardware_logs/*.log
 *.bak
 *.qpf
 *.qsf
