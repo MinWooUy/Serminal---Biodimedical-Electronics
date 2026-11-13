@@ -198,7 +198,6 @@ module gvu_top #(
     logic signed [DATA_WIDTH-1:0] runtime_clamp_min, runtime_clamp_max;
     logic runtime_accumulate;
     logic [LANES-1:0][ACC_WIDTH-1:0] raw_result;
-    logic [LANES-1:0][ACC_WIDTH-1:0] raw_sram_data;
     logic [LANES-1:0][ACC_WIDTH-1:0] quantized_result;
 
     gvu_runtime_quantize #(
@@ -243,7 +242,7 @@ module gvu_top #(
         .instruction_rs1(instruction_rs1), .instruction_rs2(instruction_rs2),
         .instruction_lane_mask(instruction_lane_mask), .load_data(load_data),
         .load_valid(1'b0), .load_ready(load_ready), .result(raw_result), .result_valid(result_valid),
-        .sram_c_we(sram_c_we), .sram_c_address(sram_c_address), .sram_c_data(raw_sram_data)
+        .sram_c_we(sram_c_we), .sram_c_address(sram_c_address), .sram_c_data()
     );
     assign result = quantized_result;
     assign sram_c_data = quantized_result;

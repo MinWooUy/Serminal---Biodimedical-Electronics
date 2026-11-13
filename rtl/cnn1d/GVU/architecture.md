@@ -23,7 +23,7 @@ Package `gvu_config_pkg` là nguồn mặc định dùng chung cho các module G
 | Nhóm | Tham số |
 |---|---|
 | Datapath | `DATA_WIDTH`, `MAX_VECTOR_WIDTH`, `VECTOR_LANES`, `ACC_WIDTH`, `PSUM_WIDTH` |
-| Register/memory | `NUM_VECTOR_REGS`, `NUM_SCRATCHPAD_BANKS`, `SCRATCHPAD_DEPTH`, `REG_ADDR_WIDTH`, `MEM_ADDR_WIDTH` |
+| Register/memory | `NUM_VECTOR_REGS` (default 8), `NUM_SCRATCHPAD_BANKS`, `SCRATCHPAD_DEPTH`, `REG_ADDR_WIDTH`, `MEM_ADDR_WIDTH` |
 | Điều khiển | `OPCODE_WIDTH`, `MAX_OUTSTANDING`, `PIPELINE_STAGES`, `MAX_INFLIGHT_OPS` |
 | Kiểu dữ liệu | `SUPPORT_INT8`, `SUPPORT_INT16`, `SUPPORT_INT32`, `SUPPORT_FP16`, `SUPPORT_FP32` |
 | Số học | `SUPPORT_SATURATION`, `SUPPORT_ROUNDING` |

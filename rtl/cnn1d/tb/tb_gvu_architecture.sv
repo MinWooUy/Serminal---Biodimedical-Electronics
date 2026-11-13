@@ -1,9 +1,12 @@
 `timescale 1ns / 1ps
+import gvu_config_pkg::*;
 
 module tb_gvu_architecture;
     localparam int LANES = 2;
     localparam int DATA_WIDTH = 8;
     localparam int ACC_WIDTH = 16;
+    localparam int REG_WIDTH = $clog2((NUM_VECTOR_REGS < 2) ? 2 : NUM_VECTOR_REGS);
+    localparam int INSTRUCTION_WIDTH = OPCODE_WIDTH + (3 * REG_WIDTH) + 12;
 
     logic clk = 1'b0;
     logic rst_n = 1'b0;
@@ -14,12 +17,12 @@ module tb_gvu_architecture;
     logic [LANES-1:0][DATA_WIDTH-1:0] operand_b = '0;
     logic valid_out;
     logic [LANES-1:0][ACC_WIDTH-1:0] result;
-    logic [34:0] instruction = '0;
+    logic [INSTRUCTION_WIDTH-1:0] instruction = '0;
     logic instruction_valid = 1'b1;
     logic [7:0] decoded_opcode;
-    logic [4:0] decoded_rd;
-    logic [4:0] decoded_rs1;
-    logic [4:0] decoded_rs2;
+    logic [REG_WIDTH-1:0] decoded_rd;
+    logic [REG_WIDTH-1:0] decoded_rs1;
+    logic [REG_WIDTH-1:0] decoded_rs2;
     logic [11:0] decoded_imm;
     logic decoded_valid;
     logic decoded_illegal;
@@ -39,7 +42,7 @@ module tb_gvu_architecture;
     );
 
     initial begin
-        instruction = {12'habc, 5'd3, 5'd2, 5'd1, 8'h06};
+        instruction = {12'habc, REG_WIDTH'(3), REG_WIDTH'(2), REG_WIDTH'(1), OPCODE_WIDTH'(6)};
         #1;
         if (decoded_opcode !== 8'h06 || decoded_rd !== 5'd1 || decoded_rs1 !== 5'd2 ||
             decoded_rs2 !== 5'd3 || decoded_imm !== 12'habc || !decoded_valid || decoded_illegal) $fatal(1, "decode failed");
