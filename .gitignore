@@ -1,6 +1,8 @@
 ~*.tmp
 .vscode
 docs/issue
+docs/drawio
+docs/log
 results/img
 rtl/cnn1d/output_files
 rtl/cnn1d/incremental_db
@@ -9,3 +11,11 @@ results/hardware_logs/*.log
 *.bak
 *.qpf
 *.qsf
+
+# Tái cấu trúc: file sinh ra không theo dõi (xem docs/restructure-plan.md)
+__pycache__/
+*.pyc
+data/cache/
+rtl/cnn1d/modelsim.ini
+rtl/cnn1d/transcript
+rtl/cnn1d/sim/out/

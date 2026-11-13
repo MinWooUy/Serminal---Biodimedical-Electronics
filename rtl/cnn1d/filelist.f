@@ -26,11 +26,13 @@ pe/ProcessingElement.v
 pe/scan_endpoint_mux.v
 pe/pe_top.v
 
-// Lõi tính toán: systolic array, PSM, FSM
+// Lõi tính toán: systolic array, FSM
 core/pe_array.v
-core/partial_sum_manager.v
 core/cnn_control_fsm.v
 core/cnn_compute_core.v
+
+// PSM
+psm/partial_sum_manager.v
 
 // Feeder ifmap/weight
 feeder/feed_delay.v
@@ -67,3 +69,4 @@ top/ecg_accel_top.v
 // Quantized convolution output and streaming pooling
 post/conv1d_post_process.v
 post/maxpool1d2.v
+post/fmap_writer.v

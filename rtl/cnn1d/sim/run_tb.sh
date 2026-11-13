@@ -7,6 +7,7 @@
 #   sim/run_tb.sh all                       # chạy mọi testbench trong tb/ (regression)
 #   sim/run_tb.sh --wave tb_ring_buffer     # chạy và ghi mọi tín hiệu vào sim/out/<tb>.wlf
 #   sim/run_tb.sh --gui  tb_ring_buffer     # mở ModelSim GUI, thêm mọi tín hiệu vào cửa sổ wave
+#   sim/run_tb.sh --param ARRAY_ROWS=7 --param ARRAY_COLS=7 tb_conv1d_tile_top
 #
 # Mã thoát: 0 khi mọi testbench PASS, 1 khi có testbench lỗi hoặc FAIL.
 # Đổi đường dẫn ModelSim bằng biến MODELSIM nếu cài chỗ khác.
@@ -16,11 +17,22 @@ cd "$(dirname "$0")/.."
 MSIM=${MODELSIM:-/c/intelFPGA_lite/18.1/modelsim_ase/win32aloem}
 OUT=sim/out
 MODE=batch
+GENERIC_ARGS=()
 
-case "${1:-}" in
-	--wave) MODE=wave; shift ;;
-	--gui)  MODE=gui;  shift ;;
-esac
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--wave) MODE=wave; shift ;;
+		--gui)  MODE=gui;  shift ;;
+		--param)
+			[ "$#" -ge 2 ] || { echo "--param cần NAME=VALUE" >&2; exit 2; }
+			case "$2" in
+				*=*) GENERIC_ARGS+=("-g$2"); shift 2 ;;
+				*) echo "--param cần NAME=VALUE" >&2; exit 2 ;;
+			esac
+			;;
+		*) break ;;
+	esac
+done
 
 mkdir -p "$OUT"
 [ -d "$OUT/work" ] || "$MSIM/vlib" "$OUT/work" > /dev/null
@@ -49,7 +61,7 @@ run_one() {
 	compile "$tb" || return 1
 	[ "$MODE" = wave ] && do_cmd="log -r /*; run -all; quit -f"
 	if ! "$MSIM/vsim" -c -lib "$OUT/work" -l "$OUT/$tb.log" -wlf "$OUT/$tb.wlf" \
-		-do "$do_cmd" "$tb" > /dev/null; then
+		"${GENERIC_ARGS[@]}" -do "$do_cmd" "$tb" > /dev/null; then
 		echo "$tb: LỖI MÔ PHỎNG (log: $OUT/$tb.log)"
 		grep -E '\*\* (Error|Fatal)' "$OUT/$tb.log" | head -5
 		return 1
@@ -67,7 +79,7 @@ run_gui() {
 	compile "$tb" || return 1
 	echo "$tb: mở ModelSim GUI (đóng cửa sổ để quay lại terminal)"
 	"$MSIM/vsim" -gui -lib "$OUT/work" -wlf "$OUT/$tb.wlf" \
-		-do "log -r /*; add wave -r /*; run -all; wave zoom full" "$tb"
+		"${GENERIC_ARGS[@]}" -do "log -r /*; add wave -r /*; run -all; wave zoom full" "$tb"
 }
 
 target="${1:?Cần tên testbench, ví dụ: sim/run_tb.sh tb_conv1d_tile_top}"

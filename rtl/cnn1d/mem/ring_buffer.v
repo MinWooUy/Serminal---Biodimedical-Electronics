@@ -19,12 +19,15 @@ module ring_buffer #(
 	// (CNT_W của FIFO_param là độ rộng bộ đếm = log2 + 1, truyền nhầm sẽ hỏng địa chỉ.)
 	localparam AW = $clog2(DEPTH);
 
-	// synthesis translate_off
-	initial begin
-		if ((1 << AW) != DEPTH)
-			$fatal(1, "ring_buffer: DEPTH=%0d khong phai luy thua cua 2", DEPTH);
-	end
-	// synthesis translate_on
+	// Kiểm tra DEPTH là lũy thừa của 2 lúc elaboration, cả khi mô phỏng lẫn tổng hợp.
+	// Nếu sai, instance không hợp lệ này làm build lỗi "module not found" thay vì chạy
+	// sai âm thầm (con trỏ không quay vòng đúng khi DEPTH không phải lũy thừa của 2).
+	localparam DEPTH_IS_POW2 = (DEPTH >= 2) && ((DEPTH & (DEPTH - 1)) == 0);
+	generate
+		if (!DEPTH_IS_POW2) begin : g_depth_not_pow2
+			ring_buffer_DEPTH_must_be_power_of_two u_error();
+		end
+	endgenerate
 
 	reg [DATA_W-1:0] mem[0:DEPTH-1]; 	// memory
   reg [AW:0] wr_ptr, rd_ptr; // write and read pointers (thêm 1 bit đánh dấu vòng)
