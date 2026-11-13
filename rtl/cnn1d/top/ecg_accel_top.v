@@ -2,14 +2,21 @@
 module ecg_accel_top #(
     parameter CLK_FREQ=50000000, BAUD_RATE=115200,
     parameter MEM_DEPTH=1024, FEEDER_DEPTH=1024, MAX_PAYLOAD=256,
-    parameter RX_TIMEOUT_CLKS=CLK_FREQ/10, POST_ENABLE=0
+    parameter RX_TIMEOUT_CLKS=CLK_FREQ/10, 
+    parameter ARRAY_ROWS = 7, ARRAY_COLS = 7,
+    parameter POST_ENABLE=0
 )(input wire clk, reset, uart_rx, output wire uart_tx);
+
+    localparam ROW_W = (ARRAY_ROWS <= 1) ? 1 : $clog2(ARRAY_ROWS + 1);
+    localparam COL_W = (ARRAY_COLS <= 1) ? 1 : $clog2(ARRAY_COLS + 1);
+    localparam TILE_ELEMS = ARRAY_ROWS * ARRAY_COLS;
+    localparam BIAS_COUNT = ARRAY_COLS;
 
 `ifndef SYNTHESIS
     initial begin
         if(CLK_FREQ/BAUD_RATE < 8 || RX_TIMEOUT_CLKS < 1)
             $fatal(1,"Invalid UART timing parameters");
-        if(MAX_PAYLOAD < (POST_ENABLE ? 45 : 36) || MAX_PAYLOAD > 256 || MEM_DEPTH < 1 || MEM_DEPTH > 65536 ||
+        if(MAX_PAYLOAD < (ARRAY_ROWS * ARRAY_COLS * (POST_ENABLE ? 5 : 4)) || MAX_PAYLOAD > 256 || MEM_DEPTH < 1 || MEM_DEPTH > 65536 ||
            FEEDER_DEPTH < 1 || FEEDER_DEPTH > 65535)
             $fatal(1,"Invalid accelerator transport dimensions");
     end
@@ -25,18 +32,21 @@ module ecg_accel_top #(
     wire [15:0] bias_wr_addr;
     wire [7:0] wr_data;
     wire [31:0] bias_wr_data;
-    wire [1:0] tile_bias_rd_idx;
-    wire [1:0] active_rows,active_cols;
-    wire [287:0] tile_data;
-    wire [71:0] post_tile;
+    wire [COL_W-1:0] tile_bias_rd_idx;
+    
+    wire [ROW_W-1:0] active_rows;
+    wire [COL_W-1:0] active_cols;
+    wire [TILE_ELEMS*32 - 1:0] tile_data;
+    wire [TILE_ELEMS*8 - 1:0] post_tile;
     wire post_valid;
-    wire [23:0] post_shift;
+    
+    wire [ARRAY_COLS*8-1:0] post_shift;
     wire post_relu;
     wire post_configured;
    
-    reg [31:0] bias_mem [0:2];
+    reg [31:0] bias_mem [0:ARRAY_COLS-1];
     reg [31:0] bias_rd_data;
-    reg [71:0] post_tile_q;
+    reg [TILE_ELEMS*8 - 1:0] post_tile_q;
     reg post_ready_q;
 
     always @(posedge clk or posedge reset) begin
@@ -59,36 +69,82 @@ module ecg_accel_top #(
     always @(posedge clk or posedge reset) begin
         if(reset) begin
             bias_rd_data<=0;
-            for(bias_i=0;bias_i<3;bias_i=bias_i+1) bias_mem[bias_i]<=0;
+            for(bias_i=0;bias_i<ARRAY_COLS;bias_i=bias_i+1) bias_mem[bias_i]<=0;
         end else begin
-            if(bias_wr_en) bias_mem[bias_wr_addr[1:0]]<=bias_wr_data;
+            if(bias_wr_en) bias_mem[bias_wr_addr[COL_W-1:0]]<=bias_wr_data;
             if(tile_bias_rd_en) bias_rd_data<=bias_mem[tile_bias_rd_idx];
         end
     end
 
     uart_crc_top #(.CLK_FREQ(CLK_FREQ),.BAUD_RATE(BAUD_RATE),
-        .MAX_PAYLOAD(MAX_PAYLOAD),.RX_TIMEOUT_CLKS(RX_TIMEOUT_CLKS)) u_transport(
+        .MAX_PAYLOAD(MAX_PAYLOAD),.RX_TIMEOUT_CLKS(RX_TIMEOUT_CLKS)
+    ) u_transport(
         .clk(clk),.reset(reset),.uart_rx(uart_rx),.uart_tx(uart_tx),
         .rx_enable(rx_enable),.rx_cmd(rx_cmd),.rx_seq(rx_seq),.rx_length(rx_length),
         .rx_payload(rx_payload),.rx_valid(rx_valid),.rx_error(rx_error),
         .tx_start(tx_start),.tx_cmd(tx_cmd),.tx_seq(tx_seq),.tx_length(tx_length),
-        .tx_payload(tx_payload),.tx_busy(tx_busy));
+        .tx_payload(tx_payload),.tx_busy(tx_busy)
+    );
     
-    host_command_controller #(.MAX_PAYLOAD(MAX_PAYLOAD),.MEM_DEPTH(MEM_DEPTH),
-        .FEEDER_DEPTH(FEEDER_DEPTH),.POST_ENABLE(POST_ENABLE)) u_commands(
-        .clk(clk),.reset(reset),.rx_enable(rx_enable),.rx_cmd(rx_cmd),.rx_seq(rx_seq),
-        .rx_length(rx_length),.rx_payload(rx_payload),.rx_valid(rx_valid),.rx_error(rx_error),
-        .tx_start(tx_start),.tx_cmd(tx_cmd),.tx_seq(tx_seq),.tx_length(tx_length),
-        .tx_payload(tx_payload),.tx_busy(tx_busy),
-        .x_wr_en(x_wr_en),.w_wr_en(w_wr_en),.wr_addr(wr_addr),.wr_data(wr_data),
-        .bias_wr_en(bias_wr_en),.bias_wr_addr(bias_wr_addr),.bias_wr_data(bias_wr_data),
+    host_command_controller #(
+        .MAX_PAYLOAD(MAX_PAYLOAD),
+        .MEM_DEPTH(MEM_DEPTH),
+        .FEEDER_DEPTH(FEEDER_DEPTH),
+        .ARRAY_ROWS(ARRAY_ROWS), .ARRAY_COLS(ARRAY_COLS),
+        .POST_ENABLE(POST_ENABLE)
+        ) u_commands(
+        .clk(clk),.reset(reset),
+
+        .rx_enable(rx_enable),
+        .rx_cmd(rx_cmd),
+        .rx_seq(rx_seq),
+        .rx_length(rx_length),
+        
+        .rx_payload(rx_payload),
+        .rx_valid(rx_valid),
+        .rx_error(rx_error),
+        
+        .tx_start(tx_start),
+        .tx_cmd(tx_cmd),
+        .tx_seq(tx_seq),
+        .tx_length(tx_length),
+        
+        .tx_payload(tx_payload),
+        .tx_busy(tx_busy),
+        
+        .x_wr_en(x_wr_en),
+        .w_wr_en(w_wr_en),
+        .wr_addr(wr_addr),
+        .wr_data(wr_data),
+        
+        .bias_wr_en(bias_wr_en),
+        .bias_wr_addr(bias_wr_addr),
+        .bias_wr_data(bias_wr_data),
+        
         .preload_bias_en(preload_bias_en),
-        .x_swap(x_swap),.w_swap(w_swap),.tile_start(tile_start),.k_len(k_len),
-        .window_step(window_step),.x_base(x_base),.w_base(w_base),
-        .active_rows(active_rows),.active_cols(active_cols),
-        .tile_busy(tile_busy),.tile_done(tile_done),.tile_data(tile_data),
+        
+        .x_swap(x_swap),
+        .w_swap(w_swap),
+        .tile_start(tile_start),
+        .k_len(k_len),
+        
+        .window_step(window_step),
+        .x_base(x_base),
+        .w_base(w_base),
+        
+        .active_rows(active_rows),
+        .active_cols(active_cols),
+        
+        .tile_busy(tile_busy),
+        .tile_done(tile_done),
+        .tile_data(tile_data),
+        
         .post_ready(post_ready_q),
-        .post_data(post_tile_q),.post_shift(post_shift),.post_relu(post_relu),
+        
+        .post_data(post_tile_q),
+        .post_shift(post_shift),
+        .post_relu(post_relu),
+        
         .post_configured(post_configured)
         );
 
@@ -96,6 +152,8 @@ module ecg_accel_top #(
         .POST_ENABLE(POST_ENABLE),
         .IFMAP_MEM_DEPTH(MEM_DEPTH),
         .WGT_MEM_DEPTH(MEM_DEPTH),
+        .ARRAY_ROWS(ARRAY_ROWS), 
+        .ARRAY_COLS(ARRAY_COLS),
         .FEEDER_DEPTH(FEEDER_DEPTH)
         ) u_tile(
         .i_clk(clk),

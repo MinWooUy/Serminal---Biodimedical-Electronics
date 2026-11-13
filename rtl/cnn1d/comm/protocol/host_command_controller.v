@@ -3,8 +3,13 @@
 module host_command_controller #(
     parameter MAX_PAYLOAD=256,
     parameter MEM_DEPTH=1024, 
-    parameter FEEDER_DEPTH=1024, 
-    parameter BIAS_COUNT=3,
+    parameter FEEDER_DEPTH=1024,
+    parameter ARRAY_ROWS = 3,
+    parameter ARRAY_COLS = 3,
+    parameter ROW_W = (ARRAY_ROWS <= 1) ? 1 : $clog2(ARRAY_ROWS + 1),
+    parameter COL_W = (ARRAY_COLS <= 1) ? 1 : $clog2(ARRAY_COLS + 1),
+    parameter TILE_ELEMS = ARRAY_ROWS * ARRAY_COLS,
+    parameter BIAS_COUNT = ARRAY_COLS,
     parameter POST_ENABLE=0
 )(
     input wire clk, reset,
@@ -31,18 +36,22 @@ module host_command_controller #(
     output reg preload_bias_en,
     output wire x_swap, w_swap, tile_start,
     output reg [15:0] k_len, window_step, x_base, w_base,
-    output reg [1:0] active_rows, active_cols,
+    output reg [ROW_W - 1:0] active_rows, 
+    output reg [COL_W - 1:0] active_cols,
     input wire post_ready,
-    input wire [71:0] post_data,
-    output reg[23:0] post_shift,
+    input wire [TILE_ELEMS*8 - 1:0] post_data,
+    output reg[ARRAY_COLS*8 - 1:0] post_shift,
     output reg post_relu,
     output reg post_configured,
     input wire tile_busy, tile_done,
-    input wire [287:0] tile_data
+    input wire [TILE_ELEMS*32 - 1:0] tile_data
 );
-    localparam IDLE=0, WRITE=1, SWAP=2, START=3, WAIT_TILE=4,
-               SEND=5, TX_LAUNCH=6, TX_WAIT=7, CHECK_X=8, CHECK_W=9,
-               WRITE_BIAS=10;
+    localparam IDLE=0, WRITE=1, SWAP=2, START=3, WAIT_TILE=4, SEND=5, TX_LAUNCH=6, TX_WAIT=7, CHECK_X=8, CHECK_W=9, WRITE_BIAS=10;
+    localparam CHECK_LANE_W = (ROW_W > COL_W) ? ROW_W : COL_W;
+    localparam RAW_RESULT_BYTES = TILE_ELEMS * 4;
+    localparam POST_RESULT_BYTES = TILE_ELEMS;
+    localparam RESULT_BYTES = POST_ENABLE ? (RAW_RESULT_BYTES + POST_RESULT_BYTES) : RAW_RESULT_BYTES;
+
     reg [3:0] state;
     reg [MAX_PAYLOAD*8-1:0] request;
     reg [15:0] address, count, index;
@@ -57,7 +66,7 @@ module host_command_controller #(
     wire [15:0] cfg_x=rx_payload[63:48], cfg_w=rx_payload[79:64];
     wire [7:0] cfg_preload=rx_payload[87:80];
    
-    reg [1:0] check_lane;
+    reg [CHECK_LANE_W - 1 : 0] check_lane;
     wire [31:0] check_x_addr={16'b0,x_base}+check_lane*{16'b0,window_step}+index;
     wire [31:0] check_w_addr={16'b0,w_base}+check_lane*{16'b0,k_len}+index;
     
@@ -74,30 +83,71 @@ module host_command_controller #(
     assign w_swap=(state==SWAP)&&w_dirty;
     assign tile_start=(state==START);
     
-    wire bias_ready = !preload_bias_en ||
-        ((active_cols==1 && bias_valid[0]) ||
-         (active_cols==2 && &bias_valid[1:0]) ||
-         (active_cols==3 && &bias_valid[2:0]));
+    integer ready_i;
+    reg bias_ready;
+    // tile_done is a one-cycle pulse and post_ready can rise after it,
+    // so remember that the tile finished while waiting for post_ready.
+    reg tile_done_seen;
+    always @(*) begin
+        bias_ready = !preload_bias_en;
+        if(preload_bias_en) begin
+            bias_ready = 1'b1;
+            for(ready_i = 0; ready_i < ARRAY_COLS; ready_i = ready_i+1)
+                if(ready_i < active_cols && !bias_valid[ready_i])
+                    bias_ready = 1'b0;
+        end
+    end
          
     always @(posedge clk or posedge reset) begin
         if(reset) begin
-            state<=IDLE;tx_start<=0;tx_cmd<=0;tx_seq<=0;tx_length<=0;tx_payload<=0;
-            request<=0;address<=0;count<=0;index<=0;write_weight<=0;check_lane<=0;
-            configured<=0;x_dirty<=0;w_dirty<=0;preload_bias_en<=0;
-            x_stage_map<=0;w_stage_map<=0;x_active_map<=0;w_active_map<=0;
+            state<=IDLE;
+				
+				tx_start<=0;
+				tx_cmd<=0;
+				tx_seq<=0;
+				tx_length<=0;
+				tx_payload<=0;
+				
+            request<=0;
+				address<=0;
+				count<=0;
+				index<=0;
+				write_weight<=0;
+				check_lane<=0;
+				
+            configured<=0;
+				x_dirty<=0;
+				w_dirty<=0;
+				preload_bias_en<=0;
+				
+            x_stage_map<=0;
+				w_stage_map<=0;
+				x_active_map<=0;
+				w_active_map<=0;
+				
             bias_valid<=0;
-            k_len<=0;window_step<=0;x_base<=0;w_base<=0;active_rows<=0;active_cols<=0;
+            k_len<=0;
+				window_step<=0;
+				x_base<=0;
+				w_base<=0;
+				active_rows<=0;
+				active_cols<=0;
 
             post_shift <= 0;
             post_relu <= 0;
             post_configured <= 0;
+            tile_done_seen <= 0;
         end else begin
             tx_start<=0;
+            
             case(state)
                 IDLE: if(rx_valid || rx_error) begin
-                    tx_seq<=rx_seq;tx_length<=2;tx_payload<=0;
+                    tx_seq<=rx_seq;
+                    tx_length<=2;
+                    tx_payload<=0;
                     tx_payload[7:0]<=rx_cmd;
-                    tx_cmd<=8'h80;state<=SEND;
+                    tx_cmd<=8'h80;
+                    state<=SEND;
                     if(rx_error) begin tx_cmd<=8'h81;tx_payload[15:8]<=1; end
                     else case(rx_cmd)
                         8'h01,8'h02: begin
@@ -108,22 +158,23 @@ module host_command_controller #(
                                 index<=0;write_weight<=(rx_cmd==2);state<=WRITE;
                             end
                         end
+                        
                         8'h03: begin
                             if((rx_length!=10 && rx_length!=11) ||
                                (rx_length==11 && cfg_preload>1) ||
                                cfg_k==0 || cfg_k>FEEDER_DEPTH ||
-                               cfg_step==0 || cfg_rows==0 || cfg_rows>3 || cfg_cols==0 || cfg_cols>3 ||
-                               ({16'b0,cfg_x}+(cfg_rows-1)*{16'b0,cfg_step}+cfg_k)>MEM_DEPTH ||
-                               ({16'b0,cfg_w}+cfg_cols*{16'b0,cfg_k})>MEM_DEPTH) begin
-                                tx_cmd<=8'h81;tx_payload[15:8]<=2;
+                               cfg_step==0 || cfg_rows==0 || cfg_rows>ARRAY_ROWS || cfg_cols==0 || cfg_cols>ARRAY_COLS ||({16'b0,cfg_x}+(cfg_rows-1)*{16'b0,cfg_step}+cfg_k)>MEM_DEPTH || ({16'b0,cfg_w}+cfg_cols*{16'b0,cfg_k})>MEM_DEPTH) begin
+                               tx_cmd<=8'h81;
+										 tx_payload[15:8]<=2;
                             end else begin
                                 k_len<=cfg_k;window_step<=cfg_step;
-                                active_rows<=cfg_rows[1:0];active_cols<=cfg_cols[1:0];
+                                active_rows<=cfg_rows[ROW_W - 1:0];active_cols<=cfg_cols[COL_W - 1:0];
                                 x_base<=cfg_x;w_base<=cfg_w;
                                 preload_bias_en<=(rx_length==11) && cfg_preload[0];
                                 configured<=1;
                             end
                         end
+                        
                         8'h06: begin
                             // base:u16 followed by one or more little-endian INT32 biases.
                             if(rx_length<6 || rx_length[1:0]!=2'b10 ||
@@ -134,6 +185,7 @@ module host_command_controller #(
                                 index<=0;state<=WRITE_BIAS;
                             end
                         end
+                        
                         8'h04: begin
                             if(rx_length!=0) begin tx_cmd<=8'h81;tx_payload[15:8]<=2; end
                             else if(!configured || tile_busy || tile_done || !bias_ready ||
@@ -141,6 +193,7 @@ module host_command_controller #(
                                 tx_cmd<=8'h81;tx_payload[15:8]<=3;
                             end else begin state<=CHECK_X;index<=0;check_lane<=0;end
                         end
+                        
                         8'h05: begin
                             if(rx_length!=0) begin tx_cmd<=8'h81;tx_payload[15:8]<=2; end
                             else begin
@@ -150,39 +203,44 @@ module host_command_controller #(
                         end
                         
                         8'h07: begin
-                            if(rx_length != 4 || rx_payload[31:25] != 0) begin
+                            if(rx_length != ARRAY_COLS+1 || rx_payload[ARRAY_COLS*8 + 7 : ARRAY_COLS*8 + 1] != 0) begin
                                 tx_cmd <= 8'h81;
                                 tx_payload[15:8] <= 2;
                             end else begin
-                                post_shift <= rx_payload[23:0];
-                                post_relu <= rx_payload[24];
+                                post_shift <= rx_payload[ARRAY_COLS*8 - 1:0];
+                                post_relu <= rx_payload[ARRAY_COLS*8];
                                 post_configured <= 1'b1;
                             end
                         end
                         default: begin tx_cmd<=8'h81;tx_payload[15:8]<=4; end
                     endcase
                 end
+
                 WRITE: begin
                     if(write_weight) begin w_stage_map[address+index]<=1;w_dirty<=1;end
                     else begin x_stage_map[address+index]<=1;x_dirty<=1;end
                     if(index==count-1) state<=SEND;
                     else index<=index+1'b1;
                 end
+
                 WRITE_BIAS: begin
                     bias_valid[address+(index>>2)]<=1'b1;
                     if(index==count-4) state<=SEND;
                     else index<=index+4;
                 end
+
                 CHECK_X: begin
-                    if(check_x_addr>=MEM_DEPTH ||
-                       !(x_dirty ? x_stage_map[check_x_addr] : x_active_map[check_x_addr])) begin
-                        tx_cmd<=8'h81;tx_payload[15:8]<=3;state<=SEND;
+                    if(check_x_addr>=MEM_DEPTH || !(x_dirty ? x_stage_map[check_x_addr] : x_active_map[check_x_addr])) begin
+                        tx_cmd<=8'h81;
+                        tx_payload[15:8]<=3;
+                        state<=SEND;
                     end else if(index==k_len-1) begin
                         index<=0;
                         if(check_lane==active_rows-1) begin check_lane<=0;state<=CHECK_W;end
                         else check_lane<=check_lane+1'b1;
                     end else index<=index+1'b1;
                 end
+
                 CHECK_W: begin
                     if(check_w_addr>=MEM_DEPTH ||
                        !(w_dirty ? w_stage_map[check_w_addr] : w_active_map[check_w_addr])) begin
@@ -193,29 +251,38 @@ module host_command_controller #(
                         else check_lane<=check_lane+1'b1;
                     end else index<=index+1'b1;
                 end
+
                 SWAP: begin
                     if(x_dirty) begin x_active_map<=x_stage_map;x_stage_map<=0;x_dirty<=0;end
                     if(w_dirty) begin w_active_map<=w_stage_map;w_stage_map<=0;w_dirty<=0;end
                     state<=START;
                 end
-                START: 
-                    state<=WAIT_TILE;
 
-                WAIT_TILE: 
-                    if(tile_done && (!POST_ENABLE || post_ready)) begin
+                START: begin
+                    tile_done_seen<=0;
+                    state<=WAIT_TILE;
+                end
+
+                WAIT_TILE: begin
+                    if(tile_done) tile_done_seen<=1'b1;
+                    if((tile_done || tile_done_seen) && (!POST_ENABLE || post_ready)) begin
                         tx_cmd<=8'h82;
                         tx_payload <= 0;
+                        tx_payload[RAW_RESULT_BYTES*8-1:0] <= tile_data;
                         if(POST_ENABLE) begin
-                            tx_length<=45;
-                            tx_payload[287:0]<=tile_data;
-                            tx_payload[359:288] <=post_data;
+                            tx_length<=RESULT_BYTES;
+                            tx_payload[RAW_RESULT_BYTES*8 +: POST_RESULT_BYTES*8]<=post_data;
                         end else begin
-                            tx_length <= 36;
-                            tx_payload[287:0] <= tile_data;
+                            tx_length <= RAW_RESULT_BYTES;
                         end
                         state<=SEND;
                     end
-                SEND: if(!tx_busy) begin tx_start<=1;state<=TX_LAUNCH;end
+                end
+                SEND: if(!tx_busy) begin
+                    tx_start<=1;
+                    state<=TX_LAUNCH;
+                end
+
                 TX_LAUNCH: state<=TX_WAIT;
                 TX_WAIT: if(!tx_busy) state<=IDLE;
                 default: state<=IDLE;

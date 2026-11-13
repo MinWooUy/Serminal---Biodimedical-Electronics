@@ -14,8 +14,8 @@
 `timescale 1ns/1ps
 
 module tb_conv1d_tile_corner;
-	wire done16, done16b, done1024;
-	wire [31:0] err16, err16b, err1024;
+	wire done16, done16b, done1024, done7x7;
+	wire [31:0] err16, err16b, err1024, err7x7;
 
 	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(16),   .MEM_DEPTH(256),  .N_RANDOM(40), .SEED(11), .PRELOAD_BIAS(0))
 		u_d16   (.o_done(done16),   .o_errors(err16));
@@ -23,16 +23,21 @@ module tb_conv1d_tile_corner;
 		u_d16b  (.o_done(done16b),  .o_errors(err16b));
 	tb_conv1d_tile_corner_unit #(.FEEDER_DEPTH(1024), .MEM_DEPTH(4096), .N_RANDOM(6),  .SEED(23), .PRELOAD_BIAS(1), .DRAIN_BP(1))
 		u_d1024 (.o_done(done1024), .o_errors(err1024));
+	// Mảng 7x7 với FEEDER_DEPTH=1024, K tới 1025. MEM_DEPTH phải >= COLS*K + 4 = 7172
+	// (vùng trọng số của tile K=1024 cần 7 cột x 1024), nên đặt 8192.
+	tb_conv1d_tile_corner_unit #(.ARRAY_ROWS(7), .ARRAY_COLS(7), .FEEDER_DEPTH(1024), .MEM_DEPTH(8192), .N_RANDOM(4), .SEED(31), .PRELOAD_BIAS(1), .DRAIN_BP(1))
+		u_d1024_7x7 (.o_done(done7x7), .o_errors(err7x7));
 
 	initial begin
-		wait(done16 && done16b && done1024);
+		wait(done16 && done16b && done1024 && done7x7);
 		#20;
 		$display("==============================================");
 		$display(" CONV1D TILE CORNER TEST SUMMARY");
 		$display("   FEEDER_DEPTH=16   : %0d loi", err16);
 		$display("   FEEDER_DEPTH=16b,	preload bias, 	drain backpressure  : %0d loi", err16b);
 		$display("   FEEDER_DEPTH=1024,	preload bias, 	drain backpressure  : %0d loi", err1024);
-		if (err16 == 0 && err16b == 0 && err1024 == 0)
+		$display("   7x7, FEEDER_DEPTH=1024, preload bias, drain backpressure : %0d loi", err7x7);
+		if (err16 == 0 && err16b == 0 && err1024 == 0 && err7x7 == 0)
 			$display(" RESULT : ALL TESTS PASSED");
 		else
 			$display(" RESULT : FAILED");
@@ -53,7 +58,9 @@ module tb_conv1d_tile_corner_unit #(
 	parameter N_RANDOM     = 20,
 	parameter SEED         = 1,
 	parameter PRELOAD_BIAS = 0,
-	parameter DRAIN_BP     = 0 // 1: i_drain_ready bật tắt ngẫu nhiên
+	parameter DRAIN_BP     = 0, // 1: i_drain_ready bật tắt ngẫu nhiên
+	parameter ARRAY_ROWS   = 3,
+	parameter ARRAY_COLS   = 3
 )(
 	output reg        o_done,
 	output reg [31:0] o_errors
@@ -62,8 +69,6 @@ module tb_conv1d_tile_corner_unit #(
 	localparam ACC_W      = 32;
 	localparam CFG_W      = 16;
 	localparam ADDR_W     = $clog2(MEM_DEPTH);
-	localparam ARRAY_ROWS = 3;
-	localparam ARRAY_COLS = 3;
 	localparam ROW_W      = $clog2(ARRAY_ROWS + 1);
 	localparam COL_W      = $clog2(ARRAY_COLS + 1);
 	localparam N_OUT      = ARRAY_ROWS * ARRAY_COLS;
@@ -420,23 +425,23 @@ module tb_conv1d_tile_corner_unit #(
 		if (o_cfg_err !== 1'b0) fail("o_cfg_err khong ve 0 sau reset");
 		report("C00 reset: o_cfg_err = 0");
 
-		tile(1, 1, 3, 3, 0, 0, 0);
+		tile(1, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C01 K = 1 (nho nhat)");
 
-		tile(FEEDER_DEPTH, 1, 3, 3, 0, 0, 0);
+		tile(FEEDER_DEPTH, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C02 K = DEPTH (FIFO vua day)");
 
-		run_tile(FEEDER_DEPTH + 1, 1, 3, 3, 0, 0, 1, 1);
+		run_tile(FEEDER_DEPTH + 1, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 1, 1);
 		report("C03 K = DEPTH+1 -> o_cfg_err, khong treo");
 
-		tile(5, 1, 3, 3, 0, 0, 0);
+		tile(5, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		if (o_cfg_err !== 1'b0) fail("o_cfg_err khong xoa sau tile hop le");
 		report("C04 tile hop le ngay sau tile loi");
 
-		run_tile(0, 1, 3, 3, 0, 0, 1, 1);
+		run_tile(0, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 1, 1);
 		report("C05 K = 0 -> o_cfg_err");
 
-		run_tile(16'hFFFF, 1, 3, 3, 0, 0, 1, 1);
+		run_tile(16'hFFFF, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 1, 1);
 		report("C06 K = 65535 -> o_cfg_err");
 
 		for (ar = 1; ar <= ARRAY_ROWS; ar = ar + 1)
@@ -444,31 +449,31 @@ module tb_conv1d_tile_corner_unit #(
 				tile(5, 2, ar, ac, 0, 0, 0);
 		report("C07 active_rows x active_cols: 9 to hop");
 
-		tile(6, 0, 3, 3, 0, 0, 0);
+		tile(6, 0, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C08 step = 0 (moi hang cung cua so)");
-		tile(6, 6, 3, 3, 0, 0, 0);
+		tile(6, 6, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C09 step = K (cua so lien ke, khong chong)");
-		tile(4, 9, 3, 3, 0, 0, 0);
+		tile(4, 9, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C10 step > K (cua so cach quang)");
 
 		km = FEEDER_DEPTH;
-		for (mode = 1; mode <= 4; mode = mode + 1) tile(km, 1, 3, 3, 0, 0, mode);
+		for (mode = 1; mode <= 4; mode = mode + 1) tile(km, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, mode);
 		report("C11 gia tri bien: -128*-128, -128*127, 127*127, +/-1 voi K = DEPTH");
 
-		tile(7, 3, 3, 3, 37, 13, 0);
-		tile(7, 3, 2, 3, MEM_DEPTH / 4 + 1, MEM_DEPTH / 8 + 3, 0);
+		tile(7, 3, ARRAY_ROWS, ARRAY_COLS, 37, 13, 0);
+		tile(7, 3, ARRAY_ROWS-1, ARRAY_COLS, MEM_DEPTH / 4 + 1, MEM_DEPTH / 8 + 3, 0);
 		report("C12 base ifmap/weight khac 0, le");
 
-		tile(3, 1, 3, 3, 0, 0, 0);
+		tile(3, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		fill_and_swap(0, 0, 4, 1, 0);
-		run_tile(4, 1, 3, 3, 0, 0, 0, 1);
-		run_tile(4, 1, 3, 3, 0, 0, 0, 1);      // chạy lại cùng bank, không ghi mới
-		run_tile(FEEDER_DEPTH + 1, 1, 3, 3, 0, 0, 1, 1);
-		run_tile(4, 1, 3, 3, 0, 0, 0, 1);      // dữ liệu bank vẫn còn sau tile lỗi
+		run_tile(4, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0, 1);
+		run_tile(4, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0, 1);      // chạy lại cùng bank, không ghi mới
+		run_tile(FEEDER_DEPTH + 1, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 1, 1);
+		run_tile(4, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0, 1);      // dữ liệu bank vẫn còn sau tile lỗi
 		report("C13 nhieu tile lien tiep, chay lai cung bank, xen tile loi");
 
 		fill_and_swap(0, 0, 8, 1, 0);
-		run_tile(8, 1, 3, 3, 0, 0, 0, 100000); // giữ start qua cả lúc done
+		run_tile(8, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0, 100000); // giữ start qua cả lúc done
 		report("C14 giu i_start muc 1 suot tile: chi chay 1 lan");
 
 		// reset giữa chừng: trong lúc load, rồi trong lúc compute
@@ -479,13 +484,13 @@ module tb_conv1d_tile_corner_unit #(
 		repeat (10) @(negedge i_clk);
 		do_reset;
 		if (o_busy || o_done_dut || o_ifmap_loader_state != 0) fail("reset trong luc load: DUT chua ve IDLE");
-		tile(5, 1, 3, 3, 0, 0, 0);
+		tile(5, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		fill_and_swap(0, 0, 6, 1, 0);
 		i_k_len = 6; i_start = 1'b1; @(negedge i_clk); i_start = 1'b0;
 		while (o_state_dbg != 3'd4) @(negedge i_clk);   // S_COMPUTE
 		repeat (2) @(negedge i_clk);
 		do_reset;
-		tile(5, 1, 3, 3, 0, 0, 0);
+		tile(5, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C15 reset giua luc load / compute roi chay tiep");
 
 		fill_and_swap(0, 0, 6, 1, 0);
@@ -493,7 +498,7 @@ module tb_conv1d_tile_corner_unit #(
 		i_start = 1'b1; @(negedge i_clk); i_start = 1'b0;
 		while (o_core_state_dbg != 3'd6) @(negedge i_clk);   // core S_PRE_WAIT
 		do_reset;
-		tile(5, 1, 3, 3, 0, 0, 0);
+		tile(5, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 		report("C18 reset giua luc preload roi chay tiep");
 		if (PRELOAD_BIAS) begin
 			if (bias_reads == 0) fail("che do bias nhung chua doc bias RAM lan nao");
@@ -504,10 +509,10 @@ module tb_conv1d_tile_corner_unit #(
 		end
 
 		if (FEEDER_DEPTH >= 192) begin
-			tile(7, 1, 3, 3, 0, 0, 0);
-			tile(80, 16, 3, 3, 0, 0, 0);
-			tile(96, 32, 3, 3, 0, 0, 0);
-			tile(192, 64, 3, 3, 0, 0, 0);
+			tile(7, 1, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
+			tile(80, 16, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
+			tile(96, 32, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
+			tile(192, 64, ARRAY_ROWS, ARRAY_COLS, 0, 0, 0);
 			tile(192, 64, 1, 2, 0, 0, 0);
 			report("C16 kich thuoc ECG: K = 7/80/96/192, step = Cin");
 		end

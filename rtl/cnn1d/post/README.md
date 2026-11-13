@@ -24,11 +24,11 @@ Model hợp lệ phải bảo đảm tổng accumulator + bias nằm trong INT32
 Bias đã chứa BatchNorm được fold; không cần khối BatchNorm riêng.
 Các hàng/cột không hoạt động luôn bằng 0, kể cả khi bias khác 0.
 
-Giao diện không có backpressure: tại mỗi cạnh lên có `i_valid=1`, lấy cả tile
-và cấu hình; sau cạnh đó `o_tile` và `o_valid` là kết quả đã đăng ký.
-Nhận được một tile mỗi chu kỳ. Khi không valid, giữ data và hạ valid.
-Consumer phải nhận mọi chu kỳ valid hoặc đặt FIFO phía sau.
-Reset bất đồng bộ active-high xóa dữ liệu và valid.
+Mỗi cột có một bộ requant riêng, đi qua các hàng mỗi chu kỳ một hàng (chi tiết
+và cơ sở lý thuyết: `docs/post_process_requant.md`). `i_valid` bắt đầu một tile,
+cấu hình được chốt tại cạnh đó, nhưng `i_tile` phải giữ nguyên đến khi `o_valid`
+lên. `o_valid` lên sau `ROWS+1` chu kỳ, kéo dài 1 chu kỳ. `o_busy` cao khi đang
+xử lý; `i_valid` bị bỏ qua lúc đó. Reset bất đồng bộ active-high xóa dữ liệu và valid.
 
 ## Tích hợp với conv1d_tile_top
 
