@@ -65,7 +65,10 @@ comm/protocol/packet_rx.v
 comm/protocol/packet_tx.v
 comm/uart/uart_crc_top.v
 comm/protocol/host_command_controller.v
+
 top/ecg_accel_top.v
+top/layer_core.v
+top/layer_cmd_controller.v
 
 // Quantized convolution output and streaming pooling
 post/conv1d_post_process.v
