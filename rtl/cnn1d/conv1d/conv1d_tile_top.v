@@ -134,7 +134,16 @@ module conv1d_tile_top #(
 	// Tile không chạy, vẫn trả o_done. Giữ tới lần start hợp lệ tiếp theo.
 	// Khi o_cfg_err = 1, o_tile/o_tile_valid là của tile TRƯỚC, không được dùng.
 	// =====================================================
-	output wire o_cfg_err
+	output wire o_cfg_err,
+
+	//======================================================
+	// debug read của IFMap (Bank đọc). Chỉ dùng khi tile đang IDLE:
+	// Host đọc lại output trung gian của Layer. Dữ liệu trả về sau 1 chu kỳ
+	// ======================================================
+	input wire i_dbg_rd_en,
+	input wire [ADDR_W-1:0] i_dbg_rd_addr,
+	output wire signed [DATA_W-1:0] o_dbg_rd_data,
+	output wire o_dbg_rd_valid
 );
 	reg cfg_err_q;
 	assign o_cfg_err = cfg_err_q;
@@ -195,11 +204,16 @@ module conv1d_tile_top #(
 	// =====================================================
 	// IFMAP SRAM
 	// =====================================================
-	wire ifmap_sram_rd_en;
-	wire [ADDR_W-1:0] ifmap_sram_rd_addr;
+	wire ifmap_ld_rd_en;
+	wire [ADDR_W-1:0] ifmap_ld_rd_addr;
+	wire ifmap_sram_rd_en = ifmap_ld_rd_en | i_dbg_rd_en;
+	wire [ADDR_W-1:0] ifmap_sram_rd_addr = i_dbg_rd_en ? i_dbg_rd_addr : ifmap_ld_rd_addr;
 	
 	wire signed [DATA_W-1:0] ifmap_sram_rd_data;
 	wire ifmap_sram_rd_valid;
+
+	assign o_dbg_rd_data = ifmap_sram_rd_data;
+	assign o_dbg_rd_valid = ifmap_sram_rd_valid;
 	
 	tensor_pingpong_buffer #(
 		.DATA_W(DATA_W),
@@ -217,7 +231,7 @@ module conv1d_tile_top #(
 		
 		.i_rd_en(ifmap_sram_rd_en),
 		.i_rd_addr(ifmap_sram_rd_addr),
-		
+
 		.o_rd_data(ifmap_sram_rd_data),
 		.o_rd_valid(ifmap_sram_rd_valid),
 		
@@ -346,8 +360,8 @@ module conv1d_tile_top #(
 		.o_load_done(ifmap_load_done),
 		
 		// SRAM
-		.o_sram_rd_en(ifmap_sram_rd_en),
-		.o_sram_rd_addr(ifmap_sram_rd_addr),
+		.o_sram_rd_en(ifmap_ld_rd_en),
+		.o_sram_rd_addr(ifmap_ld_rd_addr),
 		
 		.i_sram_rd_data(ifmap_sram_rd_data),
 		.i_sram_rd_valid(ifmap_sram_rd_valid),

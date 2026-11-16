@@ -39,7 +39,10 @@ module conv1d_layer_controller #(
 	input wire [CFG_W-1:0] i_out_channels,
 	input wire [CFG_W-1:0] i_k_len,
 	input wire [ADDR_W-1:0] i_window_step,
-	
+	// So hang vi tri moi tile (0 = dung ARRAY_ROWS). Lop co pool dung so chan (vd 2)
+	// de moi cap pool nam tron trong mot tile.
+	input wire [ROW_W-1:0] i_rows_per_tile,
+
 	input wire [ADDR_W-1:0] i_ifmap_base_addr,
 	input wire [ADDR_W-1:0] i_wgt_base_addr,
 	
@@ -127,7 +130,11 @@ module conv1d_layer_controller #(
 	// =====================================================
 	reg [CFG_W-1:0] rows_remaining_q;
 	reg [CFG_W-1:0] cols_remaining_q;
-	
+
+	reg [ROW_W-1:0] rows_per_tile_q;
+	wire [ROW_W-1:0] rows_per_tile_in =
+		(i_rows_per_tile == {ROW_W{1'b0}} || i_rows_per_tile > ARRAY_ROWS) ? ARRAY_ROWS : i_rows_per_tile;
+
 	
 	// =====================================================
 	// OUTPUT ASSIGNMENT
@@ -171,6 +178,7 @@ module conv1d_layer_controller #(
 			
 			rows_remaining_q <= {CFG_W{1'b0}};
 			cols_remaining_q <= {CFG_W{1'b0}};
+			rows_per_tile_q <= ARRAY_ROWS;
 		end else begin
 			case(state_q)
 				
@@ -196,7 +204,8 @@ module conv1d_layer_controller #(
 						rows_remaining_q <= i_out_len;
 						cols_remaining_q <= i_out_channels;
 						
-						if(i_out_len > ARRAY_ROWS) active_rows_q <= ARRAY_ROWS;
+						rows_per_tile_q <= rows_per_tile_in;
+						if(i_out_len > rows_per_tile_in) active_rows_q <= rows_per_tile_in;
 						else active_rows_q <= i_out_len;
 						
 						if(i_out_channels > ARRAY_COLS) active_cols_q <= ARRAY_COLS;
@@ -250,23 +259,23 @@ module conv1d_layer_controller #(
 						// Hết column tile nhưng còn row tile
 						// -----------------------------------------
 						else if(rows_remaining_q > active_rows_q) begin
-							rows_remaining_q <= rows_remaining_q - ARRAY_ROWS;
+							rows_remaining_q <= rows_remaining_q - rows_per_tile_q;
 							cols_remaining_q <= out_channels_q;
-							
-							out_row_base_q <= out_row_base_q + ARRAY_ROWS;
+
+							out_row_base_q <= out_row_base_q + rows_per_tile_q;
 							out_col_base_q <= {CFG_W{1'b0}};
 							
 							// IFMAP:
 							// next output position group:
 							//
 							// base += ARRAY_ROWS * window_step
-							tile_ifmap_base_q <= tile_ifmap_base_q + ARRAY_ROWS*window_step_q;
-							
+							tile_ifmap_base_q <= tile_ifmap_base_q + rows_per_tile_q*window_step_q;
+
 							// Weight quay lại Cout = 0
 							tile_wgt_base_q <= layer_wgt_base_q;
-							
-							if((rows_remaining_q - ARRAY_ROWS) > ARRAY_ROWS) active_rows_q <= ARRAY_ROWS;
-							else active_rows_q <= rows_remaining_q - ARRAY_ROWS;
+
+							if((rows_remaining_q - rows_per_tile_q) > rows_per_tile_q) active_rows_q <= rows_per_tile_q;
+							else active_rows_q <= rows_remaining_q - rows_per_tile_q;
 							
 							if(out_channels_q > ARRAY_COLS) active_cols_q <= ARRAY_COLS;
 							else active_cols_q <= out_channels_q;

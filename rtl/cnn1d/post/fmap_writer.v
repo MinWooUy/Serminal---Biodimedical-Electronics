@@ -52,10 +52,18 @@ module fmap_writer #(
   // Số kênh output của cả layer và địa chỉ gốc
   input wire [CFG_W-1:0] i_out_channels,
   input wire [ADDR_W-1:0] i_output_base,
+  input wire [CFG_W-1:0] i_row_pad,
+
+  input wire i_pool_en,
+  input wire i_gap_en,
 
   output wire o_wr_en,
   output wire[ADDR_W-1:0] o_wr_addr,
   output wire[DATA_W-1:0] o_wr_data,
+
+  output wire o_gap_en,
+  output wire [CFG_W-1:0] o_gap_idx,
+  output wire [DATA_W-1:0] o_gap_data,
 
   output wire o_ready, 
   output wire o_overrun,
@@ -69,11 +77,16 @@ module fmap_writer #(
   reg [ROW_W-1:0] row;
   reg [COL_W-1:0] col;
 
-  reg [CFG_W -1:0] row_base_q, col_base_q, out_channels_q;
+  reg [CFG_W -1:0] row_base_q, col_base_q, out_channels_q, row_pad_q;
   reg [ROW_W-1:0] active_rows_q;
   reg [COL_W-1:0] active_cols_q;
   reg [ADDR_W-1:0] output_base_q;
+  reg pool_q, gap_q; 
+  reg [ROW_W-1:0]out_rows_q;
   reg [ARRAY_ROWS*ARRAY_COLS*DATA_W-1:0] tile_q;
+  
+  wire [ROW_W-1:0] out_rows_in = i_pool_en ? (i_active_rows >> 1) : i_active_rows;
+
   always @(posedge i_clk or posedge i_reset) begin
     if(i_reset) begin
       state <= S_IDLE;
@@ -90,6 +103,9 @@ module fmap_writer #(
 
       output_base_q <= 0;
 
+      pool_q <=0; gap_q <= 0;
+      row_pad_q <= 0; out_rows_q <= 0;
+
       tile_q <= 0;
 
       o_done <= 1'b0;
@@ -105,14 +121,20 @@ module fmap_writer #(
           col_base_q <= i_col_base;
           out_channels_q <= i_out_channels;
 
+          row_pad_q <= i_row_pad;
+          out_rows_q <= out_rows_in;
+
           active_rows_q <= i_active_rows;
           active_cols_q <= i_active_cols;
 
           output_base_q <= i_output_base;
 
+          pool_q <= i_pool_en;
+          gap_q <= i_gap_en;
+
           tile_q <= i_tile;
           if(i_start) begin
-            if(i_active_rows != 0 && i_active_cols != 0) begin
+            if(out_rows_in != 0 && i_active_cols != 0) begin
               state <= S_WRITE;
               row <= 0; col <= 0;
             end else begin
@@ -126,7 +148,7 @@ module fmap_writer #(
           // Counter 2-D: [Vị trí][Kênh]
           if(col == active_cols_q-1'b1) begin
             col <= 0;
-            if(row == active_rows_q-1'b1) begin
+            if(row == out_rows_q-1'b1) begin
               // Ghi phần tử cuối tại cạnh clock này
               state <= S_IDLE;
               o_done <= 1'b1;
@@ -141,11 +163,22 @@ module fmap_writer #(
     end
   end
 
+  // Phần tử đang được xử lỹ
+  wire signed [DATA_W-1:0] a = tile_q[((pool_q ? 2*row : row)*ARRAY_COLS + col)*DATA_W +: DATA_W];
+  wire signed [DATA_W-1:0] b = tile_q[((2*row + 1)*ARRAY_COLS + col)*DATA_W +: DATA_W];
+  wire signed [DATA_W-1:0] elem = (pool_q && (b > a)) ? b : a;
+
+  wire [CFG_W-1:0] out_pos = pool_q ? ((row_base_q >> 1) + row) : (row_base_q + row);
+
   assign o_ready = (state == S_IDLE); // o_busy = !o_ready: nên không cần o_busy
   assign o_overrun = overrun_q;
-  assign o_wr_en = (state == S_WRITE);
-  assign o_wr_addr = output_base_q + (row_base_q + row)*out_channels_q + (col_base_q + col);
-  assign o_wr_data = tile_q[(row*ARRAY_COLS + col)*DATA_W +: DATA_W];
+  assign o_wr_en   = (state == S_WRITE) && !gap_q;
+  assign o_wr_addr = output_base_q + (out_pos + row_pad_q)*out_channels_q + (col_base_q + col);
+  assign o_wr_data = elem;
+
+  assign o_gap_en = (state == S_WRITE) && gap_q;
+  assign o_gap_idx = col_base_q + col;
+  assign o_gap_data = elem;
 
 endmodule
 
