@@ -53,6 +53,7 @@ conv1d/conv1d_ifmap_feeder_top.v
 conv1d/conv1d_weight_feeder_top.v
 conv1d/conv1d_tile_top.v
 conv1d/conv1d_layer_controller.v
+conv1d/conv1d_layer_top.v
 
 // Host UART 8N1, CRC and command transport
 comm/crc/crc16_ccitt_next.v

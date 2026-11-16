@@ -87,7 +87,11 @@ module tb_conv1d_tile_top #(
         .o_ifmap_loader_state(o_ifmap_loader_state), .o_wgt_loader_state(o_wgt_loader_state),
         .o_ifmap_read_bank(o_ifmap_read_bank), .o_ifmap_write_bank(o_ifmap_write_bank),
         .o_wgt_read_bank(o_wgt_read_bank), .o_wgt_write_bank(o_wgt_write_bank),
-        .o_cfg_err(o_cfg_err)
+        .o_cfg_err(o_cfg_err),
+        .i_dbg_rd_en(1'b0),
+        .i_dbg_rd_addr({ADDR_W{1'b0}}),
+        .o_dbg_rd_data(),
+        .o_dbg_rd_valid()
     );
 
     function integer sample_value;

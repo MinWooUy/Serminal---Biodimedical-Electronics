@@ -11,8 +11,12 @@ module maxpool1d2 #(parameter CHANNELS=3)(
     reg [CHANNELS*8-1:0] first;
     integer c;
     always @(posedge i_clk or posedge i_reset) begin
-        if(i_reset) begin pending<=0; first<=0; o_data<=0; o_valid<=0; end
-        else begin
+        if(i_reset) begin 
+            pending<=0; 
+            first<=0; 
+            o_data<=0; 
+            o_valid<=0; 
+        end else begin
             o_valid<=0;
             if(i_clear) pending<=0;
             else if(i_valid) begin
@@ -21,8 +25,7 @@ module maxpool1d2 #(parameter CHANNELS=3)(
                 else begin
                     o_valid<=1;
                     for(c=0;c<CHANNELS;c=c+1)
-                        o_data[c*8 +: 8] <= ($signed(first[c*8 +: 8]) > $signed(i_data[c*8 +: 8]))
-                            ? first[c*8 +: 8] : i_data[c*8 +: 8];
+                        o_data[c*8 +: 8] <= ($signed(first[c*8 +: 8]) > $signed(i_data[c*8 +: 8])) ? first[c*8 +: 8] : i_data[c*8 +: 8];
                 end
             end
         end

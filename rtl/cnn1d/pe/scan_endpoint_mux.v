@@ -19,7 +19,7 @@ module scan_endpoint_mux #(
 			for(r = 0; r < ARRAY_ROWS; r = r + 1) begin
 				o_scan_pe[r*ACC_W +: ACC_W] = i_scan_taps[((r*ARRAY_COLS) + (i_active_cols - 1'b1))*ACC_W +: ACC_W];
 			end
-		end
+		end	
 	end
 
 endmodule
