@@ -59,9 +59,13 @@ module conv1d_layer_top #(
   input wire [CFG_W-1:0] i_pad_next, // Padding của layer sau (số vị trí 0 mỗi đầu)
 
   // Đọc kết quả GAP
-  input wire [CFG_W-1:0] i_gap_rd_idx,
-  
+  input wire [CFG_W-1:0] i_gap_rd_idx,  
   output wire [15:0] o_gap_rd_data,
+
+	input wire i_dbg_rd_en,
+	input wire [ADDR_W-1:0] i_dbg_rd_addr,
+	output wire signed [7:0] o_dbg_rd_data,
+	output wire o_dbg_rd_valid,
 
   output wire o_busy, 
   output wire o_done,  // xung 1 chu kỳ khi cả layer đã ghi xong
@@ -214,7 +218,10 @@ module conv1d_layer_top #(
 		.i_post_relu(1'b1),
 		.o_post_tile(post_tile),
 		.o_post_valid(post_valid),
-		.o_cfg_err()
+		.o_cfg_err(),
+
+		.i_dbg_rd_en(i_dbg_rd_en), .i_dbg_rd_addr(i_dbg_rd_addr),
+		.o_dbg_rd_data(o_dbg_rd_data), .o_dbg_rd_valid(o_dbg_rd_valid)
 	);
 
 	// =====================================================
