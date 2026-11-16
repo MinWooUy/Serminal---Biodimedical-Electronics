@@ -1,0 +1,12 @@
+package: ECG_TILE_20261116_684553e
+date: 2026-11-16
+git_commit: 684553e423e746fb0201553230b170185b24bad3
+protocol: tile (docs/proto_tile.md)
+serminal_rtl: 4ad6c8b
+model_dir: 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3
+lite_int8_sha256: 4940bef2dc096a2c64ec6d7f5041776bfa7eb77d3c25db2e6f7745db5e55da35
+geometry: ROWS = COLS = 7, MEM_DEPTH = 1024, MAX_PAYLOAD = 256, POST_ENABLE = 1
+golden_beats: 1306
+layer_beats: 80
+tile_traces: [{"name": "N_beat0", "beat_id": 0, "tx_bytes": 118104, "rx_bytes": 141469}, {"name": "S_beat121", "beat_id": 121, "tx_bytes": 118104, "rx_bytes": 141469}, {"name": "V_beat224", "beat_id": 224, "tx_bytes": 118104, "rx_bytes": 141469}, {"name": "F_beat413", "beat_id": 413, "tx_bytes": 118104, "rx_bytes": 141469}]
+generated_by: scripts/make_tile_handoff.py

@@ -1,0 +1,2 @@
+# Keep the hand-off bytes exactly as built: SHA256SUMS must match on every OS (no CRLF conversion)
+* -text
