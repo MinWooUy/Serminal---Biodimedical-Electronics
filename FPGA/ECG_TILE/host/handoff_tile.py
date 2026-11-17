@@ -97,7 +97,7 @@ def main(argv=None, transport=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=("status", "smoke", "layer", "layers", "golden"))
     ap.add_argument("--port")
-    ap.add_argument("--baud", type=int, default=115200)
+    ap.add_argument("--baud", type=int, default=921600)
     ap.add_argument("--sim", action="store_true", help="simulated accelerator in this process (no board)")
     ap.add_argument("--timeout", type=float, default=1.0)
     ap.add_argument("--beats")

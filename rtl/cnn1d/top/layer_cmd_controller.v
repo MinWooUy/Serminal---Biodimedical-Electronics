@@ -20,6 +20,15 @@
     0x0E RUN         Rỗng                             -> RESULT [status:u8, cycles:u32] (Khi layer xong)
     0x0F READ_GAP    Rỗng                             -> RESULT COUT_MAX x u16
     0x10 READ_FMAP   offset:u16, len:u8               -> RESULT len byte (bank đọc của ifmap)
+
+  Lenh danh rieng cho pipeline nhieu layer (da danh so, chua xu ly trong FSM nay):
+    0x11 CONFIG_ALL  layer_count:u8 + 4 cau hinh      -> ACK khi du config
+    0x12 LOAD_COMMIT checksum/flags                   -> ACK khi du data
+    0x13 RUN_ALL     Rỗng                             -> RESULT sau khi chay het pipeline
+    0x14 GET_RESULT  result_type:u8                   -> RESULT ket qua cuoi
+
+  Cac ma 0x11..0x14 chi la hop dong du kien o giai doan nay. Vi chua co nhanh
+  xu ly tuong ung trong case, bitstream hien tai van tra NACK lenh la.
 */
 module layer_cmd_controller#(
   parameter MAX_PAYLOAD = 256,
@@ -91,6 +100,11 @@ module layer_cmd_controller#(
   localparam [7:0] C_RUN = 8'h0E;
   localparam [7:0] C_READ_GAP = 8'h0F;
   localparam [7:0] C_READ_FMAP = 8'h10;
+  // CMD danh cho pipeline nhieu layer; chua duoc noi vao FSM.
+  localparam [7:0] C_CONFIG_ALL = 8'h11;
+  localparam [7:0] C_LOAD_COMMIT = 8'h12;
+  localparam [7:0] C_RUN_ALL = 8'h13;
+  localparam [7:0] C_GET_RESULT = 8'h14;
 
   localparam IDLE = 0;
   localparam WRITE = 1;

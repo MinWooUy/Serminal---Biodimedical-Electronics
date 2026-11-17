@@ -10,7 +10,7 @@ module de10_lite_top(
 	assign reset = ~KEY0;
 	
 	ecg_accel_top #(
-		.CLK_FREQ(50000000), .BAUD_RATE(115200),
+		.CLK_FREQ(50000000), .BAUD_RATE(921600),
 		.ARRAY_ROWS(7), .ARRAY_COLS(7),
 		.IFMAP_MEM_DEPTH(4096), .WGT_MEM_DEPTH(16384),
 		.FEEDER_DEPTH(1024), .COUT_MAX(64)
