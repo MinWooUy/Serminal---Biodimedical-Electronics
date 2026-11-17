@@ -1,7 +1,7 @@
 // UART 8N1, centre sampling. CLK_FREQ/BAUD_RATE must be >= 8.
 module uart_receiver #(
     parameter CLK_FREQ = 50000000,
-    parameter BAUD_RATE = 115200
+    parameter BAUD_RATE = 921600
 )(
     input wire clk, reset, rx_in,
     output reg [7:0] data_out,

@@ -40,10 +40,13 @@ if not (ROOT / "export" / "weights.h").exists():           # chay tu thu muc kha
 # ---- ma lenh (layer_cmd_controller) ----
 CMD_WRITE_X, CMD_WRITE_W, CMD_WRITE_BIAS, CMD_WRITE_SHIFT = 0x08, 0x09, 0x0A, 0x0B
 CMD_SWAP, CMD_CONFIG, CMD_RUN, CMD_READ_GAP, CMD_READ_FMAP = 0x0C, 0x0D, 0x0E, 0x0F, 0x10
+# CMD pipeline nhieu layer: moi chi ghi nhan hop dong, chua gui trong host nay.
+CMD_CONFIG_ALL, CMD_LOAD_COMMIT, CMD_RUN_ALL, CMD_GET_RESULT = 0x11, 0x12, 0x13, 0x14
 RSP_ACK, RSP_NACK, RSP_RESULT = 0x80, 0x81, 0x82
 CMD_NAMES = {CMD_WRITE_X: "WRITE_X", CMD_WRITE_W: "WRITE_W", CMD_WRITE_BIAS: "WRITE_BIAS",
              CMD_WRITE_SHIFT: "WRITE_SHIFT", CMD_SWAP: "SWAP", CMD_CONFIG: "CONFIG", CMD_RUN: "RUN",
-             CMD_READ_GAP: "READ_GAP", CMD_READ_FMAP: "READ_FMAP"}
+             CMD_READ_GAP: "READ_GAP", CMD_READ_FMAP: "READ_FMAP", CMD_CONFIG_ALL: "CONFIG_ALL",
+             CMD_LOAD_COMMIT: "LOAD_COMMIT", CMD_RUN_ALL: "RUN_ALL", CMD_GET_RESULT: "GET_RESULT"}
 RSP_NAMES = {RSP_ACK: "ACK", RSP_NACK: "NACK", RSP_RESULT: "RESULT"}
 NACK_CODES = {1: "loi khung/CRC (goi bi hong tren duong truyen)",
               2: "tham so sai (do dai, dia chi vuot bo nho, hoac cau hinh khong hop le)",
@@ -247,7 +250,7 @@ def decode_link_error(e):
         }.get(code, [])
     if "timeout" in e.msg.lower():
         return [f"FPGA khong tra loi lenh {e.name} trong thoi han.",
-                "Kiem tra: (1) da nap dung .sof ecg_layer_top chua, (2) dung COM va baud (115200),",
+                "Kiem tra: (1) da nap dung .sof ecg_layer_top chua, (2) dung COM va baud (921600),",
                 "          (3) nhan reset tren board roi chay lai, (4) cong UART_RX/TX cua top da noi dung chan chua."]
     if "CRC" in e.msg or "Sequence" in e.msg:
         return [f"Goi tra loi cua lenh {e.name} bi loi khung/CRC/seq: {e.msg}",
@@ -257,7 +260,7 @@ def decode_link_error(e):
 
 # ---------------------------------------------------------------- chay layer
 class LayerRunner:
-    def __init__(self, dev, log, baud=115200, dump_dir=None):
+    def __init__(self, dev, log, baud=921600, dump_dir=None):
         self.dev = dev if isinstance(dev, TracedDevice) else TracedDevice(dev, log)
         self.log = log
         self.baud = baud
@@ -530,7 +533,7 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="Cong COM, vi du COM4")
-    ap.add_argument("--baud", type=int, default=115200)
+    ap.add_argument("--baud", type=int, default=921600)
     ap.add_argument("--timeout", type=float, default=5.0)
     ap.add_argument("--root", help="Goc repo (chua export/weights.h); mac dinh: thu muc cha cua host/")
     ap.add_argument("--record", default="rec101_93600")

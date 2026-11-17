@@ -3,7 +3,7 @@
 //   uart_crc_top  -> layer_core (layer_cmd_controller + conv1d_layer_top)
 // reset tich cuc cao.
 module ecg_accel_top #(
-	parameter CLK_FREQ = 50000000, BAUD_RATE = 115200,
+	parameter CLK_FREQ = 50000000, BAUD_RATE = 921600,
 	parameter MAX_PAYLOAD = 256,
 	parameter RX_TIMEOUT_CLKS = CLK_FREQ/10,
 	parameter ARRAY_ROWS = 3, ARRAY_COLS = 3,
