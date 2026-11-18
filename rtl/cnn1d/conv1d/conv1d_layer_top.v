@@ -416,8 +416,8 @@ module conv1d_layer_top #(
 	// =====================================================
 	reg [15:0] gap_mem [0:COUT_MAX-1];
 	integer gi;
-	// Chi xoa khi bat dau mot layer GAP: layer sau (FC voi gap_in) con doc gap_mem
-	wire gap_clear = (lstate == L_IDLE) && i_layer_start && i_gap_en;
+	// Xoa khi bat dau moi layer (nhu truoc), TRU layer doc GAP (gap_in): FC1 can GAP cua conv3
+	wire gap_clear = (lstate == L_IDLE) && i_layer_start && !i_flags[3];
 	always @(posedge i_clk) begin
 		if(gap_clear) begin
 			for(gi = 0; gi < COUT_MAX; gi = gi + 1) gap_mem[gi] <= 16'd0;

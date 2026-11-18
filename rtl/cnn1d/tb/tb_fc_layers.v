@@ -7,6 +7,8 @@
 module tb_fc_layers;
 	parameter ARRAY_ROWS = 3;
 	parameter ARRAY_COLS = 3;
+	parameter FIRST_BEAT = 0;   // chay tu nhip nay (0..3)
+	parameter WATCH = 0;        // 1: in trang thai moi 5000 chu ky (go roi khi treo)
 	localparam NB = 4, COUT_MAX = 64;
 
 	reg clk = 0, reset = 1;
@@ -110,7 +112,7 @@ module tb_fc_layers;
 		repeat (2) @(negedge clk);
 		dut.gap_cout_q = 64; // nhu sau conv3 (layer GAP 64 kenh)
 
-		for (beat = 0; beat < NB; beat = beat + 1) begin
+		for (beat = FIRST_BEAT; beat < NB; beat = beat + 1) begin
 			// "conv3" vua xong: GAP 64 kenh; host ghi 4 byte RR vao hang 2 (dia chi 2*68 + 64)
 			for (i = 0; i < 64; i = i + 1) dut.gap_mem[i] = gmem[beat*64 + i];
 			for (i = 0; i < 4; i = i + 1) begin
@@ -158,10 +160,15 @@ module tb_fc_layers;
 			$display("beat %0d: pred %0d (golden %0d), FC1 %0d chu ky, FC2 %0d chu ky", beat, rd_bank(16), pmem[beat], cyc_fc1, cyc_fc2);
 		end
 
-		if (errors == 0) $display("PASS tb_fc_layers %0dx%0d: FC1 + FC2 + argmax khop golden %0d nhip", ARRAY_ROWS, ARRAY_COLS, NB);
+		if (errors == 0) $display("PASS tb_fc_layers %0dx%0d: FC1 + FC2 + argmax khop golden %0d nhip", ARRAY_ROWS, ARRAY_COLS, NB - FIRST_BEAT);
 		else $display("[FAIL] tb_fc_layers: %0d loi", errors);
 		$finish;
 	end
+
+	always @(posedge clk)
+		if (WATCH && ($time / 10) % 5000 == 0)
+			$display("[watch] t=%0d beat=%0d lstate=%0d xs=%0d ctrl=%0d tile=%0d commit_pending=%0d busy=%0d",
+				$time / 10, beat, dut.lstate, dut.xs, dut.ctrl_dbg, dut.u_tile.state_q, dut.commit_pending, busy);
 
 	initial begin
 		#20000000;
