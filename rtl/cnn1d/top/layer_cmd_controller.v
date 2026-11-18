@@ -20,8 +20,17 @@
     0x0E RUN         Rỗng                             -> RESULT [status:u8, cycles:u32] (Khi layer xong)
     0x0F READ_GAP    Rỗng                             -> RESULT COUT_MAX x u16
     0x10 READ_FMAP   offset:u16, len:u8               -> RESULT len byte (bank đọc của ifmap)
+    0x11 INFO        Rỗng                             -> RESULT 22 byte (phần cứng tự khai báo cấu hình)
+                       [0] version=1  [1] ARRAY_ROWS  [2] ARRAY_COLS  [3] 0
+                       [4..7] CLK_FREQ u32  [8..11] BAUD_RATE u32
+                       [12..13] IFMAP_MEM_DEPTH  [14..15] WGT_MEM_DEPTH  [16..17] FEEDER_DEPTH
+                       [18..19] COUT_MAX         [20..21] MAX_PAYLOAD      (u16, little-endian)
 */
 module layer_cmd_controller#(
+  parameter ARRAY_ROWS = 3,
+  parameter ARRAY_COLS = 3,
+  parameter CLK_FREQ = 50000000,
+  parameter BAUD_RATE = 115200,
   parameter MAX_PAYLOAD = 256,
   parameter IFMAP_MEM_DEPTH = 4096,
   parameter WGT_MEM_DEPTH = 16384,
@@ -91,6 +100,21 @@ module layer_cmd_controller#(
   localparam [7:0] C_RUN = 8'h0E;
   localparam [7:0] C_READ_GAP = 8'h0F;
   localparam [7:0] C_READ_FMAP = 8'h10;
+  localparam [7:0] C_INFO = 8'h11;
+
+  // Thông tin phần cứng (do tham số synthesis quyết định) cho lệnh INFO
+  localparam [7:0]  INFO_VERSION = 8'd1;
+  localparam [7:0]  INFO_ROWS = ARRAY_ROWS;
+  localparam [7:0]  INFO_COLS = ARRAY_COLS;
+  localparam [31:0] INFO_CLK = CLK_FREQ;
+  localparam [31:0] INFO_BAUD = BAUD_RATE;
+  localparam [15:0] INFO_IFMAP = IFMAP_MEM_DEPTH;
+  localparam [15:0] INFO_WGT = WGT_MEM_DEPTH;
+  localparam [15:0] INFO_FEEDER = FEEDER_DEPTH;
+  localparam [15:0] INFO_COUT = COUT_MAX;
+  localparam [15:0] INFO_PAYLOAD = MAX_PAYLOAD;
+  localparam [175:0] HW_INFO = {INFO_PAYLOAD, INFO_COUT, INFO_FEEDER, INFO_WGT, INFO_IFMAP,
+                                INFO_BAUD, INFO_CLK, 8'd0, INFO_COLS, INFO_ROWS, INFO_VERSION};
 
   localparam IDLE = 0;
   localparam WRITE = 1;
@@ -316,6 +340,17 @@ module layer_cmd_controller#(
                   count <= req_len8;
                   index <= 0;
                   state <= RD_FMAP_ISSUE;
+                end
+              end
+
+              C_INFO: begin
+                if(i_rx_length != 0) begin
+                  o_tx_cmd <= 8'h81;
+                  o_tx_payload[15:8] <= 2;
+                end else begin
+                  o_tx_cmd <= 8'h82;
+                  o_tx_length <= 22;
+                  o_tx_payload[175:0] <= HW_INFO;
                 end
               end
 
