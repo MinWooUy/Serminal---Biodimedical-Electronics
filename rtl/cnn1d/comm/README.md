@@ -6,7 +6,7 @@ GND, with logic voltage compatible with the FPGA board. Board pin assignments
 and timing constraints must be supplied for the actual board. This is a logic-level
 UART interface, not a direct RS-232 voltage interface.
 
-Defaults: clock 50 MHz, UART 115200 8N1, no hardware flow control. Change
+Defaults: clock 50 MHz, UART 921600 8N1, no hardware flow control. Change
 `CLK_FREQ` to the actual input clock and match `BAUD_RATE` on the host.
 `CLK_FREQ/BAUD_RATE >= 8`. TX holds the complete stop bit; RX synchronizes the
 input, samples near bit centres, rejects false starts and bad stop bits.
@@ -157,6 +157,20 @@ a lost response to RUN must not trigger a blind retry.
 | `06 WRITE_BIAS` | `base:u16`, followed by 1–3 signed little-endian INT32 biases | ACK after writes complete |
 | `07 CONFIG_POST` | `shift_ch0:i8, shift_ch1:i8, shift_ch2:i8, relu:u8` (`relu` must be 0 or 1) | ACK |
 
+Reserved commands for the planned multi-layer pipeline. The numeric values are
+registered in the layer controller and host for documentation, but the current
+FSM does not implement them yet:
+
+| CMD | Request payload | Planned response |
+| --- | --- | --- |
+| `11 CONFIG_ALL` | `layer_count:u8` + four layer configurations | ACK after all configs are stored |
+| `12 LOAD_COMMIT` | checksum/flags | ACK after input, weights, and configs are validated |
+| `13 RUN_ALL` | empty | RESULT after the autonomous layer pipeline |
+| `14 GET_RESULT` | `result_type:u8` | RESULT with the final output |
+
+Until the decoder and pipeline controller are connected, these commands return
+NACK code 4 (unknown command) on the current bitstream.
+
 Response commands:
 
 - `80 ACK`: payload `[original_CMD, 00]`; GET_STATUS adds flags at byte 2:
@@ -201,7 +215,7 @@ host requests with execution in this first implementation.
 Install `pyserial` in the host Python environment, then from `rtl/cnn1d`:
 
 ```sh
-python3 comm/host/ecg_host.py /dev/ttyUSB0 --baud 115200
+python3 comm/host/ecg_host.py /dev/ttyUSB0 --baud 921600
 # Windows: python comm/host/ecg_host.py COM3
 ```
 
@@ -235,9 +249,109 @@ back-to-back traffic, asynchronous baud mismatch and framing recovery; physical
 UART end-to-end through SRAM and Conv1D, negative inputs, repeated runs,
 input-only bank replacement, partial tile, invalid CRC/config/address, incomplete
 staging data and packet timeout. Host framing/error handling is tested separately.
-UART unit tests use the default 50 MHz/115200 divider. End-to-end tests use a
+UART unit tests use the default 50 MHz/921600 divider. The focused timing test
+checks the resulting DIV=54 (1.08 us per bit). End-to-end tests use a
 smaller divider for speed; they still serialize every byte over RX/TX pins.
 
 ModelSim can use the updated `filelist.f` and `tb/tb_uart_crc_top.v`, top module
 `tb_uart_crc_top`. Testbenches use `$fatal` and explicit timeouts. The old UART
 interfaces (24-bit custom frame and internal loopback) have been replaced.
+
+## Evaluation scope and multi-layer data-flow plan
+
+The software model is trained and frozen in Python. The FPGA is an inference
+device only: it receives the frozen quantized parameters and input vectors,
+computes the forward pass, and returns results for comparison with the Python
+integer/golden reference. The two sides must use the same model parameters,
+quantization, preprocessing, padding, record/segment, beat, and tensor layout.
+
+The current evaluation scopes are intentionally different:
+
+- Python detector/model evaluation covers all 22 DS1 records. DS2 is a separate
+   locked evaluation and requires explicit user authorization.
+- The exported FPGA golden data defaults to 8 DS1 records, one selected
+   120-second segment per record, about 1,306 beats in total.
+- `host/ecg_layer_host.py` defaults to one beat (`rec101_93600`, beat 0) and
+   runs layers 0..3. It is a bit-exact smoke/diagnostic runner, not a complete
+   record evaluation.
+
+For a fair FPGA result, Python and FPGA must evaluate the same golden segment
+and beat set. Layer-level checks should compare `z_q`, every Conv/Pool output,
+GAP, logits, and prediction; the final report should aggregate results per
+record and over the same selected set.
+
+The intended multi-layer data flow is a feature-map ping-pong pipeline:
+
+```text
+Conv0: read Bank A -> write Bank B -> swap
+Conv1: read Bank B -> write Bank A -> swap
+Conv2: read Bank A -> write Bank B -> swap
+Conv3: read Bank B -> GAP/logits
+```
+
+The configuration for all layers must be copied into dedicated configuration
+registers or a separate configuration RAM before execution, for example
+`cfg[0]` through `cfg[3]`. It must not be stored only in a bank that will later
+be overwritten by a feature-map output. Configuration includes layer geometry,
+pool/GAP/padding controls, bias, and shift. The feature-map banks should hold
+only data; weight storage should be separate.
+
+For the full CNN-Lite layer path (the `layer_core`/`de10_lite_top` configuration,
+not the default single-tile helper described above), the largest feature-map is
+about 3,008 signed INT8 bytes. Therefore two `IFMAP_MEM_DEPTH=4096` banks are
+sufficient for the alternating feature maps:
+
+| item | size |
+| --- | ---: |
+| Conv0 input with padding | 366 B |
+| Conv0 output after pool/padding | 2,944 B |
+| Conv1 output after pool/padding | 2,944 B |
+| Conv2 output after pool/padding | 3,008 B |
+| Conv3 output before GAP | 2,880 B |
+
+The four convolution weight tensors total 21,104 B (112 B, 2,560 B,
+6,144 B, and 12,288 B). The current 16,384-byte weight memory can hold each
+layer separately, but not all four tensors in one contiguous region. Without a
+larger weight memory, load each layer's weights once when changing layers and
+reuse them for all beats; do not resend them for every beat. To load the whole
+model once and retain all weights, use a separate weight memory of at least
+21,104 B (32 KiB is a practical rounded size), or a dedicated ROM/BRAM layout.
+
+The current frame remains:
+
+```text
+A5 5A | CMD:u8 | SEQ:u8 | LEN:u16 LE | PAYLOAD | CRC16:u16 LE
+```
+
+With `MAX_PAYLOAD=256`, one tensor write carries at most 254 data bytes after
+the 2-byte base address. A complete model transfer therefore consists of
+multiple valid frames, not one 20-KiB frame. The documented and tested UART
+configuration is 921600 baud. The host and FPGA must use the same rate; with
+the 50 MHz board clock the integer divider is 54, giving an actual baud rate
+of about 925926 baud (0.47% fast). Regardless of baud rate, the
+current protocol is stop-and-wait: one request is sent and its ACK/RESULT is
+consumed before the next request. The current RTL has no request FIFO, so
+sending frames blindly back-to-back loses data.
+
+If burst loading is implemented later, retain the existing CMD meanings and
+CRC on every frame, write each valid block directly to staging memory, and
+return an ACK only at a commit boundary such as `SWAP`. A block identifier or
+address range must still be tracked so a missing/corrupt block is detected;
+removing per-block ACKs must not remove per-frame CRC validation. This requires
+changes to the UART/controller FSM and is not implemented by the current
+single-tile wrapper.
+
+The desired end-to-end sequence is therefore:
+
+```text
+load all layer configuration -> load input/data -> load weights as supported
+-> commit/swap staging data -> RUN_ALL in the autonomous controller
+-> Conv0 -> Pool -> Conv1 -> Pool -> Conv2 -> Pool -> Conv3 -> GAP/FC
+-> return final result to the PC -> compare with Python
+```
+
+The existing RTL implements the single-tile command path documented above. A
+true `RUN_ALL` flow additionally needs per-layer configuration storage, an
+autonomous layer FSM, protected configuration memory, and a weight-memory
+policy. These are architectural extensions, not assumptions about the current
+bitstream.

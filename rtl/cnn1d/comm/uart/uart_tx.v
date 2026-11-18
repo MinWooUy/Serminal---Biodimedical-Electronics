@@ -1,7 +1,7 @@
 // UART 8N1. A byte is accepted only when valid && ready.
 module uart_transmitter #(
     parameter CLK_FREQ = 50000000,
-    parameter BAUD_RATE = 115200
+    parameter BAUD_RATE = 921600
 )(
     input wire clk, reset,
     input wire [7:0] data_in,

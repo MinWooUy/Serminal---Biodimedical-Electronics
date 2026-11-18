@@ -525,7 +525,7 @@ Các quy tắc:
 - `LEN`: độ dài payload, little-endian;
 - `PAYLOAD`: dữ liệu lệnh;
 - `CRC16`: CRC-16/CCITT-FALSE, tính từ `CMD` đến byte cuối payload, truyền little-endian;
-- UART vật lý mặc định: 8N1, 115200 baud, phụ thuộc `CLK_FREQ` và `BAUD_RATE`.
+- UART vật lý mặc định: 8N1, 921600 baud, phụ thuộc `CLK_FREQ` và `BAUD_RATE`.
 
 Ví dụ frame không payload có `LEN = 0`:
 

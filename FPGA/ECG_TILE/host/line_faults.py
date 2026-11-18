@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-BYTE_TIME_S = 10 / 115200                 # 8N1: start + 8 data + stop bits
+BYTE_TIME_S = 10 / 921600                 # 8N1: start + 8 data + stop bits
 
 
 @dataclass

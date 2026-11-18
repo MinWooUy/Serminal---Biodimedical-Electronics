@@ -9,7 +9,7 @@ Two modes:
         replies) to a hex file so a testbench can replay it at packet level.
 
 Everything that depends on the synthesized hardware (PE array size, clock, UART baud,
-SRAM depths, limits) is read from the FPGA with the INFO command (0x11) and printed as
+SRAM depths, limits) is read from the FPGA with the INFO command (0x15) and printed as
 reported.  With an older bitstream that does not know INFO, pass --array RxC (and
 --clk-mhz) and the report marks those values as "assumed".
 
@@ -47,11 +47,18 @@ if not (ROOT / "export" / "weights.h").exists():           # started from anothe
 
 # ---- command codes (layer_cmd_controller) ----
 CMD_WRITE_X, CMD_WRITE_W, CMD_WRITE_BIAS, CMD_WRITE_SHIFT = 0x08, 0x09, 0x0A, 0x0B
-CMD_SWAP, CMD_CONFIG, CMD_RUN, CMD_READ_GAP, CMD_READ_FMAP, CMD_INFO = 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11
+CMD_SWAP, CMD_CONFIG, CMD_RUN, CMD_READ_GAP, CMD_READ_FMAP = 0x0C, 0x0D, 0x0E, 0x0F, 0x10
+
+# CMD pipeline nhieu layer: moi chi ghi nhan hop dong, chua gui trong host nay.
+CMD_CONFIG_ALL, CMD_LOAD_COMMIT, CMD_RUN_ALL, CMD_GET_RESULT = 0x11, 0x12, 0x13, 0x14
+CMD_INFO = 0x15
 RSP_ACK, RSP_NACK, RSP_RESULT = 0x80, 0x81, 0x82
 CMD_NAMES = {CMD_WRITE_X: "WRITE_X", CMD_WRITE_W: "WRITE_W", CMD_WRITE_BIAS: "WRITE_BIAS",
              CMD_WRITE_SHIFT: "WRITE_SHIFT", CMD_SWAP: "SWAP", CMD_CONFIG: "CONFIG", CMD_RUN: "RUN",
-             CMD_READ_GAP: "READ_GAP", CMD_READ_FMAP: "READ_FMAP", CMD_INFO: "INFO"}
+             CMD_READ_GAP: "READ_GAP", CMD_READ_FMAP: "READ_FMAP", CMD_INFO: "INFO",
+             CMD_CONFIG_ALL: "CONFIG_ALL", CMD_LOAD_COMMIT: "LOAD_COMMIT",
+             CMD_RUN_ALL: "RUN_ALL", CMD_GET_RESULT: "GET_RESULT"}
+
 RSP_NAMES = {RSP_ACK: "ACK", RSP_NACK: "NACK", RSP_RESULT: "RESULT"}
 NACK_CODES = {1: "frame/CRC error (packet corrupted on the wire)",
               2: "bad argument (length, address beyond memory, or invalid configuration)",
@@ -351,6 +358,7 @@ def decode_link_error(e, hw):
         return [f"FPGA did not answer {e.name} in time.",
                 f"Check: (1) the right .sof is loaded, (2) COM port and baud ({hw.baud}),",
                 "       (3) press reset on the board and retry, (4) UART_RX/UART_TX pin assignments."]
+
     if "CRC" in e.msg or "Sequence" in e.msg:
         return [f"Reply to {e.name} has a frame/CRC/sequence error: {e.msg}",
                 "Usually line noise, or the FPGA is still sending an old packet: press reset and rerun."]
@@ -721,6 +729,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="COM port, e.g. COM4")
     ap.add_argument("--baud", type=int, default=115200, help="host-side baud rate (must match the FPGA)")
+
     ap.add_argument("--timeout", type=float, default=5.0)
     ap.add_argument("--root", help="repo root (contains export/weights.h); default: parent of host/")
     ap.add_argument("--record", default="rec101_93600")

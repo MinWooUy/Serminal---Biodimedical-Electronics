@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-// INFO (0x11) cua layer_core: phan cung tu khai bao cau hinh (mang PE, clock, baud, SRAM...).
+// INFO (0x15) cua layer_core: phan cung tu khai bao cau hinh (mang PE, clock, baud, SRAM...).
 // Chay o muc goi (rx_* / tx_*), khong can UART. Thu 2 cau hinh de chung minh gia tri
 // do THAM SO synthesis quyet dinh (khong phai hang so trong host).
 module tb_layer_core_info;
@@ -85,7 +85,7 @@ module tb_layer_core_info;
 		repeat (3) @(negedge clk);
 
 		// A: INFO hop le
-		send_a(8'h11, 0, 8'h5A);
+		send_a(8'h15, 0, 8'h5A);
 		check("A cmd (RESULT=0x82)", cap_cmd, 8'h82);
 		check("A seq", cap_seq, 8'h5A);
 		check("A length", cap_len, 22);
@@ -102,19 +102,19 @@ module tb_layer_core_info;
 		check("A max payload", cap_pay[175:160], MP);
 
 		// A: INFO co payload -> NACK tham so sai
-		send_a(8'h11, 1, 8'h01);
+		send_a(8'h15, 1, 8'h01);
 		check("A bad-len cmd (NACK=0x81)", cap_cmd, 8'h81);
 		check("A bad-len code", cap_pay[15:8], 2);
 
 		// A: lenh la van bi NACK 4 (INFO khong lam hong nhanh default)
-		send_a(8'h12, 0, 8'h02);
+		send_a(8'h17, 0, 8'h02);
 		check("A unknown cmd", cap_cmd, 8'h81);
 		check("A unknown code", cap_pay[15:8], 4);
 
 		// B: cau hinh khac -> thong tin khac
 		wait (rx_enable_b);
 		@(negedge clk);
-		rx_cmd_b = 8'h11; rx_seq_b = 8'h33; rx_length_b = 0; rx_valid_b = 1;
+		rx_cmd_b = 8'h15; rx_seq_b = 8'h33; rx_length_b = 0; rx_valid_b = 1;
 		@(negedge clk);
 		rx_valid_b = 0;
 		repeat (20) @(negedge clk);

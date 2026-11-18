@@ -23,10 +23,10 @@ def utf8_console() -> None:
 
 
 class SerialTransport:
-    """write(bytes), read(timeout) -> bytes, clock() on a serial port, 115200 8N1 by default.
+    """write(bytes), read(timeout) -> bytes, clock() on a serial port, 921600 8N1 by default.
     `port` may also be a pyserial URL, e.g. 'loop://' (software loopback, no hardware)."""
 
-    def __init__(self, port: str, baud: int = 115200):
+    def __init__(self, port: str, baud: int = 921600):
         import serial                                   # pyserial
         if "://" in port:
             self.ser = serial.serial_for_url(port, baudrate=baud, bytesize=8, parity="N", stopbits=1, timeout=0)
@@ -167,7 +167,7 @@ def diagnose_ping(host, expected_crc: int, pong=None) -> list[str]:
     if d.frames_ok == 0:
         return [f"Có {host.rx_bytes} byte về nhưng không ghép được khung hợp lệ nào "
                 f"(lỗi CRC {d.bad_crc}, LEN {d.bad_len}, TYPE {d.bad_type}; bỏ qua {d.skipped_bytes} byte).",
-                "- Sai tốc độ baud: cả hai phía phải là 115200, 8N1.",
+                "- Sai tốc độ baud: cả hai phía phải là 921600, 8N1.",
                 "- Mức điện áp: module USB-UART phải đặt 3.3 V (KHÔNG dùng 5 V với chân FPGA).",
                 "- Dây lỏng / nhiễu; FPGA phải dùng khung v2 (A5 5A, TYPE, LEN 2 byte little-endian, CRC-16 little-endian).",
                 f"- Những byte đầu nhận được: {head[:32].hex(' ')}"]
