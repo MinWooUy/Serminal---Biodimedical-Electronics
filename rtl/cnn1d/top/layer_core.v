@@ -1,6 +1,8 @@
 `default_nettype none
 
 module layer_core #(
+  parameter CLK_FREQ = 50000000,
+  parameter BAUD_RATE = 115200,
   parameter MAX_PAYLOAD = 256,
   parameter ARRAY_ROWS = 3,
   parameter ARRAY_COLS = 3,
@@ -39,6 +41,8 @@ module layer_core #(
 	wire [7:0] dbg_rd_data;
 
   layer_cmd_controller #(
+    .ARRAY_ROWS(ARRAY_ROWS), .ARRAY_COLS(ARRAY_COLS),
+    .CLK_FREQ(CLK_FREQ), .BAUD_RATE(BAUD_RATE),
     .MAX_PAYLOAD(MAX_PAYLOAD),
     .IFMAP_MEM_DEPTH(IFMAP_MEM_DEPTH),
     .WGT_MEM_DEPTH(WGT_MEM_DEPTH),
