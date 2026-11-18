@@ -15,8 +15,14 @@
     0x09 WRITE_W    addr:u16, data[n]                 -> ACK        Ghi vào bank ghi của Weight
     0x0A WRITE_BIAS base:u16, int32[n]                -> ACK        bias theo kênh toàn cục
     0x0B WRITE_SHIFT base:u16, int8[n]                -> ACK        shift theo kênh toàn cục
+                                                                    base 0..COUT_MAX-1: shift requant (SO)
+                                                                    base COUT_MAX..: shift "truoc" SG (row_combine)
     0x0C SWAP        flags:u8 (bit0 x, bit1 w)        -> ACK
-    0x0D CONFIG      out_len, cout, k_len, window_step:u16, pool, gap, pad_next:u8 (11 byte)  -> ACK
+    0x0D CONFIG      out_len, cout, k_len, window_step:u16, pool, gap, pad_next:u8 [, flags:u8] (11/12 byte) -> ACK
+                       flags (thieu = 0): bit0 out_int32, bit1 argmax, bit2 row_combine, bit3 gap_in
+                       (y nghia: xem conv1d_layer_top.v). Rang buoc, sai -> NACK 2:
+                         argmax can out_int32; out_int32: out_len = 1; row_combine: out_len = 3,
+                         ARRAY_ROWS >= 3; gap_in can row_combine; out_int32/row_combine: pool = gap = pad = 0
     0x0E RUN         Rỗng                             -> RESULT [status:u8, cycles:u32] (Khi layer xong)
     0x0F READ_GAP    Rỗng                             -> RESULT COUT_MAX x u16
     0x10 READ_FMAP   offset:u16, len:u8               -> RESULT len byte (bank đọc của ifmap)
@@ -28,7 +34,8 @@
     0x14 GET_RESULT  result_type:u8                   -> RESULT ket qua cuoi
 
     0x15 INFO        Rỗng                             -> RESULT 22 byte (phần cứng tự khai báo cấu hình)
-                       [0] version=1  [1] ARRAY_ROWS  [2] ARRAY_COLS  [3] 0
+                       [0] version=2  [1] ARRAY_ROWS  [2] ARRAY_COLS  [3] features (bit0 out_int32,
+                       bit1 argmax, bit2 row_combine, bit3 gap_in)
                        [4..7] CLK_FREQ u32  [8..11] BAUD_RATE u32
                        [12..13] IFMAP_MEM_DEPTH  [14..15] WGT_MEM_DEPTH  [16..17] FEEDER_DEPTH
                        [18..19] COUT_MAX         [20..21] MAX_PAYLOAD      (u16, little-endian)
@@ -90,6 +97,7 @@ module layer_cmd_controller#(
   output reg [ADDR_W-1:0] o_window_step,
   output reg o_pool_en, o_gap_en,
   output reg [CFG_W-1:0] o_pad_next,
+  output reg [3:0] o_flags,
 
   input wire [15:0] i_gap_rd_data,
   output wire [CFG_W-1:0] o_gap_rd_idx,
@@ -120,7 +128,8 @@ module layer_cmd_controller#(
   localparam [7:0] C_INFO = 8'h15;
 
   // Thông tin phần cứng (do tham số synthesis quyết định) cho lệnh INFO
-  localparam [7:0]  INFO_VERSION = 8'd1;
+  localparam [7:0]  INFO_VERSION = 8'd2;
+  localparam [7:0]  INFO_FEATURES = 8'h0F; // out_int32 | argmax | row_combine | gap_in
   localparam [7:0]  INFO_ROWS = ARRAY_ROWS;
   localparam [7:0]  INFO_COLS = ARRAY_COLS;
   localparam [31:0] INFO_CLK = CLK_FREQ;
@@ -131,7 +140,7 @@ module layer_cmd_controller#(
   localparam [15:0] INFO_COUT = COUT_MAX;
   localparam [15:0] INFO_PAYLOAD = MAX_PAYLOAD;
   localparam [175:0] HW_INFO = {INFO_PAYLOAD, INFO_COUT, INFO_FEEDER, INFO_WGT, INFO_IFMAP,
-                                INFO_BAUD, INFO_CLK, 8'd0, INFO_COLS, INFO_ROWS, INFO_VERSION};
+                                INFO_BAUD, INFO_CLK, INFO_FEATURES, INFO_COLS, INFO_ROWS, INFO_VERSION};
 
   localparam IDLE = 0;
   localparam WRITE = 1;
@@ -161,7 +170,15 @@ module layer_cmd_controller#(
   wire [7:0] cfg_pool = i_rx_payload[71:64];
   wire [7:0] cfg_gap = i_rx_payload[79:72];
   wire [7:0] cfg_pad = i_rx_payload[87:80];
-  wire [7:0] req_len8 = i_rx_payload[23:16]; 
+  wire [7:0] req_len8 = i_rx_payload[23:16];
+
+  // Byte co thu 12 cua CONFIG (khong gui = 0, giu tuong thich host cu)
+  wire [7:0] cfg_flags = (i_rx_length == 12) ? i_rx_payload[95:88] : 8'd0;
+  wire cf_i32 = cfg_flags[0], cf_am = cfg_flags[1], cf_rc = cfg_flags[2], cf_gin = cfg_flags[3];
+  wire cfg_flags_bad = (cfg_flags[7:4] != 0) || (cf_am && !cf_i32) || (cf_i32 && cf_rc) || (cf_gin && !cf_rc)
+                    || ((cf_i32 || cf_rc) && (cfg_pool != 0 || cfg_gap != 0 || cfg_pad != 0))
+                    || (cf_i32 && (cfg_out_len != 1 || ({2'b00, cfg_cout, 2'b00} + 18'd1) > IFMAP_MEM_DEPTH))
+                    || (cf_rc && (cfg_out_len != 3 || ARRAY_ROWS < 3));
 
   assign o_rx_enable = (state == IDLE);
 
@@ -219,6 +236,7 @@ module layer_cmd_controller#(
       o_pool_en <= 0;
       o_gap_en <= 0;
       o_pad_next <= 0;
+      o_flags <= 0;
     end else begin
       o_tx_start <= 0;
 
@@ -254,7 +272,7 @@ module layer_cmd_controller#(
               end
 
               C_WRITE_SHIFT: begin
-                if(i_rx_length < 3 || ({1'b0, req_addr} + i_rx_length - 2) > COUT_MAX)begin
+                if(i_rx_length < 3 || ({1'b0, req_addr} + i_rx_length - 2) > 2*COUT_MAX)begin
                   o_tx_cmd <= 8'h81;
                   o_tx_payload[15:8] <= 2;
                 end else begin
@@ -295,7 +313,7 @@ module layer_cmd_controller#(
               end
 
               C_CONFIG: begin
-                if(i_rx_length != 11 || cfg_out_len == 0 || cfg_cout == 0 || cfg_cout > COUT_MAX || cfg_k == 0 || cfg_k > FEEDER_DEPTH || cfg_step == 0 || cfg_pool > 1 || cfg_gap > 1 || (cfg_pool == 1 && cfg_out_len[0])) begin
+                if((i_rx_length != 11 && i_rx_length != 12) || cfg_out_len == 0 || cfg_cout == 0 || cfg_cout > COUT_MAX || cfg_k == 0 || cfg_k > FEEDER_DEPTH || cfg_step == 0 || cfg_pool > 1 || cfg_gap > 1 || (cfg_pool == 1 && cfg_out_len[0]) || cfg_flags_bad) begin
                   o_tx_cmd <= 8'h81;
                   o_tx_payload[15:8] <= 2;
                 end else if(i_layer_busy) begin
@@ -309,6 +327,7 @@ module layer_cmd_controller#(
                   o_pool_en <= cfg_pool[0];
                   o_gap_en <= cfg_gap[0];
                   o_pad_next <= {8'd0, cfg_pad};
+                  o_flags <= cfg_flags[3:0];
                   configured <= 1;
                 end
               end

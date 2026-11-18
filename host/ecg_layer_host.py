@@ -1,7 +1,10 @@
 """Run whole CNN layers on the FPGA (ecg_accel_top) and compare against golden data.
 
+Layers: 0..3 = conv0..conv3 (conv3 ends in GAP), 4 = fc1, 5 = fc2 (INT32 logits + argmax on the FPGA).
+FC runs on the same PE array as conv (FC = conv with Kw = 1), selected by CONFIG flags.
+
 Two modes:
-  python ecg_layer_host.py COM4 [--record rec101_93600 --beat 0 --last-layer 3]
+  python ecg_layer_host.py COM4 [--record rec101_93600 --beat 0 --last-layer 5]
         Connect over UART, query the hardware configuration (INFO), run layers
         0..last-layer and compare every layer with the golden output.
   python ecg_layer_host.py --dry-run trace.hex [--last-layer N]
@@ -70,14 +73,29 @@ INFO_SIZE = struct.calcsize(INFO_FMT)
 FRAME_OVERHEAD = 8                                 # A5 5A cmd seq len(2) ... crc(2)
 WIDTH = 78
 
-# ---- CNN Lite model: (Cout, Cin, Kw, pool, gap, pad_next, out_len) ----
+# ---- CONFIG flags (12th CONFIG byte, see conv1d_layer_top.v) ----
+F_OUT_INT32, F_ARGMAX, F_ROW_COMBINE, F_GAP_IN = 0x1, 0x2, 0x4, 0x8
+FLAG_NAMES = {F_OUT_INT32: "out_int32", F_ARGMAX: "argmax", F_ROW_COMBINE: "row_combine", F_GAP_IN: "gap_in"}
+CLASSES = "NSVF"
+
+# ---- CNN Lite model: (Cout, Cin, Kw, pool, gap, pad_next, out_len, flags) ----
+# FC = conv with Kw = 1. FC1 uses 3 PE rows of one tile (GAP low byte, GAP high byte, RR) that
+# row_combine merges into one output position; FC2 keeps raw INT32 logits and stores the argmax.
 LAYERS = [
-    dict(cout=16, cin=1,  kw=7, pool=1, gap=0, pad_next=2, out_len=360),
-    dict(cout=32, cin=16, kw=5, pool=1, gap=0, pad_next=1, out_len=180),
-    dict(cout=64, cin=32, kw=3, pool=1, gap=0, pad_next=1, out_len=90),
-    dict(cout=64, cin=64, kw=3, pool=0, gap=1, pad_next=0, out_len=45),
+    dict(name="conv0", cout=16, cin=1,  kw=7, pool=1, gap=0, pad_next=2, out_len=360, flags=0),
+    dict(name="conv1", cout=32, cin=16, kw=5, pool=1, gap=0, pad_next=1, out_len=180, flags=0),
+    dict(name="conv2", cout=64, cin=32, kw=3, pool=1, gap=0, pad_next=1, out_len=90,  flags=0),
+    dict(name="conv3", cout=64, cin=64, kw=3, pool=0, gap=1, pad_next=0, out_len=45,  flags=0),
+    dict(name="fc1",   cout=32, cin=68, kw=1, pool=0, gap=0, pad_next=0, out_len=3,
+         flags=F_ROW_COMBINE | F_GAP_IN),
+    dict(name="fc2",   cout=4,  cin=32, kw=1, pool=0, gap=0, pad_next=0, out_len=1,
+         flags=F_OUT_INT32 | F_ARGMAX),
 ]
+N_LAYERS = len(LAYERS)
+FC1, FC2 = 4, 5
 POOL_SHAPES = [(16, 180), (32, 90), (64, 45)]            # (C, L) after pool of layer 0..2
+GAP_C = LAYERS[3]["cout"]                                 # GAP channels feeding FC1
+FC1_AUX_ADDR = 2 * LAYERS[FC1]["cin"] + GAP_C             # RR bytes: row 2, after the GAP part (= 200)
 
 
 def c_array(header: str, ctype: str, name: str) -> np.ndarray:
@@ -90,13 +108,42 @@ def c_array(header: str, ctype: str, name: str) -> np.ndarray:
 def load_model():
     header = (ROOT / "export" / "weights.h").read_text(encoding="utf-8")
     model = []
-    for n, L in enumerate(LAYERS):
+    for n, L in enumerate(LAYERS[:4]):
         w = c_array(header, "int8_t", f"CONV{n}_W").reshape(L["cout"], L["cin"], L["kw"])
         w_acc = w.transpose(0, 2, 1).reshape(L["cout"], L["kw"] * L["cin"])    # [o][j][i] -> [Cout][K]
         model.append(dict(L, k=L["kw"] * L["cin"], step=L["cin"], weight=w_acc.reshape(-1),
                           bias=c_array(header, "int32_t", f"CONV{n}_B"),
-                          shift=c_array(header, "int8_t", f"CONV{n}_SHIFT")))
+                          shift=c_array(header, "int8_t", f"CONV{n}_SHIFT"), preshift=None))
+    wg = c_array(header, "int8_t", "FC1_WG").reshape(32, GAP_C)
+    wr = c_array(header, "int8_t", "FC1_WR").reshape(32, 4)
+    if c_array(header, "int8_t", "FC1_SHIFT_R").any():
+        raise RuntimeError("FC1_SHIFT_R must be all 0: row_combine adds the RR block without a shift")
+    L = LAYERS[FC1]
+    model.append(dict(L, k=L["cin"], step=L["cin"], weight=np.concatenate([wg, wr], axis=1).reshape(-1),
+                      bias=c_array(header, "int32_t", "FC1_B"),
+                      shift=c_array(header, "int8_t", "FC1_SHIFT_OUT"),          # SO: final requant
+                      preshift=c_array(header, "int8_t", "FC1_SHIFT_G")))        # SG: GAP block, before + RR
+    L = LAYERS[FC2]
+    model.append(dict(L, k=L["cin"], step=L["cin"], weight=c_array(header, "int8_t", "FC2_W"),
+                      bias=c_array(header, "int32_t", "FC2_B"),
+                      shift=np.zeros(L["cout"], np.int64), preshift=None))          # INT32 out: no requant
     return model
+
+
+def rshift_round(acc, s):
+    s = np.asarray(s, dtype=np.int64)
+    return np.where(s > 0, (acc + (np.int64(1) << np.maximum(s - 1, 0))) >> s, acc)
+
+
+def fc_forward(model, gap, rr):
+    """FC1 + FC2 + argmax exactly as python/quant/int8.py (the golden)."""
+    f1, f2 = model[FC1], model[FC2]
+    w1 = f1["weight"].reshape(f1["cout"], f1["k"])
+    acc_g = w1[:, :GAP_C] @ np.asarray(gap, np.int64)
+    acc_r = w1[:, GAP_C:] @ np.asarray(rr, np.int64)
+    h = np.clip(rshift_round(rshift_round(acc_g, f1["preshift"]) + acc_r + f1["bias"], f1["shift"]), 0, 127)
+    logits = f2["weight"].reshape(f2["cout"], f2["k"]) @ h + f2["bias"]
+    return h, logits, int(np.argmax(logits))                 # np.argmax: ties -> smallest index (= RTL)
 
 
 def load_beat(record: str, beat: int):
@@ -113,7 +160,11 @@ def load_beat(record: str, beat: int):
         pad = L["pad_next"]
         expect.append(np.pad(p, ((pad, pad), (0, 0))).reshape(-1))
     gap = arr("gap", np.int32, (-1, 64)).astype(np.int64)
-    return x0, expect, gap
+    fc = dict(rr=arr("rr_q", np.int8, (-1, 4)).astype(np.int64),
+              h=arr("fc1", np.int8, (-1, 32)).astype(np.int64),
+              logits=arr("logits", np.int32, (-1, 4)).astype(np.int64),
+              pred=int(arr("pred", np.int8, (-1,))), label=int(arr("label", np.int8, (-1,))))
+    return x0, expect, gap, fc
 
 
 # ---------------------------------------------------------------- hardware description
@@ -131,6 +182,7 @@ class HwInfo:
     max_payload: int
     reported: bool = True
     version: int = 1
+    features: int = 0                      # INFO byte 3 (version >= 2): CONFIG flags the bitstream supports
 
     @property
     def pes(self):
@@ -140,16 +192,16 @@ class HwInfo:
     def from_payload(cls, p: bytes):
         if len(p) != INFO_SIZE:
             raise ValueError(f"INFO reply is {len(p)} B, expected {INFO_SIZE} B")
-        ver, rows, cols, _, clk, baud, ifm, wgt, feed, cmax, mp = struct.unpack(INFO_FMT, p)
-        return cls(rows, cols, clk, baud, ifm, wgt, feed, cmax, mp, True, ver)
+        ver, rows, cols, feat, clk, baud, ifm, wgt, feed, cmax, mp = struct.unpack(INFO_FMT, p)
+        return cls(rows, cols, clk, baud, ifm, wgt, feed, cmax, mp, True, ver, feat if ver >= 2 else 0)
 
     @classmethod
-    def assumed(cls, rows, cols, clk_hz, baud):
+    def assumed(cls, rows, cols, clk_hz, baud, features=0):
         # Remaining limits are the ecg_accel_top defaults.
-        return cls(rows, cols, clk_hz, baud, 4096, 16384, 1024, 64, 256, False)
+        return cls(rows, cols, clk_hz, baud, 4096, 16384, 1024, 64, 256, False, 1, features)
 
     def to_payload(self):
-        return struct.pack(INFO_FMT, self.version, self.rows, self.cols, 0, self.clk_hz, self.baud,
+        return struct.pack(INFO_FMT, self.version, self.rows, self.cols, self.features, self.clk_hz, self.baud,
                            self.ifmap_depth, self.wgt_depth, self.feeder_depth, self.cout_max, self.max_payload)
 
 
@@ -280,6 +332,7 @@ def query_hw(dev, log, args):
     fb_rows, fb_cols = args.array if args.array else (3, 3)
     fallback = HwInfo.assumed(fb_rows, fb_cols, int(args.clk_mhz * 1e6), args.baud)
     if isinstance(dev, DryRunDevice):
+        fallback.features = F_OUT_INT32 | F_ARGMAX | F_ROW_COMBINE | F_GAP_IN    # trace for the current RTL
         return fallback, "ASSUMED (dry run, no board)", ["values taken from --array / --clk-mhz"]
     try:
         hw = HwInfo.from_payload(dev.exchange(CMD_INFO, b"", RSP_RESULT))
@@ -314,6 +367,7 @@ def ms(cycles, clk_hz):
 def layer_plan(L, hw):
     """Tiling the layer controller will use on THIS array (mirrors conv1d_layer_top)."""
     rows = (2 if hw.rows >= 2 else 1) if L["pool"] else hw.rows      # pool needs pairs of output positions
+    rows = min(rows, L["out_len"])                                    # FC: 1 (fc2) or 3 (fc1) rows used
     row_tiles = math.ceil(L["out_len"] / rows)
     col_tiles = math.ceil(L["cout"] / hw.cols)
     return dict(rows=rows, row_tiles=row_tiles, col_tiles=col_tiles, tiles=row_tiles * col_tiles,
@@ -321,9 +375,15 @@ def layer_plan(L, hw):
 
 
 def out_shape(L):
-    """(T, C) of the output after pooling and padding for the next layer."""
-    t = L["out_len"] // 2 if L["pool"] else L["out_len"]
+    """(T, C) of the output after pooling / row_combine and padding for the next layer."""
+    if L["flags"] & F_OUT_INT32:
+        return 1, 4 * L["cout"] + (1 if L["flags"] & F_ARGMAX else 0)   # LE int32 per channel [+ argmax byte]
+    t = 1 if L["flags"] & F_ROW_COMBINE else L["out_len"] // 2 if L["pool"] else L["out_len"]
     return t + 2 * L["pad_next"], L["cout"]
+
+
+def flag_text(flags):
+    return "+".join(v for k, v in FLAG_NAMES.items() if flags & k) or "none"
 
 
 def fit_problems(L, hw, x_len, T_out, C_out):
@@ -341,6 +401,12 @@ def fit_problems(L, hw, x_len, T_out, C_out):
         p.append(f"output {T_out * C_out:,} B > ifmap SRAM {hw.ifmap_depth:,} B")
     if L["gap"] and hw.cout_max * 2 > hw.max_payload:
         p.append(f"GAP reply {hw.cout_max * 2} B > payload limit {hw.max_payload} B")
+    missing = L["flags"] & ~hw.features
+    if missing:
+        p.append(f"needs CONFIG flags {flag_text(missing)}, the bitstream reports {flag_text(hw.features)} "
+                 f"(INFO version {hw.version}{'' if hw.reported else ', assumed'}): rebuild with the FC RTL")
+    if L["flags"] & F_ROW_COMBINE and hw.rows < 3:
+        p.append(f"row_combine needs >= 3 PE rows, the array has {hw.rows}")
     return p
 
 
@@ -399,11 +465,11 @@ class LayerRunner:
     def skipped(self, tag, title):
         self.log.out(f"   {tag}  {title:<38}{'-':>5}{'-':>9}{'-':>9}{'-':>10}")
 
-    def write_bytes(self, cmd, data):
+    def write_bytes(self, cmd, data, base=0):
         for off in range(0, len(data), self.wchunk):
             part = data[off:off + self.wchunk]
-            self.dev.exchange(cmd, struct.pack("<H", off) + u8(part), RSP_ACK,
-                              note=f"addr {off}..{off + len(part) - 1}")
+            self.dev.exchange(cmd, struct.pack("<H", base + off) + u8(part), RSP_ACK,
+                              note=f"addr {base + off}..{base + off + len(part) - 1}")
 
     def write_bias(self, bias):
         for off in range(0, len(bias), self.bchunk):
@@ -527,21 +593,48 @@ class LayerRunner:
                     W(("  - " if i == 0 else "    ") + ln)
         return False
 
+    def compare_logits(self, got):
+        """FC2 output: 4 x INT32 LE logits + argmax byte, against golden logits / pred (and the true label)."""
+        fc = self.fc
+        n_out = len(fc["logits"])
+        if len(got) != 4 * n_out + 1:
+            self.kv("Verify", f"[FAIL] logits: received {len(got)} B, expected {4 * n_out + 1} B")
+            return False
+        G = np.array(struct.unpack(f"<{n_out}i", got[:4 * n_out]), dtype=np.int64)
+        pred = got[4 * n_out]
+        ok_l = bool((G == fc["logits"]).all())
+        ok_p = pred == fc["pred"]
+        exp_txt = "" if ok_l else f"  exp {[int(v) for v in fc['logits']]}"
+        self.kv("Verify", f"[{'PASS' if ok_l else 'FAIL'}] logits (x2^-11): got {[int(v) for v in G]}{exp_txt}")
+        self.sub(f"= {', '.join(f'{c} {v / 2048:+.3f}' for c, v in zip(CLASSES, G))}")
+        self.kv("", f"[{'PASS' if ok_p else 'FAIL'}] argmax on FPGA = {pred} ({CLASSES[pred] if pred < 4 else '?'}), "
+                    f"golden pred {fc['pred']} ({CLASSES[fc['pred']]})")
+        self.sub(f"true label {CLASSES[fc['label']]}: the model {'is right' if fc['pred'] == fc['label'] else 'is WRONG'} "
+                 f"on this beat (a model property, not a hardware error)")
+        if ok_l and not ok_p:
+            self.sub("logits match but the argmax byte does not: check the argmax compare/tie rule or the address 4*cout.")
+        return ok_l and ok_p
+
     # ---- one layer ----
     def run_layer(self, n, L, x, expect, gap, first):
         d, hw = self.dev, self.hw
         plan = layer_plan(L, hw)
         T_out, C_out = out_shape(L)
-        src = ("golden output of layer %d" % (n - 1) if (first and n) else
+        src = ("GAP of conv3 (on chip) + 4 RR bytes from the host" if n == FC1 else
+               "golden output of layer %d" % (n - 1) if (first and n) else
                "x0 (z_q + zero pad)" if first else "output of layer %d (already in SRAM)" % (n - 1))
         dst = (f"GAP, {L['cout']} channels (u16)" if L["gap"] else
+               f"{L['cout']} x INT32 logits + argmax byte = {C_out} B" if L["flags"] & F_OUT_INT32 else
                f"{T_out} x {C_out} = {T_out * C_out:,} B (with padding)")
         self.log.out("")
         self.log.out("-" * WIDTH)
-        self.log.out(f" LAYER {n}   conv{n}")
+        self.log.out(f" LAYER {n}   {L['name']}")
         self.log.out("-" * WIDTH)
         self.kv("Shape", f"Cin {L['cin']} -> Cout {L['cout']}, Kw {L['kw']} (K={L['k']}), out_len {L['out_len']}, "
-                         f"{'pool 2' if L['pool'] else 'GAP' if L['gap'] else 'no pool'}, pad {L['pad_next']}")
+                         f"{'pool 2' if L['pool'] else 'GAP' if L['gap'] else 'no pool'}, pad {L['pad_next']}"
+                         f"{', flags ' + flag_text(L['flags']) if L['flags'] else ''}")
+        if n == FC1:
+            self.sub("3 PE rows per channel: GAP & 127 | GAP >> 7 | RR  -> row_combine -> 1 output")
         self.kv("Tiling", f"{plan['rows']} rows x {hw.cols} cols/tile, {plan['row_tiles']} x {plan['col_tiles']} "
                           f"= {plan['tiles']} tiles, rows used {plan['rows']}/{hw.rows}")
         self.kv("Work", f"{plan['macs']:,} MACs")
@@ -562,7 +655,13 @@ class LayerRunner:
 
         try:
             # [A] input
-            if first:
+            if n == FC1:
+                rr = self.fc["rr"]
+                with self.phase("A", "Write RR (4 B) -> ifmap write bank",
+                                [f"rr_q = {[int(v) for v in rr]} at address {FC1_AUX_ADDR} (row 2, after the "
+                                 f"{GAP_C} GAP slots); gap_in packs GAP into rows 0-1 and swaps"]):
+                    self.write_bytes(CMD_WRITE_X, rr, base=FC1_AUX_ADDR)
+            elif first:
                 cin = L["cin"]
                 with self.phase("A", "Load input X -> ifmap SRAM, swap",
                                 [f"source: {'x0 = z_q (360) + 3 zeros each side (pad for K=7)' if n == 0 else f'golden output of layer {n - 1} (padding included)'}",
@@ -586,13 +685,17 @@ class LayerRunner:
                              f"shift: {len(sh)} channels, min={min(sh)}, max={max(sh)} -> {sh if len(sh) <= 16 else sh[:16] + ['...']}"]):
                 self.write_bias(L["bias"])
                 self.write_bytes(CMD_WRITE_SHIFT, L["shift"])
+                if L["preshift"] is not None:                    # SG of row_combine, at shift address COUT_MAX + c
+                    self.write_bytes(CMD_WRITE_SHIFT, L["preshift"], base=hw.cout_max)
 
-            # [D] config
+            # [D] config (12th byte = flags, only sent when non-zero: old bitstreams accept 11 bytes)
             cfg = struct.pack("<HHHHBBB", L["out_len"], L["cout"], L["k"], L["step"], L["pool"], L["gap"], L["pad_next"])
+            if L["flags"]:
+                cfg += bytes((L["flags"],))
             with self.phase("D", "CONFIG layer",
                             [f"out_len={L['out_len']} cout={L['cout']} k_len={L['k']} window_step={L['step']} (= Cin) "
-                             f"pool={L['pool']} gap={L['gap']} pad_next={L['pad_next']}"]):
-                d.exchange(CMD_CONFIG, cfg, RSP_ACK, note="11-byte config")
+                             f"pool={L['pool']} gap={L['gap']} pad_next={L['pad_next']} flags={flag_text(L['flags'])}"]):
+                d.exchange(CMD_CONFIG, cfg, RSP_ACK, note=f"{len(cfg)}-byte config")
 
             # [E] run
             with self.phase("E", "RUN (FPGA runs all tiles, then swaps)"):
@@ -602,8 +705,9 @@ class LayerRunner:
 
             # [F] read
             ok = status == 0
-            if n < 3:
-                exp = u8(expect[n])
+            if n != 3:
+                exp = (u8(expect[n]) if n < 3 else u8(self.fc["h"]) if n == FC1 else
+                       struct.pack(f"<{L['cout']}i", *[int(v) for v in self.fc["logits"]]) + bytes((self.fc["pred"],)))
                 got_all = bytearray()
                 with self.phase("F", f"Read output ({T_out} x {C_out}) from ifmap SRAM",
                                 [f"{len(exp):,} B in packets of up to {self.rchunk} B"]):
@@ -630,17 +734,20 @@ class LayerRunner:
                               f"({plan['macs']:,} MACs / {cycles * hw.pes / 1e6:.1f}M slots)")
         if status != 0:
             self.sub("writer overrun: the fmap writer overflowed (next tile started before the previous one was written).")
-        if n < 3:
+        if n < 3 or n == FC1:
             ok = self.compare_map(f"layer{n}_fmap", bytes(got_all), exp, C_out, L["pad_next"],
-                                  plan["rows"] // (2 if L["pool"] else 1)) and ok
+                                  plan["rows"] // (2 if L["pool"] else 1) if n < 3 else 1) and ok
+        elif n == FC2:
+            ok = self.compare_logits(bytes(got_all)) and ok
         else:
             ok = self.compare_gap(got, gap) and ok
         self.log.out(f" LAYER {n}: {'PASS' if ok else 'FAIL'}")
         return ok, cycles, plan
 
     # ---- all layers ----
-    def run(self, model, x0, expect, gap, last_layer=3, first_layer=0, keep_going=False):
+    def run(self, model, x0, expect, gap, fc, last_layer=N_LAYERS - 1, first_layer=0, keep_going=False):
         hw = self.hw
+        self.fc = fc
         pe = f"PE {hw.rows}x{hw.cols}"
         self.log.out("")
         self.log.out(" Control flow (per layer)")
@@ -653,7 +760,7 @@ class LayerRunner:
         t_all = time.monotonic()
         for n in range(first_layer, last_layer + 1):
             first = n == first_layer
-            x = (x0 if n == 0 else expect[n - 1]) if first else None
+            x = (x0 if n == 0 else fc["h"] if n == FC2 else expect[n - 1]) if first else None
             ok, cycles, plan = self.run_layer(n, model[n], x, expect, gap, first)
             results.append((n, ok, cycles, plan))
             if not ok and not keep_going and n < last_layer:
@@ -671,7 +778,7 @@ class LayerRunner:
         self.log.out("=" * WIDTH)
         self.log.out(f" SUMMARY{f'PE array {hw.rows}x{hw.cols} @ {hw.clk_hz / 1e6:.2f} MHz':>{WIDTH - 8}}")
         self.log.out("=" * WIDTH)
-        self.log.out(f" {'Layer':<6}{'Conv':<15}{'Result':<8}{'Cycles':>10}{'Time':>11}{'Tiles':>7}{'Cyc/tile':>10}{'Util':>7}")
+        self.log.out(f" {'Layer':<6}{'Shape':<15}{'Result':<8}{'Cycles':>10}{'Time':>11}{'Tiles':>7}{'Cyc/tile':>10}{'Util':>7}")
         self.log.out(" " + "-" * (WIDTH - 2))
         tot_c = tot_m = tot_t = 0
         for n, ok, cycles, plan in results:
@@ -679,7 +786,7 @@ class LayerRunner:
             tot_c += cycles
             tot_m += plan["macs"] if cycles else 0
             tot_t += plan["tiles"] if cycles else 0
-            conv = f"{L['cin']}->{L['cout']}, K={L['k']}"
+            conv = f"{L['name']} {L['cin']}->{L['cout']}"
             if cycles:
                 self.log.out(f" {n:<6}{conv:<15}{'PASS' if ok else 'FAIL':<8}{cycles:>10,}{ms(cycles, hw.clk_hz):>8.2f} ms"
                              f"{plan['tiles']:>7}{cycles / plan['tiles']:>10.1f}{100.0 * plan['macs'] / (cycles * hw.pes):>6.1f}%")
@@ -728,15 +835,17 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("port", nargs="?", help="COM port, e.g. COM4")
-    ap.add_argument("--baud", type=int, default=115200, help="host-side baud rate (must match the FPGA)")
+    ap.add_argument("--baud", type=int, default=921600, help="host-side baud rate (must match the FPGA)")
 
     ap.add_argument("--timeout", type=float, default=5.0)
     ap.add_argument("--root", help="repo root (contains export/weights.h); default: parent of host/")
     ap.add_argument("--record", default="rec101_93600")
     ap.add_argument("--beat", type=int, default=0)
-    ap.add_argument("--first-layer", type=int, default=0, choices=range(4),
-                    help="load golden output of layer N-1 as input and start at layer N (test one layer alone)")
-    ap.add_argument("--last-layer", type=int, default=3, choices=range(4))
+    ap.add_argument("--first-layer", type=int, default=0, choices=[0, 1, 2, 3, FC2],
+                    help="load golden output of layer N-1 as input and start at layer N (test one layer alone); "
+                         f"FC1 ({FC1}) reads the on-chip GAP, so it cannot start alone: use --first-layer 3")
+    ap.add_argument("--last-layer", type=int, default=N_LAYERS - 1, choices=range(N_LAYERS),
+                    help="0..3 = conv0..conv3, 4 = fc1, 5 = fc2 (logits + argmax)")
     ap.add_argument("--keep-going", action="store_true", help="keep running later layers after a failed layer")
     ap.add_argument("--array", type=parse_array, metavar="RxC",
                     help="PE array size, ONLY used when the FPGA cannot report it (old bitstream) or with --dry-run")
@@ -754,12 +863,17 @@ def main():
         ap.error("--first-layer must be <= --last-layer")
 
     model = load_model()
-    x0, expect, gap = load_beat(args.record, args.beat)
+    x0, expect, gap, fc = load_beat(args.record, args.beat)
+    # The host-side FC reference must reproduce the golden before it is used to judge the FPGA.
+    h_ref, lg_ref, pred_ref = fc_forward(model, gap, fc["rr"])
+    if not ((h_ref == fc["h"]).all() and (lg_ref == fc["logits"]).all() and pred_ref == fc["pred"]):
+        print("fc_forward() does not reproduce the golden FC1/FC2: weights.h and export/golden disagree", file=sys.stderr)
+        return 2
     if args.dry_run:
         dev = DryRunDevice()
         log = Log(None, verbose=-1)
         hw, _, _ = query_hw(dev, log, args)
-        LayerRunner(dev, log, hw).run(model, x0, expect, gap, args.last_layer, args.first_layer)
+        LayerRunner(dev, log, hw).run(model, x0, expect, gap, fc, args.last_layer, args.first_layer)
         size = dev.write_trace(args.dry_run)
         print(f"{len(dev.packets)} packets, {size} bytes -> {args.dry_run}")
         return 0
@@ -795,7 +909,7 @@ def main():
         hw, source, notes = query_hw(dev, log, args)
         log.out("")
         hw_report(log, hw, source, notes)
-        ok = LayerRunner(dev, log, hw, dump_dir).run(model, x0, expect, gap, args.last_layer,
+        ok = LayerRunner(dev, log, hw, dump_dir).run(model, x0, expect, gap, fc, args.last_layer,
                                                      args.first_layer, args.keep_going)
     finally:
         dev.close()
