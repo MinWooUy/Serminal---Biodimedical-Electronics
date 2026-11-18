@@ -171,6 +171,25 @@ FSM does not implement them yet:
 Until the decoder and pipeline controller are connected, these commands return
 NACK code 4 (unknown command) on the current bitstream.
 
+### Layer protocol: FC layers through CONFIG flags
+
+The layer protocol (`top/layer_cmd_controller.v`, commands `08`–`10`, `15 INFO`) runs
+FC layers on the same PE array as conv: an FC layer is a conv with `Kw = 1`. CONFIG
+takes an optional 12th byte `flags` (11 bytes = flags 0, so older hosts keep working):
+
+| Bit | Flag | Effect (details in `conv1d/conv1d_layer_top.v`) |
+| --- | --- | --- |
+| 0 | `out_int32` | no requant: raw INT32 of row 0, little-endian, 4 bytes per channel at address `4*c` of the output bank (`out_len = 1`) |
+| 1 | `argmax` | with bit 0: after the layer, the index of the largest channel (ties → smallest index) at address `4*cout` |
+| 2 | `row_combine` | 3 PE rows of one channel merge into one output: `h = clamp(rsr(rsr((P1<<7)+P0, SG) + P2 + bias, SO), 0, 127)` (`out_len = 3`, ≥ 3 PE rows) |
+| 3 | `gap_in` | with bit 2: before running, pack `gap_mem` into the write bank as row 0 = `gap & 127`, row 1 = `gap >> 7`, row 2 = zeros up to the GAP channel count (the host writes the rest of row 2, e.g. the 4 RR bytes), then swap |
+
+`WRITE_SHIFT` addresses `0..COUT_MAX-1` hold the requant shift (SO); addresses
+`COUT_MAX..2*COUT_MAX-1` hold the pre-shift SG used by `row_combine`. INFO version 2
+reports the supported flags in byte 3 (`0x0F`). CNN Lite uses FC1 = `row_combine | gap_in`
+(`out_len 3, cout 32, K 68`) and FC2 = `out_int32 | argmax` (`out_len 1, cout 4, K 32`);
+`host/ecg_layer_host.py` runs conv0 → fc2 and reads the 4 logits + label with `READ_FMAP 0, 17`.
+
 Response commands:
 
 - `80 ACK`: payload `[original_CMD, 00]`; GET_STATUS adds flags at byte 2:

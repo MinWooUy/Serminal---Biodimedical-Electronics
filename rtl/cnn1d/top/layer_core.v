@@ -35,6 +35,7 @@ module layer_core #(
 	wire [31:0] bias_wr_data;
 	wire [CFG_W-1:0] out_len, cout, k_len, pad_next, gap_rd_idx;
 	wire pool_en, gap_en;
+	wire [3:0] layer_flags;
 	wire [15:0] gap_rd_data;
 	wire dbg_rd_en, dbg_rd_valid, layer_busy, layer_done, layer_err;
 	wire [ADDR_W-1:0] dbg_rd_addr;
@@ -64,6 +65,7 @@ module layer_core #(
     .o_shift_wr_en(shift_wr_en), .o_shift_wr_addr(shift_wr_addr), .o_shift_wr_data(shift_wr_data),
     .o_layer_start(layer_start), .o_out_len(out_len), .o_cout(cout), .o_k_len(k_len),
     .o_window_step(window_step), .o_pool_en(pool_en), .o_gap_en(gap_en), .o_pad_next(pad_next),
+    .o_flags(layer_flags),
     .o_gap_rd_idx(gap_rd_idx), .i_gap_rd_data(gap_rd_data),
     .o_dbg_rd_en(dbg_rd_en), .o_dbg_rd_addr(dbg_rd_addr), .i_dbg_rd_data(dbg_rd_data), .i_dbg_rd_valid(dbg_rd_valid),
     .i_layer_busy(layer_busy), .i_layer_done(layer_done), .i_layer_err(layer_err)
@@ -81,6 +83,7 @@ module layer_core #(
 		.i_shift_wr_en(shift_wr_en), .i_shift_wr_addr(shift_wr_addr), .i_shift_wr_data(shift_wr_data),
 		.i_layer_start(layer_start), .i_out_len(out_len), .i_cout(cout), .i_k_len(k_len),
 		.i_window_step(window_step), .i_pool_en(pool_en), .i_gap_en(gap_en), .i_pad_next(pad_next),
+		.i_flags(layer_flags),
 		.i_gap_rd_idx(gap_rd_idx), .o_gap_rd_data(gap_rd_data),
 		.i_dbg_rd_en(dbg_rd_en), .i_dbg_rd_addr(dbg_rd_addr),
 		.o_dbg_rd_data(dbg_rd_data), .o_dbg_rd_valid(dbg_rd_valid),
