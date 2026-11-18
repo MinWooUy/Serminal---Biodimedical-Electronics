@@ -44,6 +44,7 @@ feeder/weight_feeder.v
 mem/tensor_sram.v
 mem/tensor_pingpong_buffer.v
 mem/ring_buffer.v
+mem/layer_config_ram.v
 
 // Conv1D: AGU, loader, tile top, layer controller
 conv1d/conv1d_address_generating.v
@@ -69,6 +70,7 @@ comm/protocol/host_command_controller.v
 top/ecg_accel_top.v
 top/layer_core.v
 top/layer_cmd_controller.v
+top/cnn_pipeline_controller.v
 
 // Quantized convolution output and streaming pooling
 post/conv1d_post_process.v

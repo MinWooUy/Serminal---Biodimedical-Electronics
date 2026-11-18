@@ -107,7 +107,7 @@ def response_len(cmd) -> int:
     return FRAME_OVERHEAD + RESULT_BYTES if isinstance(cmd, RunTile) else ACK_BYTES
 
 
-def wire_cost(cmds: list, baud: int = 115200) -> dict:
+def wire_cost(cmds: list, baud: int = 921600) -> dict:
     """Bytes on the line for one command list (requests + answers), stop-and-wait, 10 bit times per byte."""
     tx = sum(FRAME_OVERHEAD + payload_len(c) for c in cmds)
     rx = sum(response_len(c) for c in cmds)

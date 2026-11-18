@@ -2,7 +2,7 @@
 
     python scripts/live_monitor.py --golden rec208_237600 [--speed 1|4] [--corrupt 0.02]   # simulated device
     python scripts/live_monitor.py --check all                                              # headless bit-exact check
-    python scripts/live_monitor.py --serial COM5 [--baud 115200]                            # real board (needs pyserial)
+    python scripts/live_monitor.py --serial COM5 [--baud 921600]                            # real board (needs pyserial)
 
 GoldenSource simulates the firmware: the golden ADC segment (DS1) goes sample by sample through
 IntegerPipelineStream (the streaming integer pipeline), every output is ENCODED into UART frames, and the
@@ -327,7 +327,7 @@ def main() -> None:
     src.add_argument("--golden", help="golden segment name, e.g. rec208_237600 (see export/golden_manifest.json)")
     src.add_argument("--serial", help="serial port of the board (needs pyserial)")
     src.add_argument("--check", help="headless bit-exact check: segment name or 'all'")
-    ap.add_argument("--baud", type=int, default=115200)
+    ap.add_argument("--baud", type=int, default=921600)
     ap.add_argument("--speed", type=float, choices=(1, 4), default=1)
     ap.add_argument("--corrupt", type=float, default=0.0, help="fraction of frames corrupted (golden source)")
     args = ap.parse_args()

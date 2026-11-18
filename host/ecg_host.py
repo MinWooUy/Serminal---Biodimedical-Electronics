@@ -619,7 +619,7 @@ def run_conv0_record(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run Conv1D hardware tests over UART.")
     parser.add_argument("port", help="Serial port, e.g. COM4")
-    parser.add_argument("--baud", type=int, default=115200)
+    parser.add_argument("--baud", type=int, default=921600)
     parser.add_argument("--timeout", type=float, default=2.0, help="Response timeout in seconds")
     parser.add_argument("--array-rows", type=int, default=7,
                         help="Số hàng PE của bitstream (mặc định 7)")

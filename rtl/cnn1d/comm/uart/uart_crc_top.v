@@ -1,6 +1,6 @@
 // Serial packet transport; no loopback and no accelerator side effects.
 module uart_crc_top #(
-    parameter CLK_FREQ=50000000, BAUD_RATE=115200, MAX_PAYLOAD=256,
+    parameter CLK_FREQ=50000000, BAUD_RATE=921600, MAX_PAYLOAD=256,
     parameter RX_TIMEOUT_CLKS=CLK_FREQ/10
 )(
     input wire clk, reset, uart_rx,

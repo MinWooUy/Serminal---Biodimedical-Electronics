@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 module tb_uart;
-    localparam DIV=434;
+    localparam CLK_FREQ=50000000;
+    localparam BAUD_RATE=921600;
+    localparam DIV=CLK_FREQ/BAUD_RATE;
     reg clk=0,reset=1,start=0;
     reg [7:0] data=0;
     wire tx,ready,busy,valid,err;
@@ -16,11 +18,11 @@ module tb_uart;
         $dumpvars(0, tb_uart);
     end
     always #10 clk=~clk;
-    uart_transmitter tx_dut(.clk(clk),.reset(reset),.data_in(data),.tx_start(start),
+    uart_transmitter #(.CLK_FREQ(CLK_FREQ), .BAUD_RATE(BAUD_RATE)) tx_dut(.clk(clk),.reset(reset),.data_in(data),.tx_start(start),
         .tx_ready(ready),.tx_busy(busy),.tx_out(tx));
-    uart_receiver rx_dut(.clk(clk),.reset(reset),.rx_in(tx),.data_out(received),
+    uart_receiver #(.CLK_FREQ(CLK_FREQ), .BAUD_RATE(BAUD_RATE)) rx_dut(.clk(clk),.reset(reset),.rx_in(tx),.data_out(received),
         .rx_ready(valid),.frame_error(err));
-    uart_receiver ext_dut(.clk(clk),.reset(reset),.rx_in(external_rx),.data_out(ext_data),
+    uart_receiver #(.CLK_FREQ(CLK_FREQ), .BAUD_RATE(BAUD_RATE)) ext_dut(.clk(clk),.reset(reset),.rx_in(external_rx),.data_out(ext_data),
         .rx_ready(ext_valid),.frame_error(ext_err));
     always @(negedge clk) begin
         if(!reset && valid) begin
@@ -61,15 +63,15 @@ module tb_uart;
         wait(!busy);repeat(DIV) @(posedge clk);#1;
         if(got!=256 || tx!==1) $fatal(1,"FAIL UART count or idle");
         // Short start glitch must be rejected.
-        external_rx=0;#1000;external_rx=1;#20000;
+        external_rx=0;#200;external_rx=1;#20000;
         if(ext_count || error_count) $fatal(1,"FAIL false start");
-        ext_expected=8'ha5;external_byte(8'ha5,8500,1);#20000;
-        ext_expected=8'h5a;external_byte(8'h5a,8850,1);#20000;
+        ext_expected=8'ha5;external_byte(8'ha5,1080,1);#20000;
+        ext_expected=8'h5a;external_byte(8'h5a,1100,1);#20000;
         if(ext_count!=2) $fatal(1,"FAIL baud tolerance");
-        external_byte(0,8680,0);#50000;
+        external_byte(0,1080,0);#50000;
         if(ext_count!=2 || error_count!=1) $fatal(1,"FAIL framing/break rejection");
         external_rx=1;#20000;
-        ext_expected=8'hff;external_byte(8'hff,8680,1);#20000;
+        ext_expected=8'hff;external_byte(8'hff,1080,1);#20000;
         if(ext_count!=3) $fatal(1,"FAIL framing recovery");
         $display("PASS UART 256 bytes, back-to-back, false start, baud mismatch, framing recovery");
         $finish;
