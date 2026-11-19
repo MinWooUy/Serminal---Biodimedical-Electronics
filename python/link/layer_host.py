@@ -154,19 +154,22 @@ class LayerHost:
         info = self._require_info()
         if cmd not in (pl.CMD_WRITE_X, pl.CMD_WRITE_W, pl.CMD_WRITE_SHIFT):
             raise ValueError("write_bytes only accepts WRITE_X, WRITE_W or WRITE_SHIFT")
-        data = pl._int8_bytes(values)
-        if not data:
+        # Keep signed values here: encode_write_bytes() does the int8 -> byte conversion itself.
+        # (Converting to bytes first and passing those on made every negative value fail.)
+        vals = [int(v) for v in values]
+        if not vals:
             raise ValueError("write data must not be empty")
+        pl._int8_bytes(vals)  # range check once, before anything is sent
         max_chunk = info.max_payload - 2
         if max_chunk < 1:
             raise LayerLinkError("configuration", "MAX_PAYLOAD must be at least 3 for INT8 writes", cmd)
-        if address < 0 or address + len(data) > 0x10000:
+        if address < 0 or address + len(vals) > 0x10000:
             raise ValueError("write address range must fit in u16")
-        for offset in range(0, len(data), max_chunk):
-            part = data[offset:offset + max_chunk]
+        for offset in range(0, len(vals), max_chunk):
+            part = vals[offset:offset + max_chunk]
             body = pl.encode_write_bytes(cmd, address + offset, part)
             self._exchange(cmd, body, pl.RSP_ACK)
-        return len(data)
+        return len(vals)
 
     def write_x(self, address: int, values: Iterable[int]) -> int:
         info = self._require_info()

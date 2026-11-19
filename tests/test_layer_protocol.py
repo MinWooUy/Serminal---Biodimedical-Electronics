@@ -213,3 +213,27 @@ def test_run_returns_nonzero_status_for_runner_diagnostics():
     result = host.run()
     assert result.status == 1
     assert result.cycles == 321
+
+
+def test_signed_int8_writes_are_sent_as_twos_complement_bytes():
+    transport = FakeLayerTransport()
+    host = LayerHost(transport, timeout=0.1)
+    host.info()
+    values = [-1, -128, 127, 0, -17]
+    for write, cmd in ((host.write_x, pl.CMD_WRITE_X), (host.write_w, pl.CMD_WRITE_W),
+                       (host.write_shift, pl.CMD_WRITE_SHIFT)):
+        write(4, values)
+        packet = [p for p in transport.commands if p.cmd == cmd][-1]
+        assert packet.payload == b"\x04\x00" + bytes(v & 0xFF for v in values)
+
+
+def test_out_of_range_int8_is_rejected_before_anything_is_sent():
+    transport = FakeLayerTransport()
+    host = LayerHost(transport, timeout=0.1)
+    host.info()
+    sent = len(transport.commands)
+    with pytest.raises(ValueError):
+        host.write_x(0, [1, 128])
+    with pytest.raises(ValueError):
+        host.write_w(0, [-129])
+    assert len(transport.commands) == sent
