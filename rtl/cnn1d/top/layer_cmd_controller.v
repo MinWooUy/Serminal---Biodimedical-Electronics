@@ -13,12 +13,17 @@
   Command (payload, little-endian):
     0x08 WRITE_X    addr:u16, data[n]                 -> ACK        Ghi vào bank ghi của IFMap
     0x09 WRITE_W    addr:u16, data[n]                 -> ACK        Ghi vào bank ghi của Weight
-    0x0A WRITE_BIAS base:u16, int32[n]                -> ACK        bias theo kênh toàn cục
+    0x0A WRITE_BIAS base:u16, int32[n]                -> ACK        bias tai dia chi 0..BIAS_DEPTH-1 (b_base + kenh)
     0x0B WRITE_SHIFT base:u16, int8[n]                -> ACK        shift theo kênh toàn cục
                                                                     base 0..COUT_MAX-1: shift requant (SO)
                                                                     base COUT_MAX..: shift "truoc" SG (row_combine)
     0x0C SWAP        flags:u8 (bit0 x, bit1 w)        -> ACK
-    0x0D CONFIG      out_len, cout, k_len, window_step:u16, pool, gap, pad_next:u8 [, flags:u8] (11/12 byte) -> ACK
+    0x0D CONFIG      out_len, cout, k_len, window_step:u16, pool, gap, pad_next:u8 [, flags:u8 [, w_base, b_base:u16]]
+                     (11 / 12 / 16 byte) -> ACK
+                       w_base: dia chi goc trong so cua layer trong bank DOC weight (thieu = 0);
+                       b_base: dia chi goc bias trong bias RAM (BIAS_DEPTH muc, thieu = 0).
+                       Nho do ca mo hinh nam san trong 2 bank weight + bias RAM, nap mot lan.
+                       w_base + cout*k_len > WGT_MEM_DEPTH hoac b_base + cout > BIAS_DEPTH -> NACK 2
                        flags (thieu = 0): bit0 out_int32, bit1 argmax, bit2 row_combine, bit3 gap_in
                        (y nghia: xem conv1d_layer_top.v). Rang buoc, sai -> NACK 2:
                          argmax can out_int32; out_int32: out_len = 1; row_combine: out_len = 3,
@@ -34,7 +39,7 @@
     0x14 GET_RESULT  result_type:u8                   -> RESULT ket qua cuoi
 
     0x15 INFO        Rỗng                             -> RESULT 22 byte (phần cứng tự khai báo cấu hình)
-                       [0] version=2  [1] ARRAY_ROWS  [2] ARRAY_COLS  [3] features (bit0 out_int32,
+                       [0] version=2  [1] ARRAY_ROWS  [2] ARRAY_COLS  [3] features (bit5 pool dung so hang chan lon nhat, bit4 w_base/b_base, bit0 out_int32,
                        bit1 argmax, bit2 row_combine, bit3 gap_in)
                        [4..7] CLK_FREQ u32  [8..11] BAUD_RATE u32
                        [12..13] IFMAP_MEM_DEPTH  [14..15] WGT_MEM_DEPTH  [16..17] FEEDER_DEPTH
@@ -53,6 +58,7 @@ module layer_cmd_controller#(
   parameter WGT_MEM_DEPTH = 16384,
   parameter FEEDER_DEPTH = 1024,
   parameter COUT_MAX = 64,
+  parameter BIAS_DEPTH = 256,     // bias RAM: du cho bias cua MOI layer o dia chi rieng (b_base)
   parameter ADDR_W = 16,
   parameter CFG_W = 16
 )(  
@@ -98,6 +104,8 @@ module layer_cmd_controller#(
   output reg o_pool_en, o_gap_en,
   output reg [CFG_W-1:0] o_pad_next,
   output reg [3:0] o_flags,
+  output reg [ADDR_W-1:0] o_w_base,  // dia chi goc trong so cua layer trong bank DOC (CONFIG 16 byte)
+  output reg [CFG_W-1:0] o_b_base,   // dia chi goc bias cua layer trong bias RAM
 
   input wire [15:0] i_gap_rd_data,
   output wire [CFG_W-1:0] o_gap_rd_idx,
@@ -129,7 +137,7 @@ module layer_cmd_controller#(
 
   // Thông tin phần cứng (do tham số synthesis quyết định) cho lệnh INFO
   localparam [7:0]  INFO_VERSION = 8'd2;
-  localparam [7:0]  INFO_FEATURES = 8'h0F; // out_int32 | argmax | row_combine | gap_in
+  localparam [7:0]  INFO_FEATURES = 8'h3F; // out_int32 | argmax | row_combine | gap_in | w_base/b_base | pool even rows
   localparam [7:0]  INFO_ROWS = ARRAY_ROWS;
   localparam [7:0]  INFO_COLS = ARRAY_COLS;
   localparam [31:0] INFO_CLK = CLK_FREQ;
@@ -173,7 +181,12 @@ module layer_cmd_controller#(
   wire [7:0] req_len8 = i_rx_payload[23:16];
 
   // Byte co thu 12 cua CONFIG (khong gui = 0, giu tuong thich host cu)
-  wire [7:0] cfg_flags = (i_rx_length == 12) ? i_rx_payload[95:88] : 8'd0;
+  wire [7:0] cfg_flags = (i_rx_length >= 12) ? i_rx_payload[95:88] : 8'd0;
+  // Byte 13..16 cua CONFIG: w_base, b_base (khong gui = 0: moi layer doc trong so / bias tu dau)
+  wire [15:0] cfg_w_base = (i_rx_length == 16) ? i_rx_payload[111:96] : 16'd0;
+  wire [15:0] cfg_b_base = (i_rx_length == 16) ? i_rx_payload[127:112] : 16'd0;
+  wire cfg_base_bad = ({16'd0, cfg_w_base} + cfg_cout * cfg_k) > WGT_MEM_DEPTH
+                   || ({1'b0, cfg_b_base} + cfg_cout) > BIAS_DEPTH;
   wire cf_i32 = cfg_flags[0], cf_am = cfg_flags[1], cf_rc = cfg_flags[2], cf_gin = cfg_flags[3];
   wire cfg_flags_bad = (cfg_flags[7:4] != 0) || (cf_am && !cf_i32) || (cf_i32 && cf_rc) || (cf_gin && !cf_rc)
                     || ((cf_i32 || cf_rc) && (cfg_pool != 0 || cfg_gap != 0 || cfg_pad != 0))
@@ -237,6 +250,8 @@ module layer_cmd_controller#(
       o_gap_en <= 0;
       o_pad_next <= 0;
       o_flags <= 0;
+      o_w_base <= 0;
+      o_b_base <= 0;
     end else begin
       o_tx_start <= 0;
 
@@ -286,7 +301,7 @@ module layer_cmd_controller#(
               end
 
               C_WRITE_BIAS: begin
-                if(i_rx_length < 6 || i_rx_length[1:0] != 2'b10 || ({1'b0, req_addr} + ((i_rx_length - 2) >> 2)) > COUT_MAX) begin
+                if(i_rx_length < 6 || i_rx_length[1:0] != 2'b10 || ({1'b0, req_addr} + ((i_rx_length - 2) >> 2)) > BIAS_DEPTH) begin
                   o_tx_cmd <= 8'h81;
                   o_tx_payload[15:8] <= 2;
                 end else begin
@@ -313,7 +328,7 @@ module layer_cmd_controller#(
               end
 
               C_CONFIG: begin
-                if((i_rx_length != 11 && i_rx_length != 12) || cfg_out_len == 0 || cfg_cout == 0 || cfg_cout > COUT_MAX || cfg_k == 0 || cfg_k > FEEDER_DEPTH || cfg_step == 0 || cfg_pool > 1 || cfg_gap > 1 || (cfg_pool == 1 && cfg_out_len[0]) || cfg_flags_bad) begin
+                if((i_rx_length != 11 && i_rx_length != 12 && i_rx_length != 16) || cfg_base_bad || cfg_out_len == 0 || cfg_cout == 0 || cfg_cout > COUT_MAX || cfg_k == 0 || cfg_k > FEEDER_DEPTH || cfg_step == 0 || cfg_pool > 1 || cfg_gap > 1 || (cfg_pool == 1 && cfg_out_len[0]) || cfg_flags_bad) begin
                   o_tx_cmd <= 8'h81;
                   o_tx_payload[15:8] <= 2;
                 end else if(i_layer_busy) begin
@@ -328,6 +343,8 @@ module layer_cmd_controller#(
                   o_gap_en <= cfg_gap[0];
                   o_pad_next <= {8'd0, cfg_pad};
                   o_flags <= cfg_flags[3:0];
+                  o_w_base <= cfg_w_base[ADDR_W-1:0];
+                  o_b_base <= cfg_b_base[CFG_W-1:0];
                   configured <= 1;
                 end
               end

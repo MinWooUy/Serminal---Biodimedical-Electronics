@@ -61,243 +61,150 @@ module conv1d_weight_loader #(
     output reg o_done,
     output wire [2:0] o_state_dbg
 );
-	// FSM
+	// =====================================================
+	// Pipeline 1 byte / chu ky (giong conv1d_ifmap_loader):
+	//   chu ky n  : phat doc SRAM tai dia chi AGU, AGU tien, nho cot dich (col)
+	//   chu ky n+1: du lieu ve -> ghi vao FIFO cua cot; FIFO day -> giu vao skid, ngung phat doc.
+	// Bo cuc trong so: cot c (kenh col_base + c) la K byte lien tiep tai base + c*K.
+	// =====================================================
+	localparam S_IDLE  = 3'd0;
+	localparam S_RUN   = 3'd1;
+	localparam S_DRAIN = 3'd2;
+	localparam S_DONE  = 3'd4;
 
-    localparam S_IDLE  = 3'd0;
-    localparam S_REQ   = 3'd1;
-    localparam S_WAIT  = 3'd2;
-    localparam S_WRITE = 3'd3;
-    localparam S_DONE  = 3'd4;
+	reg [2:0] state_q;
 
-    reg [2:0] state_q;
+	assign o_state_dbg = state_q;
+	assign o_busy = (state_q != S_IDLE) && (state_q != S_DONE);
 
-    assign o_state_dbg = state_q;
+	// Cot (lan FIFO) cua dia chi AGU hien tai: AGU window w -> cot w
+	reg [COL_W-1:0] col_cnt_q;
 
-    assign o_busy = (state_q != S_IDLE) && (state_q != S_DONE);
-	
-    // Current physical column (khai báo trước wr_ok vì wr_ok dùng nó).
-    // AGU sequence: window0 -> column0 FIFO, window1 -> column1 FIFO, ...
-    // For Weight, one AGU window = one output channel.
-    reg [COL_W-1:0] col_cnt_q;
+	reg pend_q;
+	reg [COL_W-1:0] pend_col_q;
 
-    // Lane đích còn chỗ thì mới ghi
-    wire wr_ok = ~i_lane_full[col_cnt_q];
+	reg skid_q;
+	reg [COL_W-1:0] skid_col_q;
+	reg signed [DATA_W-1:0] skid_data_q;
+
+	wire pend_block = pend_q && i_lane_full[pend_col_q];
+	wire pend_ok    = pend_q && !i_lane_full[pend_col_q];
+	wire skid_ok    = skid_q && !i_lane_full[skid_col_q];
 
 	// AGU
-    wire [ADDR_W-1:0] agu_addr;
+	wire [ADDR_W-1:0] agu_addr;
+	wire agu_valid;
+	wire agu_busy;
+	wire agu_done;
+	wire agu_k_first;
+	wire agu_k_last;
+	wire agu_window_first;
+	wire agu_window_last;
 
-    wire agu_valid;
-    wire agu_busy;
-    wire agu_done;
+	wire agu_start = (state_q == S_IDLE) && i_start;
+	wire issue = (state_q == S_RUN) && agu_valid && !skid_q && !pend_block;
+	wire agu_advance = issue;
 
-    wire agu_k_first;
-    wire agu_k_last;
+	// Moi kenh ra = K byte lien tiep: window_step = K, so window = so cot dang dung
+	wire [ADDR_W-1:0] weight_step = i_k_len;
+	wire [CFG_W-1:0] agu_num_windows = i_active_cols;
 
-    wire agu_window_first;
-    wire agu_window_last;
+	conv1d_address_generating #(
+		.ADDR_W(ADDR_W),
+		.CFG_W(CFG_W)
+	) u_agu (
+		.i_clk(i_clk),
+		.i_reset(i_reset),
 
+		.i_start(agu_start),
+		.i_advance(agu_advance),
 
-    // =====================================================
-    // AGU CONTROL
-    //
-    // Start when loader accepts start.
-    //
-    // Advance only when current SRAM data has been
-    // committed into the corresponding Weight FIFO.
-    // =====================================================
+		.i_base_addr(i_base_addr),
+		.i_k_len(i_k_len),
+		.i_window_step(weight_step),
+		.i_num_windows(agu_num_windows),
 
-    wire agu_start;
-    wire agu_advance;
+		.o_addr(agu_addr),
+		.o_valid(agu_valid),
+		.o_k_first(agu_k_first),
+		.o_k_last(agu_k_last),
+		.o_window_first(agu_window_first),
+		.o_window_last(agu_window_last),
+		.o_busy(agu_busy),
+		.o_done(agu_done)
+	);
 
-    assign agu_start = (state_q == S_IDLE) && i_start;
-    assign agu_advance = (state_q == S_WRITE) && wr_ok;
+	// SRAM request
+	assign o_sram_rd_en = issue;
+	assign o_sram_rd_addr = agu_addr;
 
+	// FIFO write
+	always @(*) begin
+		o_wgt_wr_en = {ARRAY_COLS{1'b0}};
+		o_wgt_wr_data = {ARRAY_COLS*DATA_W{1'b0}};
 
-    // =====================================================
-    // AGU CONFIG ADAPTATION
-    // =====================================================
+		if(skid_ok) begin
+			o_wgt_wr_en[skid_col_q] = 1'b1;
+			o_wgt_wr_data[skid_col_q*DATA_W +: DATA_W] = skid_data_q;
+		end else if(pend_ok) begin
+			o_wgt_wr_en[pend_col_q] = 1'b1;
+			o_wgt_wr_data[pend_col_q*DATA_W +: DATA_W] = i_sram_rd_data;
+		end
+	end
 
-    // Each output channel contains K contiguous values.
-    //
-    // Therefore:
-    //
-    // col0 base = base
-    // col1 base = base + K
-    // col2 base = base + 2K
-    // ...
+	// FSM + pipeline
+	always @(posedge i_clk) begin
+		if(i_reset) begin
+			state_q <= S_IDLE;
+			col_cnt_q <= {COL_W{1'b0}};
+			pend_q <= 1'b0;
+			pend_col_q <= {COL_W{1'b0}};
+			skid_q <= 1'b0;
+			skid_col_q <= {COL_W{1'b0}};
+			skid_data_q <= {DATA_W{1'b0}};
+			o_done <= 1'b0;
+		end else begin
+			o_done <= 1'b0;
 
-    wire [ADDR_W-1:0] weight_step;
+			pend_q <= issue;
+			if(issue) pend_col_q <= col_cnt_q;
 
-    assign weight_step = i_k_len;
+			if(pend_block) begin
+				skid_q <= 1'b1;
+				skid_col_q <= pend_col_q;
+				skid_data_q <= i_sram_rd_data;
+			end else if(skid_ok) begin
+				skid_q <= 1'b0;
+			end
 
-    // Number of AGU "windows" = number of active SA columns.
+			case(state_q)
+				S_IDLE: begin
+					col_cnt_q <= {COL_W{1'b0}};
+					if(i_start) state_q <= S_RUN;
+				end
 
-    wire [CFG_W-1:0] agu_num_windows;
+				S_RUN: begin
+					if(issue && agu_k_last) begin
+						if(agu_window_last) state_q <= S_DRAIN;
+						else col_cnt_q <= col_cnt_q + 1'b1;
+					end
+				end
 
-    assign agu_num_windows = i_active_cols;
+				S_DRAIN: begin
+					if(!pend_q && !skid_q) state_q <= S_DONE;
+				end
 
+				S_DONE: begin
+					o_done <= 1'b1;
+					if(!i_start) state_q <= S_IDLE;
+				end
 
-    // =====================================================
-    // AGU INSTANCE
-    //
-    // Reuse the SAME AGU already verified for IFMAP.
-    // =====================================================
-
-    conv1d_address_generating #(
-        .ADDR_W(ADDR_W),
-        .CFG_W(CFG_W)
-    ) u_agu (
-        .i_clk(i_clk),
-        .i_reset(i_reset),
-
-        .i_start(agu_start),
-        .i_advance(agu_advance),
-
-        .i_base_addr(i_base_addr),
-
-        .i_k_len(i_k_len),
-
-        .i_window_step(weight_step),
-
-        .i_num_windows(agu_num_windows),
-
-        .o_addr(agu_addr),
-        .o_valid(agu_valid),
-
-        .o_k_first(agu_k_first),
-        .o_k_last(agu_k_last),
-
-        .o_window_first(agu_window_first),
-        .o_window_last(agu_window_last),
-
-        .o_busy(agu_busy),
-        .o_done(agu_done)
-    );
-
-
-    // =====================================================
-    // SRAM RESPONSE REGISTER
-    // =====================================================
-
-    reg signed [DATA_W-1:0] rd_data_q;
-
-    // =====================================================
-    // SRAM REQUEST
-    // =====================================================
-
-    assign o_sram_rd_en = (state_q == S_REQ) && agu_valid;
-    assign o_sram_rd_addr = agu_addr;
-
-
-    // =====================================================
-    // WEIGHT FIFO WRITE CONTROL
-    // =====================================================
-    always @(*) begin
-        o_wgt_wr_en = {ARRAY_COLS{1'b0}};
-        o_wgt_wr_data = {ARRAY_COLS*DATA_W{1'b0}};
-
-        if(state_q == S_WRITE && wr_ok) begin
-            o_wgt_wr_en[col_cnt_q] = 1'b1;
-            o_wgt_wr_data[col_cnt_q*DATA_W +: DATA_W] = rd_data_q;
-
-        end
-    end
-	
-	// FSM
-    always @(posedge i_clk) begin
-        if(i_reset) begin
-            state_q <= S_IDLE;
-            col_cnt_q <= 0;
-            rd_data_q <= 0;
-            o_done <= 1'b0;
-        end
-        else begin
-            // DONE is a one-cycle pulse
-            o_done <= 1'b0;
-            case(state_q)
-                S_IDLE: begin
-                    col_cnt_q <= 0;
-                    if(i_start) begin
-                        state_q <= S_REQ;
-                    end
-                end
-
-                // =========================================
-                // ISSUE WEIGHT SRAM READ
-                // =========================================
-
-                S_REQ: begin
-                    if(agu_valid) begin
-                        // During this state:
-                        //
-                        // o_sram_rd_en   = 1
-                        // o_sram_rd_addr = agu_addr
-                        state_q <= S_WAIT;
-                    end
-                end
-
-                // =========================================
-                // WAIT FOR SRAM RESPONSE
-                // =========================================
-
-                S_WAIT: begin
-                    if(i_sram_rd_valid) begin
-                        rd_data_q <= i_sram_rd_data;
-                        state_q <= S_WRITE;
-                    end
-                end
-
-                // =========================================
-                // WRITE TO CURRENT COLUMN FIFO
-                //
-                // During S_WRITE:
-                //
-                // o_wgt_wr_en[col] = 1
-                // agu_advance      = 1
-                //
-                // At the edge:
-                //
-                // FIFO captures weight
-                // AGU advances
-                // =========================================
-
-                S_WRITE: begin
-                    if(wr_ok) begin
-                        // -------------------------------------
-                        // Last K element of current output
-                        // channel?
-                        // -------------------------------------
-                        if(agu_k_last) begin
-                            // ---------------------------------
-                            // Last active output channel?
-                            // ---------------------------------
-                            if(agu_window_last) begin
-                                state_q <= S_DONE;
-                            end
-                            else begin
-                                col_cnt_q <= col_cnt_q + 1'b1;
-                                state_q <= S_REQ;
-                            end
-                        end
-                        else begin
-                            state_q <= S_REQ;
-                        end
-                    end
-                end
-
-                S_DONE: begin
-                    o_done <= 1'b1;
-                    if(!i_start) begin
-                        state_q <= S_IDLE;
-                    end
-                end
-
-                default: begin
-                    state_q <= S_IDLE;
-                    col_cnt_q <= 0;
-                end
-            endcase
-        end
-    end
+				default: begin
+					state_q <= S_IDLE;
+					col_cnt_q <= {COL_W{1'b0}};
+				end
+			endcase
+		end
+	end
 endmodule
 `default_nettype wire

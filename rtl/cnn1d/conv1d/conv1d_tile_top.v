@@ -1,24 +1,24 @@
 `default_nettype none
 // conv1d_tile_top
-// │
-// ├── tensor_pingpong_buffer        <- raw X
-// │
-// ├── conv1d_ifmap_feeder_top
-// │   ├── conv1d_ifmap_loader
-// │   │   └── AGU
-// │   └── ifmap_feeder
-// │
-// ├── tensor_pingpong_buffer        <- packed W
-// │
-// ├── conv1d_weight_feeder_top
-// │   ├── conv1d_weight_loader
-// │   │   └── AGU
-// │   └── weight_feeder
-// │
-// └── cnn_compute_core
-//     ├── cnn_control_fsm
-//     ├── pe_array
-//     └── partial_sum_manager
+// 
+// 	 tensor_pingpong_buffer        <- raw X
+// 
+// 	 conv1d_ifmap_feeder_top
+// 		 conv1d_ifmap_loader
+// 			AGU
+// 		 ifmap_feeder
+// 
+// 	 tensor_pingpong_buffer        <- packed W
+// 
+// 	 conv1d_weight_feeder_top
+// 		 conv1d_weight_loader
+// 			AGU
+// 		 weight_feeder
+// 
+// 	 cnn_compute_core
+//    	cnn_control_fsm
+//     	pe_array
+//     	partial_sum_manager
 
 module conv1d_tile_top #(
 	parameter POST_ENABLE = 0, // opt-in INT32 -> INT8 post processing

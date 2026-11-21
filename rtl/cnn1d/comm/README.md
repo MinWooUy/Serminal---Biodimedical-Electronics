@@ -184,9 +184,17 @@ takes an optional 12th byte `flags` (11 bytes = flags 0, so older hosts keep wor
 | 2 | `row_combine` | 3 PE rows of one channel merge into one output: `h = clamp(rsr(rsr((P1<<7)+P0, SG) + P2 + bias, SO), 0, 127)` (`out_len = 3`, ≥ 3 PE rows) |
 | 3 | `gap_in` | with bit 2: before running, pack `gap_mem` into the write bank as row 0 = `gap & 127`, row 1 = `gap >> 7`, row 2 = zeros up to the GAP channel count (the host writes the rest of row 2, e.g. the 4 RR bytes), then swap |
 
+CONFIG may also carry bytes 13–16 `w_base:u16, b_base:u16` (16-byte CONFIG): the layer reads its
+weights from the READ weight bank at `w_base + c*K + k` and its bias from `bias_mem[b_base + c]`
+(bias RAM: `BIAS_DEPTH = 256` entries, `WRITE_BIAS` accepts addresses up to it). With this the whole
+CNN Lite stays on chip: bank A holds conv0, conv1, conv2, fc1, fc2 (11 120 B), bank B holds conv3
+(12 288 B), all 212 biases sit in the bias RAM; the host loads them once and per beat only sends the
+input, the shifts, CONFIG/RUN (and a weight SWAP around conv3). INFO byte 3 bit 4 (`0x10`) reports it.
+
 `WRITE_SHIFT` addresses `0..COUT_MAX-1` hold the requant shift (SO); addresses
 `COUT_MAX..2*COUT_MAX-1` hold the pre-shift SG used by `row_combine`. INFO version 2
-reports the supported flags in byte 3 (`0x0F`). CNN Lite uses FC1 = `row_combine | gap_in`
+reports the supported features in byte 3 (`0x3F`; bit 5 `0x20` = layers with pool use the largest
+even row count `ARRAY_ROWS & ~1`, e.g. 6 rows on 7×7, so the host plans tiles with that many rows). CNN Lite uses FC1 = `row_combine | gap_in`
 (`out_len 3, cout 32, K 68`) and FC2 = `out_int32 | argmax` (`out_len 1, cout 4, K 32`);
 `host/ecg_layer_host.py` runs conv0 → fc2 and reads the 4 logits + label with `READ_FMAP 0, 17`.
 

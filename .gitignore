@@ -12,6 +12,8 @@ results/hardware_logs/*.log
 *.qpf
 *.qsf
 
+model/
+
 # Tái cấu trúc: file sinh ra không theo dõi (xem docs/restructure-plan.md)
 __pycache__/
 *.pyc
