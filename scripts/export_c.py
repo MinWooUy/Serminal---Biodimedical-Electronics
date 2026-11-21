@@ -32,9 +32,8 @@ from python.experiment import load_config  # noqa: E402
 from python.quant.filter_int import quantize_sos  # noqa: E402
 from python.quant.int8 import int_forward_trace, load_quant_model  # noqa: E402
 from python.quant.pipeline_int import (  # noqa: E402
-    EPS_Q, FILTER_FRAC_BITS, FILTER_GUARD_BITS, INPUT_EXP, filter_int, run_integer_beats,
+    EPS_Q, FILTER_FRAC_BITS, FILTER_GUARD_BITS, INPUT_EXP, filter_int, quantise_rr_parts, run_integer_beats,
 )
-from scripts.pipeline_int_eval import quantise_rr_parts  # noqa: E402
 
 DEFAULT_RECORDS = (101, 118, 119, 201, 207, 208, 209, 223)
 

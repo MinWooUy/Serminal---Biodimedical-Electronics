@@ -53,7 +53,7 @@ def main() -> None:
         logit_f = np.zeros((n_main, 4))
         logit_q = np.zeros((n_main, 4))            # int8-path logits, dequantised to logit units
         for k in cfg["folds"]:
-            ck = torch.load(run / "ckpt" / args.ckpt.format(seed=seed, k=k), weights_only=False)
+            ck = torch.load(run / "ckpt" / args.ckpt.format(seed=seed, k=k), map_location="cpu", weights_only=False)
             m = ECGCNN(ModelConfig.from_dict(ck["model"]))
             m.load_state_dict(ck["state_dict"])
             idx = fold_indices(d["rec_id"][:n_main], d["r_pos"][:n_main], cv.rec_len, cv.folds, k, cv.delay,

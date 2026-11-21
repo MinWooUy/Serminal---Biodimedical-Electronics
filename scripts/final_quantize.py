@@ -23,7 +23,8 @@ from python.models.cv_data import attach_extra_train, load_cv_data, with_extra_t
 from python.models.metrics import format_report, report  # noqa: E402
 from python.models.training import TrainConfig, fold_indices  # noqa: E402
 from python.quant.int8 import float_forward, fold_model, int_forward_q, quantize_model, save_quant_model  # noqa: E402
-from scripts.pipeline_int_eval import integer_beats, quantise_rr_parts  # noqa: E402
+from python.quant.pipeline_int import quantise_rr_parts  # noqa: E402
+from scripts.pipeline_int_eval import integer_beats  # noqa: E402
 
 
 def main() -> None:
@@ -33,7 +34,7 @@ def main() -> None:
     args = ap.parse_args()
     out = Path(args.final)
     cfg = load_config(out / "config.yaml")
-    ck = torch.load(out / "model.pt", weights_only=False)
+    ck = torch.load(out / "model.pt", map_location="cpu", weights_only=False)
     m = ECGCNN(ModelConfig.from_dict(ck["model"]))
     m.load_state_dict(ck["state_dict"])
     bcfg = load_config(REPO_ROOT / cfg["beats_config"])

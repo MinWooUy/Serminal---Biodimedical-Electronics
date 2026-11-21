@@ -33,7 +33,8 @@ from python.models.metrics import CLASSES, mean_std, report  # noqa: E402
 from python.models.training import TrainConfig, fold_indices  # noqa: E402
 from python.quant.int8 import float_forward, fold_model, int_forward, int_forward_q, quantize_model  # noqa: E402
 from python.quant.pipeline_int import (  # noqa: E402
-    FILTER_FRAC_BITS, FILTER_GUARD_BITS, INPUT_EXP, Q, filter_int, refine_abs_int, round_div, zscore_int,
+    FILTER_FRAC_BITS, FILTER_GUARD_BITS, INPUT_EXP, filter_int, quantise_rr_parts, refine_abs_int,
+    zscore_int,
 )
 
 MAX_DROP = 0.02
@@ -84,14 +85,6 @@ def integer_beats(cv, det_cfg: dict, beats_cfg: dict, log) -> dict[str, np.ndarr
     return {"z_q": z_q, "rr_parts": rrq}
 
 
-def quantise_rr_parts(parts: np.ndarray, rr_exp: np.ndarray, fs: int = 360) -> np.ndarray:
-    rp, rn, s8, n8 = (parts[:, k].astype(np.int64) for k in range(4))
-    e = [int(v) for v in rr_exp]
-    q = np.stack([round_div(rp << e[0], fs), round_div(rn << e[1], fs), round_div(s8 << e[2], fs * n8),
-                  round_div((rp * n8) << e[3], s8)], axis=1)
-    return np.clip(q, -Q, Q)
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
@@ -118,7 +111,7 @@ def main() -> None:
         pred = {c: np.full(n_main, -1) for c in cases}
         logits_iii = np.zeros((n_main, 4), dtype=np.int64)
         for k in cfg["folds"]:
-            ck = torch.load(run / "ckpt" / f"s{seed}_f{k}.pt", weights_only=False)
+            ck = torch.load(run / "ckpt" / f"s{seed}_f{k}.pt", map_location="cpu", weights_only=False)
             m = ECGCNN(ModelConfig.from_dict(ck["model"]))
             m.load_state_dict(ck["state_dict"])
             idx = fold_indices(d["rec_id"][:n_main], d["r_pos"][:n_main], cv.rec_len, cv.folds, k, cv.delay,

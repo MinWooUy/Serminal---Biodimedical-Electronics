@@ -2,7 +2,7 @@
 
     python scripts/live_monitor.py --golden rec208_237600 [--speed 1|4] [--corrupt 0.02]   # simulated device
     python scripts/live_monitor.py --check all                                              # headless bit-exact check
-    python scripts/live_monitor.py --serial COM5 [--baud 921600]                            # real board (needs pyserial)
+    python scripts/live_monitor.py --serial COM5 [--baud 1500000]                            # real board (needs pyserial)
 
 GoldenSource simulates the firmware: the golden ADC segment (DS1) goes sample by sample through
 IntegerPipelineStream (the streaming integer pipeline), every output is ENCODED into UART frames, and the
@@ -38,12 +38,17 @@ COLORS = ("#1f77b4", "#ff7f0e", "#2ca02c", "#9467bd")
 class GoldenSource:
     """Simulated device: golden ADC -> IntegerPipelineStream -> UART frames (bytes)."""
 
-    def __init__(self, segment: str, fz=None, frame_samples: int = 8, stats_every: int = FS, corrupt: float = 0.0,
-                 seed: int = 0, adc_gain: int = 200):
+    def __init__(self, segment: str | None, fz=None, frame_samples: int = 8, stats_every: int = FS,
+                 corrupt: float = 0.0, seed: int = 0, adc_gain: int = 200, adc=None, adc_zero: int | None = None):
+        """segment: golden segment name; or segment=None with adc (raw ADC samples) and adc_zero (any record)."""
         self.fz = fz or load_frozen()
-        g = load_golden_segment(segment, arrays=("adc",))
-        self.adc = g["adc"].tolist()
-        self.meta = g["meta"]
+        if segment is None:
+            self.adc = [int(v) for v in adc]
+            self.meta = {"adc_zero": int(adc_zero)}
+        else:
+            g = load_golden_segment(segment, arrays=("adc",))
+            self.adc = g["adc"].tolist()
+            self.meta = g["meta"]
         self.stream = IntegerPipelineStream(self.fz.qm, self.fz.pt, self.fz.sos, self.meta["adc_zero"], self.fz.delay,
                                             self.fz.half, self.fz.rr_lo, self.fz.rr_hi)
         self.frame_samples, self.stats_every = frame_samples, stats_every
@@ -180,7 +185,8 @@ class HostState:
 
 # ---------------------------------------------------------------- headless check against the golden vectors
 
-def check_segment(name: str, fz, corrupt: float = 0.0, chunk_seed: int = 0, corrupt_seed: int = 0) -> dict:
+def check_segment(name: str, fz, corrupt: float = 0.0, chunk_seed: int = 0, corrupt_seed: int = 0,
+                  source=None) -> dict:
     """Simulated device -> UART bytes (optionally corrupted) -> HostDecoder -> compare with the golden reference.
 
     GATE 4 evidence (clean line): the device's FINAL beat_digest (last STATS) == golden digest, same beat count.
@@ -190,7 +196,7 @@ def check_segment(name: str, fz, corrupt: float = 0.0, chunk_seed: int = 0, corr
                           payload incl. emit_idx and flags) or do not exist in golden. On a corrupted line such
                           frames are false accepts of damaged frames (robustness metric, not a gate)."""
     from python.viz.golden import golden_beats
-    src = GoldenSource(name, fz, corrupt=corrupt, seed=corrupt_seed)
+    src = source if source is not None else GoldenSource(name, fz, corrupt=corrupt, seed=corrupt_seed)
     host = HostState(keep=None)
     rng = np.random.default_rng(chunk_seed)
     while not src.done:
@@ -247,15 +253,17 @@ def check_ok(r: dict) -> bool:
 
 # ---------------------------------------------------------------- live view
 
-def run_live(source, speed: float, window_s: float = 8.0):
+def run_live(source, speed: float, window_s: float = 8.0, title: str | None = None):
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
 
     host = HostState(keep=int(window_s * FS))
     fig = plt.figure(figsize=(14, 6))
+    if title:
+        fig.suptitle(title, fontsize=10)
     ax = fig.add_axes((0.05, 0.12, 0.66, 0.8))
-    axp = fig.add_axes((0.76, 0.55, 0.21, 0.37))
-    axt = fig.add_axes((0.76, 0.08, 0.21, 0.4))
+    axp = fig.add_axes((0.76, 0.64, 0.21, 0.28))
+    axt = fig.add_axes((0.76, 0.03, 0.21, 0.55))
     axt.axis("off")
     (line,) = ax.plot([], [], lw=0.9, color="#333")
     marks = ax.scatter([], [], s=40, zorder=3)
@@ -314,6 +322,9 @@ def run_live(source, speed: float, window_s: float = 8.0):
                      f"        transport_error {d.transport_error}\n"
                      f"digest  {'-' if s is None else f'0x{s.beat_digest:08X} ({s.n_beats} beats)'}\n"
                      f"skipped {d.skipped_bytes} B, samples_lost {d.samples_lost}, resyncs {d.resyncs}")
+        extra = getattr(source, "status_text", None)         # optional: a source may add its own status lines
+        if extra:
+            txt.set_text(txt.get_text() + "\n" + extra())
         ax.set_title(f"t = {t1:.1f} s, speed x{speed:g}" + ("  (end of source)" if source.done else ""))
 
     anim = FuncAnimation(fig, update, interval=50, cache_frame_data=False)
@@ -327,7 +338,7 @@ def main() -> None:
     src.add_argument("--golden", help="golden segment name, e.g. rec208_237600 (see export/golden_manifest.json)")
     src.add_argument("--serial", help="serial port of the board (needs pyserial)")
     src.add_argument("--check", help="headless bit-exact check: segment name or 'all'")
-    ap.add_argument("--baud", type=int, default=921600)
+    ap.add_argument("--baud", type=int, default=1500000)
     ap.add_argument("--speed", type=float, choices=(1, 4), default=1)
     ap.add_argument("--corrupt", type=float, default=0.0, help="fraction of frames corrupted (golden source)")
     args = ap.parse_args()

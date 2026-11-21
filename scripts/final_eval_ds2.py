@@ -184,7 +184,7 @@ def run(records, fl: Path, ff: Path, prefix: str, git_rev: str = "", provenance:
     from python.models.metrics import format_report, report
     from python.quant.int8 import int_forward_q, load_quant_model
     from python.quant.pipeline_int import filter_int, run_integer_beats
-    from scripts.pipeline_int_eval import quantise_rr_parts
+    from python.quant.pipeline_int import quantise_rr_parts
 
     lite_cfg = load_config(fl / "config.yaml")
     bcfg = load_config(REPO_ROOT / lite_cfg["beats_config"])
@@ -195,7 +195,7 @@ def run(records, fl: Path, ff: Path, prefix: str, git_rev: str = "", provenance:
     tol150 = tol_samples(150, pt.fs)
 
     def load_float(d: Path) -> ECGCNN:
-        ck = torch.load(d / "model.pt", weights_only=False)
+        ck = torch.load(d / "model.pt", map_location="cpu", weights_only=False)
         m = ECGCNN(ModelConfig.from_dict(ck["model"]))
         m.load_state_dict(ck["state_dict"])
         return m.eval()
