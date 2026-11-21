@@ -21,3 +21,4 @@ data/cache/
 rtl/cnn1d/modelsim.ini
 rtl/cnn1d/transcript
 rtl/cnn1d/sim/out/
+sim_ecg.exe
