@@ -16,6 +16,8 @@
 //
 // Co layer i_flags (chot khi i_layer_start). FC = conv voi Kw = 1 va out_len nho; cac co
 // chi bat them buoc o sau mang PE, duong tinh van la mot:
+// i_w_base / i_b_base (chot khi i_layer_start): trong so layer doc tu bank DOC tai w_base + c*K + k,
+// bias kenh c doc tu bias_mem[b_base + c]. Nho vay ca mo hinh nam san tren chip, nap mot lan.
 //   bit0 out_int32   : bo requant; ghi gia tri int32 tho cua hang 0 (little-endian, 4 byte/kenh)
 //                      vao bank GHI tai dia chi 4*kenh. Can out_len = 1.
 //   bit1 argmax      : (cung bit0) sau layer ghi chi so kenh lon nhat (u8) tai dia chi 4*cout.
@@ -38,6 +40,7 @@ module conv1d_layer_top #(
   parameter WGT_MEM_DEPTH = 16384,
   parameter FEEDER_DEPTH = 1024,
   parameter COUT_MAX = 64,
+  parameter BIAS_DEPTH = 256, // bias RAM: bias cua moi layer o dia chi rieng (i_b_base)
   parameter ADDR_W = 16,
   parameter CFG_W = 16,
   parameter ROW_W = (ARRAY_ROWS <= 1) ? 1 : $clog2(ARRAY_ROWS + 1),
@@ -74,6 +77,8 @@ module conv1d_layer_top #(
   input wire i_gap_en,
   input wire [CFG_W-1:0] i_pad_next, // Padding của layer sau (số vị trí 0 mỗi đầu)
   input wire [3:0] i_flags, // xem dau file: out_int32, argmax, row_combine, gap_in
+  input wire [ADDR_W-1:0] i_w_base, // dia chi goc trong so cua layer trong bank DOC weight
+  input wire [CFG_W-1:0] i_b_base,  // dia chi goc bias: bias kenh c o bias_mem[i_b_base + c]
 
   // Đọc kết quả GAP
   input wire [CFG_W-1:0] i_gap_rd_idx,  
@@ -98,6 +103,8 @@ module conv1d_layer_top #(
 	reg [ADDR_W-1:0] window_step_q;
 	reg pool_q, gap_q;
 	reg [3:0] flags_q;
+	reg [ADDR_W-1:0] w_base_q;
+	reg [CFG_W-1:0] b_base_q;
 	wire f_i32 = flags_q[0];
 	wire f_argmax = flags_q[1];
 	wire f_comb = flags_q[2];
@@ -112,7 +119,10 @@ module conv1d_layer_top #(
 	reg [2:0] lstate;
 
 	wire [CFG_W-1:0] len_post = pool_q ? (out_len_q >> 1) : out_len_q;
-	wire [ROW_W-1:0] rows_per_tile = pool_q ? ((ARRAY_ROWS >= 2) ? 2 : 1) : ARRAY_ROWS;
+	// Layer co pool: so hang CHAN lon nhat <= ARRAY_ROWS (moi cap pool nam tron trong mot o).
+	// Vd mang 7x7 -> 6 hang (truoc day co dinh 2 hang: conv0-2 chi dung 2/7 hang PE).
+	localparam [ROW_W-1:0] POOL_ROWS = (ARRAY_ROWS >= 2) ? (ARRAY_ROWS & ~1) : 1;
+	wire [ROW_W-1:0] rows_per_tile = pool_q ? POOL_ROWS : ARRAY_ROWS;
 
 	// =====================================================
 	// Layer controller
@@ -143,7 +153,7 @@ module conv1d_layer_top #(
 		.i_out_len(out_len_q), .i_out_channels(cout_q),
 		.i_k_len(k_len_q), .i_window_step(window_step_q),
 		.i_rows_per_tile(rows_per_tile),
-		.i_ifmap_base_addr({ADDR_W{1'b0}}), .i_wgt_base_addr({ADDR_W{1'b0}}),
+		.i_ifmap_base_addr({ADDR_W{1'b0}}), .i_wgt_base_addr(w_base_q),
 		.i_tile_done(tile_commit),
 		.o_tile_start(ctrl_tile_start),
 		.o_ifmap_base_addr(ctrl_x_base), .o_wgt_base_addr(ctrl_w_base),
@@ -165,7 +175,8 @@ module conv1d_layer_top #(
 	//   shift dia chi 0..COUT_MAX-1        : shift requant cua kenh (SO)
 	//   shift dia chi COUT_MAX..2*COUT_MAX-1: shift "truoc" cua kenh (SG, chi dung voi row_combine)
 	// =====================================================
-	reg [ACC_W-1:0] bias_mem [0:COUT_MAX-1];
+	localparam BW = (BIAS_DEPTH <= 1) ? 1 : $clog2(BIAS_DEPTH);
+	reg [ACC_W-1:0] bias_mem [0:BIAS_DEPTH-1];
 	reg [DATA_W-1:0] shift_mem [0:COUT_MAX-1];
 	reg [DATA_W-1:0] preshift_mem [0:COUT_MAX-1];
 	reg [ACC_W-1:0] bias_rd_data;
@@ -177,15 +188,15 @@ module conv1d_layer_top #(
 	wire xs_rd_en;
 	wire [CFG_W-1:0] xs_ch;
 	wire bias_rd_en_any = tile_bias_rd_en | xs_rd_en;
-	wire [CFG_W-1:0] bias_rd_addr_any = xs_rd_en ? xs_ch : (ctrl_col_base + tile_bias_rd_idx);
+	wire [CFG_W-1:0] bias_rd_addr_any = b_base_q + (xs_rd_en ? xs_ch : (ctrl_col_base + tile_bias_rd_idx));
 	wire shift_hi = i_shift_wr_addr[CH_W];
 	reg [DATA_W-1:0] preshift_rd, so_rd;
 
 	always @(posedge i_clk) begin
-		if(i_bias_wr_en)  bias_mem[i_bias_wr_addr[CH_W-1:0]] <= i_bias_wr_data;
+		if(i_bias_wr_en)  bias_mem[i_bias_wr_addr[BW-1:0]] <= i_bias_wr_data;
 		if(i_shift_wr_en && !shift_hi) shift_mem[i_shift_wr_addr[CH_W-1:0]] <= i_shift_wr_data;
 		if(i_shift_wr_en && shift_hi) preshift_mem[i_shift_wr_addr[CH_W-1:0]] <= i_shift_wr_data;
-		if(bias_rd_en_any) bias_rd_data <= bias_mem[bias_rd_addr_any[CH_W-1:0]];
+		if(bias_rd_en_any) bias_rd_data <= bias_mem[bias_rd_addr_any[BW-1:0]];
 		if(xs_rd_en) begin
 			preshift_rd <= preshift_mem[xs_ch[CH_W-1:0]];
 			so_rd <= shift_mem[xs_ch[CH_W-1:0]];
@@ -290,7 +301,8 @@ module conv1d_layer_top #(
 
 	// =====================================================
 	// Buoc sau PE cho FC (chi khi bat co; conv thuong di thang post -> writer)
-	//   row_combine: moi kenh 2 chu ky (doc bias/SG/SO -> tinh h), xong ca tile thi phat writer
+	//   row_combine: moi kenh 4 chu ky (doc bias/SG/SO + chot T -> ghep -> rsr(SG) + T2 -> rsr(SO) + kep),
+	//                xong ca tile thi phat writer. Tach 3 tang tinh de dat 50 MHz (goc cham 85C).
 	//   out_int32  : moi kenh 4 chu ky (ghi 4 byte), cap nhat argmax o byte 0
 	// =====================================================
 	function signed [39:0] rsr40; // (a + 2^(s-1)) >>> s, giong rshift_round; s <= 0 -> giu nguyen
@@ -307,8 +319,14 @@ module conv1d_layer_top #(
 		end
 	endfunction
 
-	localparam XS_IDLE = 2'd0, XS_RD = 2'd1, XS_COMB = 2'd2, XS_I32 = 2'd3;
-	reg [1:0] xs;
+	// row_combine moi kenh: XS_RD (doc bias/SG/SO, chot T0..T2 cua cot xs_c)
+	//   -> XS_C1 (comb_x = 128*P1 + P0) -> XS_C2 (rsr(comb_x, SG) + T2) -> XS_COMB (rsr(SO) + kep)
+	// Moi tang mot phep nang (mux cot / cong 40 bit / dich bien) de dat 50 MHz o goc cham 85C.
+	localparam XS_IDLE = 3'd0, XS_RD = 3'd1, XS_COMB = 3'd2, XS_I32 = 3'd3, XS_C1 = 3'd4, XS_C2 = 3'd5;
+	reg [2:0] xs;
+	reg signed [ACC_W-1:0] t0_q, t1_q, t2_q; // T0..T2 cua cot dang xu ly (chot o XS_RD)
+	reg signed [39:0] comb_x_q;              // 128*P1 + P0
+	reg signed [39:0] comb_y_q;              // rsr(128*P1 + P0, SG) + P2 + bias
 	reg [COL_W-1:0] xs_c;
 	reg [1:0] xs_b;
 	reg comb_fire;
@@ -325,10 +343,10 @@ module conv1d_layer_top #(
 	wire signed [ACC_W-1:0] t2 = raw_tile[(R2*ARRAY_COLS + xs_c)*ACC_W +: ACC_W];
 	wire signed [39:0] b40 = {{8{bias_rd_data[ACC_W-1]}}, bias_rd_data};
 	// Moi hang da duoc preload +bias, nen 128*T1 + T0 - 129*bias = 128*P1 + P0
-	wire signed [39:0] comb_x = ({{8{t1[ACC_W-1]}}, t1} <<< 7) + {{8{t0[ACC_W-1]}}, t0} - (b40 <<< 7) - b40;
+	wire signed [39:0] comb_x = ({{8{t1_q[ACC_W-1]}}, t1_q} <<< 7) + {{8{t0_q[ACC_W-1]}}, t0_q} - (b40 <<< 7) - b40;
 	// T2 = P2 + bias: dung la "+ P2 + bias" cua cong thuc
-	wire signed [39:0] comb_y = rsr40(comb_x, preshift_rd) + {{8{t2[ACC_W-1]}}, t2};
-	wire signed [39:0] comb_q = rsr40(comb_y, so_rd);
+	wire signed [39:0] comb_y = rsr40(comb_x_q, preshift_rd) + {{8{t2_q[ACC_W-1]}}, t2_q};
+	wire signed [39:0] comb_q = rsr40(comb_y_q, so_rd); // tang 2
 	wire [7:0] comb_h = comb_q[39] ? 8'd0 : (comb_q > 40'sd127) ? 8'd127 : comb_q[7:0];
 
 	wire tile_ready = post_valid && (lstate == L_RUN);
@@ -339,7 +357,8 @@ module conv1d_layer_top #(
 	always @(posedge i_clk or posedge i_reset) begin
 		if(i_reset) begin
 			xs <= XS_IDLE; xs_c <= 0; xs_b <= 0;
-			comb_fire <= 1'b0; xs_done <= 1'b0; comb_tile <= 0;
+			comb_fire <= 1'b0; xs_done <= 1'b0; comb_tile <= 0; comb_y_q <= 0; comb_x_q <= 0;
+			t0_q <= 0; t1_q <= 0; t2_q <= 0;
 			best_q <= 0; best_idx_q <= 0; am_first <= 1'b1;
 		end else begin
 			comb_fire <= 1'b0;
@@ -351,7 +370,18 @@ module conv1d_layer_top #(
 					comb_tile <= 0;
 					xs <= f_comb ? XS_RD : XS_I32;
 				end
-				XS_RD: xs <= XS_COMB; // bias_rd_data, preshift_rd, so_rd co o chu ky sau
+				XS_RD: begin          // bias_rd_data, preshift_rd, so_rd co o chu ky sau
+					t0_q <= t0; t1_q <= t1; t2_q <= t2;
+					xs <= XS_C1;
+				end
+				XS_C1: begin
+					comb_x_q <= comb_x;
+					xs <= XS_C2;
+				end
+				XS_C2: begin
+					comb_y_q <= comb_y;
+					xs <= XS_COMB;
+				end
 				XS_COMB: begin
 					comb_tile[xs_c*8 +: 8] <= comb_h; // hang 0 cua tile
 					if(xs_c == ctrl_cols - 1'b1) begin
@@ -466,6 +496,7 @@ module conv1d_layer_top #(
 			lstate <= L_IDLE;
 			out_len_q <= 0; cout_q <= 0; k_len_q <= 0; pad_q <= 0; window_step_q <= 0;
 			pool_q <= 0; gap_q <= 0; flags_q <= 0; gap_cout_q <= 0;
+			w_base_q <= 0; b_base_q <= 0;
 			pad_i <= 0; pk_r <= 0; pk_j <= 0;
 			done_q <= 0;
 		end else begin
@@ -476,6 +507,7 @@ module conv1d_layer_top #(
 					window_step_q <= i_window_step;
 					pool_q <= i_pool_en; gap_q <= i_gap_en;
 					flags_q <= i_flags;
+					w_base_q <= i_w_base; b_base_q <= i_b_base;
 					if(i_gap_en) gap_cout_q <= i_cout;
 					pad_q <= i_gap_en ? {CFG_W{1'b0}} : i_pad_next;
 					pad_i <= 0; pk_r <= 0; pk_j <= 0;

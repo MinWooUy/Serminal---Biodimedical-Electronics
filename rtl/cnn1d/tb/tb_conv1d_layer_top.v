@@ -35,7 +35,7 @@ module tb_conv1d_layer_top;
 		.i_bias_wr_en(bias_wr_en), .i_bias_wr_addr(bias_wr_addr), .i_bias_wr_data(bias_wr_data),
 		.i_shift_wr_en(shift_wr_en), .i_shift_wr_addr(shift_wr_addr), .i_shift_wr_data(shift_wr_data),
 		.i_layer_start(layer_start), .i_out_len(out_len), .i_cout(cout), .i_k_len(k_len),
-		.i_window_step(window_step), .i_pool_en(pool_en), .i_gap_en(gap_en), .i_pad_next(pad_next), .i_flags(4'd0),
+		.i_window_step(window_step), .i_pool_en(pool_en), .i_gap_en(gap_en), .i_pad_next(pad_next), .i_flags(4'd0), .i_w_base(16'd0), .i_b_base(16'd0),
 		.i_gap_rd_idx(gap_rd_idx), .o_gap_rd_data(gap_rd_data),
 		.i_dbg_rd_en(1'b0), .i_dbg_rd_addr(16'd0), .o_dbg_rd_data(), .o_dbg_rd_valid(),
 		.o_busy(busy), .o_done(done), .o_err(err)

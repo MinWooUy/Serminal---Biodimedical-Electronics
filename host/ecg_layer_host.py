@@ -7,6 +7,10 @@ Two modes:
   python ecg_layer_host.py COM4 [--record rec101_93600 --beat 0 --last-layer 5]
         Connect over UART, query the hardware configuration (INFO), run layers
         0..last-layer and compare every layer with the golden output.
+  python ecg_layer_host.py COM4 --beats 0:20 [--record rec118_237600] | --all [--check-layers]
+        Multi-beat mode: conv0..fc2 for many beats, only the final 17 B (logits + argmax)
+        read back unless --check-layers; summary = bit-exact count, confusion matrix vs the
+        true labels, time per beat; one CSV row per beat next to the log. --sim: no board.
   python ecg_layer_host.py --dry-run trace.hex [--last-layer N]
         No board / pyserial needed: write the packet sequence (commands + expected
         replies) to a hex file so a testbench can replay it at packet level.
@@ -30,6 +34,8 @@ Layout (matches conv1d_layer_top): input/output are channel-last X[t][c], padded
 weights are [Cout][K] with K = j*Cin + i (weights.h stores [Cout][Cin][Kw], so transpose).
 """
 import argparse
+import csv
+import json
 import math
 import re
 import struct
@@ -40,6 +46,7 @@ import zlib
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -76,6 +83,9 @@ WIDTH = 78
 # ---- CONFIG flags (12th CONFIG byte, see conv1d_layer_top.v) ----
 F_OUT_INT32, F_ARGMAX, F_ROW_COMBINE, F_GAP_IN = 0x1, 0x2, 0x4, 0x8
 FLAG_NAMES = {F_OUT_INT32: "out_int32", F_ARGMAX: "argmax", F_ROW_COMBINE: "row_combine", F_GAP_IN: "gap_in"}
+F_BASES = 0x10            # INFO feature (not a CONFIG flag): CONFIG takes w_base / b_base -> weights resident on chip
+BIAS_DEPTH = 256          # bias RAM entries of that RTL (conv1d_layer_top BIAS_DEPTH)
+BANK_A, BANK_B = (0, 1, 2, 4, 5), (3,)   # resident layout: conv3 (12 KB) alone in bank B, the rest in bank A
 CLASSES = "NSVF"
 
 # ---- CNN Lite model: (Cout, Cin, Kw, pool, gap, pad_next, out_len, flags) ----
@@ -146,11 +156,21 @@ def fc_forward(model, gap, rr):
     return h, logits, int(np.argmax(logits))                 # np.argmax: ties -> smallest index (= RTL)
 
 
-def load_beat(record: str, beat: int):
-    gold = ROOT / "export" / "golden"
+@lru_cache(maxsize=None)
+def _golden_file(record: str, name: str, dtype):
+    """Whole golden array of one segment, read once (multi-beat runs index it many times)."""
+    return np.fromfile(ROOT / "export" / "golden" / f"{record}_beat_{name}.bin", dtype=dtype)
 
+
+def golden_segments():
+    """[(record, n_beats)] from export/golden/manifest.json."""
+    m = json.loads((ROOT / "export" / "golden" / "manifest.json").read_text(encoding="utf-8"))
+    return [(s["name"], int(s["n_beats"])) for s in m["segments"]]
+
+
+def load_beat(record: str, beat: int):
     def arr(name, dtype, shape):
-        return np.fromfile(gold / f"{record}_beat_{name}.bin", dtype=dtype).reshape(shape)[beat]
+        return _golden_file(record, name, dtype).reshape(shape)[beat]
 
     z = arr("z_q", np.int8, (-1, 360)).astype(np.int64)
     x0 = np.concatenate([np.zeros(3, np.int64), z, np.zeros(3, np.int64)])    # padding for K=7
@@ -233,6 +253,18 @@ class Log:
             self.f.close()
 
 
+class MemLog(Log):
+    """Keeps the detailed per-layer report of the current beat in memory (multi-beat mode):
+    nothing on screen, dumped into the main log only when that beat fails."""
+
+    def __init__(self):
+        super().__init__(None, verbose=-1)
+        self.lines = []
+
+    def out(self, msg="", level=0):
+        self.lines.append(msg)
+
+
 # ---------------------------------------------------------------- devices
 class SerialDevice:
     """Real UART link, built on Accelerator.exchange from ecg_host.py."""
@@ -245,6 +277,11 @@ class SerialDevice:
     def exchange(self, cmd, payload, rsp, expect=None, cmp_len=None):
         # Data comparison is done by LayerRunner (to report the FIRST wrong position); here we only return the payload.
         return bytes(self.acc.exchange(cmd, payload, rsp).payload)
+
+    def resync(self):
+        """After a failed beat: let the FPGA finish / time out (RX timeout 100 ms), drop stale bytes."""
+        time.sleep(0.3)
+        self.acc.uart.reset_input_buffer()
 
     def close(self):
         self.acc.close()
@@ -276,8 +313,22 @@ class DryRunDevice:
         Path(path).write_text("\n".join(f"{b:02x}" for b in out) + "\n")
         return len(out)
 
+    def resync(self):
+        pass
+
     def close(self):
         pass
+
+
+class SimDevice(DryRunDevice):
+    """--sim: answers every request with the golden reply and keeps no packet list (multi-beat dry run)."""
+
+    def exchange(self, cmd, payload, rsp, expect=None, cmp_len=None):
+        if rsp == RSP_ACK:
+            return bytes((cmd, 0))
+        if cmd == CMD_RUN:
+            return bytes((0,)) + struct.pack("<I", 1)
+        return expect if expect is not None else b""
 
 
 class LinkError(RuntimeError):
@@ -332,7 +383,7 @@ def query_hw(dev, log, args):
     fb_rows, fb_cols = args.array if args.array else (3, 3)
     fallback = HwInfo.assumed(fb_rows, fb_cols, int(args.clk_mhz * 1e6), args.baud)
     if isinstance(dev, DryRunDevice):
-        fallback.features = F_OUT_INT32 | F_ARGMAX | F_ROW_COMBINE | F_GAP_IN    # trace for the current RTL
+        fallback.features = F_OUT_INT32 | F_ARGMAX | F_ROW_COMBINE | F_GAP_IN | F_BASES   # trace for the current RTL
         return fallback, "ASSUMED (dry run, no board)", ["values taken from --array / --clk-mhz"]
     try:
         hw = HwInfo.from_payload(dev.exchange(CMD_INFO, b"", RSP_RESULT))
@@ -441,6 +492,52 @@ class LayerRunner:
         self.wchunk = hw.max_payload - 2                       # payload = addr:u16 + data
         self.bchunk = min(32, (hw.max_payload - 2) // 4)       # INT32 bias values per packet
         self.rchunk = min(250, hw.max_payload)                 # READ_FMAP bytes per packet
+        self.fast = False            # multi-beat: skip reading/comparing intermediate layers, read only fc2
+        self.last_out = None         # (logits, pred) read back from the FPGA by the last fc2
+        self.last_results = []       # [(n, ok, cycles, plan)] of the last run()
+        self.resident = False        # weights + bias loaded once (CONFIG w_base / b_base), see enable_resident
+        self.layout = None           # {layer: {bank, w_base, b_base}}
+        self.w_read = None           # which logical bank (0 = A, 1 = B) the weight READ bank holds now
+        self.loaded = False          # resident model is on the chip (cleared after a failure -> reload)
+
+    # ---- resident weights ----
+    def enable_resident(self, model):
+        """Place every layer: bank A = conv0,1,2,fc1,fc2, bank B = conv3; bias packed in one RAM."""
+        lay, b = {}, 0
+        for bank, idxs in ((0, BANK_A), (1, BANK_B)):
+            w = 0
+            for n in idxs:
+                lay[n] = dict(bank=bank, w_base=w)
+                w += len(model[n]["weight"])
+            if w > self.hw.wgt_depth:
+                return f"bank {'AB'[bank]} needs {w:,} B > weight bank {self.hw.wgt_depth:,} B"
+        for n in range(N_LAYERS):
+            lay[n]["b_base"] = b
+            b += model[n]["cout"]
+        if b > BIAS_DEPTH:
+            return f"{b} biases > bias RAM {BIAS_DEPTH}"
+        self.layout, self.resident, self.loaded = lay, True, False
+        return ""
+
+    def load_resident(self, model):
+        """Write the whole model once. Works from any bank state: ends with READ = bank A, WRITE = bank B."""
+        d = self.dev
+        self.log.out("")
+        self.log.out(" Load model once (resident weights, CONFIG w_base / b_base)")
+        self.log.out(self.STEP_HEAD)
+        with self.phase("W", "Bank A: conv0,1,2 + fc1,2 -> swap",
+                        [f"{model[n]['name']} @ {self.layout[n]['w_base']}" for n in BANK_A]):
+            for n in BANK_A:
+                self.write_bytes(CMD_WRITE_W, model[n]["weight"], base=self.layout[n]["w_base"])
+            d.exchange(CMD_SWAP, bytes((2,)), RSP_ACK, note="w_swap: bank A readable")
+        with self.phase("W", "Bank B: conv3 (stays in the write bank)"):
+            for n in BANK_B:
+                self.write_bytes(CMD_WRITE_W, model[n]["weight"], base=self.layout[n]["w_base"])
+        with self.phase("W", "Bias of all layers -> bias RAM",
+                        [f"{model[n]['name']} @ {self.layout[n]['b_base']}" for n in range(N_LAYERS)]):
+            for n in range(N_LAYERS):
+                self.write_bias(model[n]["bias"], base=self.layout[n]["b_base"])
+        self.w_read, self.loaded = 0, True
 
     # ---- layout helpers ----
     def kv(self, label, value, level=0):
@@ -471,10 +568,10 @@ class LayerRunner:
             self.dev.exchange(cmd, struct.pack("<H", base + off) + u8(part), RSP_ACK,
                               note=f"addr {base + off}..{base + off + len(part) - 1}")
 
-    def write_bias(self, bias):
+    def write_bias(self, bias, base=0):
         for off in range(0, len(bias), self.bchunk):
             part = bias[off:off + self.bchunk]
-            self.dev.exchange(CMD_WRITE_BIAS, struct.pack("<H", off) + struct.pack(f"<{len(part)}i", *[int(v) for v in part]),
+            self.dev.exchange(CMD_WRITE_BIAS, struct.pack("<H", base + off) + struct.pack(f"<{len(part)}i", *[int(v) for v in part]),
                               RSP_ACK, note=f"channels {off}..{off + len(part) - 1}")
 
     # ---- comparison ----
@@ -602,6 +699,7 @@ class LayerRunner:
             return False
         G = np.array(struct.unpack(f"<{n_out}i", got[:4 * n_out]), dtype=np.int64)
         pred = got[4 * n_out]
+        self.last_out = ([int(v) for v in G], int(pred))
         ok_l = bool((G == fc["logits"]).all())
         ok_p = pred == fc["pred"]
         exp_txt = "" if ok_l else f"  exp {[int(v) for v in fc['logits']]}"
@@ -672,25 +770,40 @@ class LayerRunner:
                 self.skipped("A", "Input already in ifmap SRAM")
 
             # [B] weights
-            with self.phase("B", "Load weights -> weight SRAM, swap",
-                            [f"shape : [Cout={L['cout']}][K={L['k']}] with K = j*Cin + i = {len(L['weight']):,} B",
-                             stats(L["weight"]) + f" | filter 0, first 8: {[int(v) for v in L['weight'][:8]]}"]):
-                self.write_bytes(CMD_WRITE_W, L["weight"])
-                d.exchange(CMD_SWAP, bytes((2,)), RSP_ACK, note="w_swap (bit1)")
+            if self.resident:
+                lay = self.layout[n]
+                need = lay["bank"] != self.w_read
+                with self.phase("B", f"Weights resident: bank {'AB'[lay['bank']]} @ {lay['w_base']}"
+                                     f"{', swap' if need else ''}",
+                                [f"loaded once at start; this layer reads w_base={lay['w_base']}, b_base={lay['b_base']}"]):
+                    if need:
+                        d.exchange(CMD_SWAP, bytes((2,)), RSP_ACK, note=f"w_swap -> bank {'AB'[lay['bank']]}")
+                        self.w_read = lay["bank"]
+            else:
+                with self.phase("B", "Load weights -> weight SRAM, swap",
+                                [f"shape : [Cout={L['cout']}][K={L['k']}] with K = j*Cin + i = {len(L['weight']):,} B",
+                                 stats(L["weight"]) + f" | filter 0, first 8: {[int(v) for v in L['weight'][:8]]}"]):
+                    self.write_bytes(CMD_WRITE_W, L["weight"])
+                    d.exchange(CMD_SWAP, bytes((2,)), RSP_ACK, note="w_swap (bit1)")
 
-            # [C] bias + shift
+            # [C] bias + shift (resident: bias already on chip; shifts are re-written, the shift RAM is per channel)
             sh = [int(v) for v in L["shift"]]
-            with self.phase("C", "Load bias (INT32) + shift per channel",
+            int32_out = bool(L["flags"] & F_OUT_INT32)
+            with self.phase("C", "Load shift per channel" if self.resident else "Load bias (INT32) + shift per channel",
                             [f"bias : {stats(L['bias'])}",
                              f"shift: {len(sh)} channels, min={min(sh)}, max={max(sh)} -> {sh if len(sh) <= 16 else sh[:16] + ['...']}"]):
-                self.write_bias(L["bias"])
-                self.write_bytes(CMD_WRITE_SHIFT, L["shift"])
+                if not self.resident:
+                    self.write_bias(L["bias"])
+                if not (self.resident and int32_out):            # INT32 output does not use the shift
+                    self.write_bytes(CMD_WRITE_SHIFT, L["shift"])
                 if L["preshift"] is not None:                    # SG of row_combine, at shift address COUT_MAX + c
                     self.write_bytes(CMD_WRITE_SHIFT, L["preshift"], base=hw.cout_max)
 
-            # [D] config (12th byte = flags, only sent when non-zero: old bitstreams accept 11 bytes)
+            # [D] config (12th byte = flags, 13..16 = w_base, b_base; shorter forms for old bitstreams)
             cfg = struct.pack("<HHHHBBB", L["out_len"], L["cout"], L["k"], L["step"], L["pool"], L["gap"], L["pad_next"])
-            if L["flags"]:
+            if self.resident:
+                cfg += struct.pack("<BHH", L["flags"], self.layout[n]["w_base"], self.layout[n]["b_base"])
+            elif L["flags"]:
                 cfg += bytes((L["flags"],))
             with self.phase("D", "CONFIG layer",
                             [f"out_len={L['out_len']} cout={L['cout']} k_len={L['k']} window_step={L['step']} (= Cin) "
@@ -705,7 +818,10 @@ class LayerRunner:
 
             # [F] read
             ok = status == 0
-            if n != 3:
+            skip_read = self.fast and n != FC2
+            if skip_read:
+                self.skipped("F", "Read output (skipped: --fast)")
+            elif n != 3:
                 exp = (u8(expect[n]) if n < 3 else u8(self.fc["h"]) if n == FC1 else
                        struct.pack(f"<{L['cout']}i", *[int(v) for v in self.fc["logits"]]) + bytes((self.fc["pred"],)))
                 got_all = bytearray()
@@ -734,7 +850,9 @@ class LayerRunner:
                               f"({plan['macs']:,} MACs / {cycles * hw.pes / 1e6:.1f}M slots)")
         if status != 0:
             self.sub("writer overrun: the fmap writer overflowed (next tile started before the previous one was written).")
-        if n < 3 or n == FC1:
+        if skip_read:
+            self.kv("Verify", "not read (multi-beat fast mode: checked through the final logits)")
+        elif n < 3 or n == FC1:
             ok = self.compare_map(f"layer{n}_fmap", bytes(got_all), exp, C_out, L["pad_next"],
                                   plan["rows"] // (2 if L["pool"] else 1) if n < 3 else 1) and ok
         elif n == FC2:
@@ -757,7 +875,17 @@ class LayerRunner:
         self.log.out(f"   --> feeder --> {pe} --> post (+bias,>>shift,ReLU,clamp) --> [maxpool 2]")
         self.log.out("   --> fmap_writer --> ifmap SRAM (write bank, + pad) --swap--> next layer")
         results = []
+        self.last_results = results
+        self.last_out = None
         t_all = time.monotonic()
+        if self.resident and not self.loaded:
+            try:
+                self.load_resident(model)
+            except LinkError as e:
+                self.log.out(f"   [LINK ERROR] while loading the model: {e.name} {e.note}")
+                for line in decode_link_error(e, hw):
+                    self.log.out(f"      {line}")
+                return self.summary(model, results, time.monotonic() - t_all, first_layer, last_layer)
         for n in range(first_layer, last_layer + 1):
             first = n == first_layer
             x = (x0 if n == 0 else fc["h"] if n == FC2 else expect[n - 1]) if first else None
@@ -830,6 +958,209 @@ def hw_report(log, hw, source, notes=()):
     log.out(f"   {'Limits':<13}Cout <= {hw.cout_max}, K <= {hw.feeder_depth}, payload <= {hw.max_payload} B/packet")
 
 
+# ---------------------------------------------------------------- multi-beat mode
+def parse_beats(text: str, n: int):
+    """'all' | 'A:B' (end exclusive, either side optional) | 'A' -> list of beat indices < n."""
+    if text == "all":
+        return list(range(n))
+    m = re.fullmatch(r"\s*(\d*)\s*:\s*(\d*)\s*", text)
+    if m:
+        a = int(m.group(1)) if m.group(1) else 0
+        b = int(m.group(2)) if m.group(2) else n
+        return list(range(a, min(b, n)))
+    return [int(text)] if int(text) < n else []
+
+
+def macro_f1(conf):
+    """Macro-F1 over the classes that occur (as true label or as prediction), like sklearn's default."""
+    f1, used = [], []
+    for c in range(len(conf)):
+        tp = conf[c][c]
+        p = sum(conf[r][c] for r in range(len(conf)))
+        t = sum(conf[c])
+        prec = tp / p if p else 0.0
+        rec = tp / t if t else 0.0
+        f1.append(2 * prec * rec / (prec + rec) if prec + rec else 0.0)
+        if p or t:
+            used.append(f1[-1])
+    return (sum(used) / len(used) if used else 0.0), f1
+
+
+def run_multi(dev, log, hw, model, targets, check_layers, csv_path, resident=True):
+    """Run conv0..fc2 for every (record, beat) and summarize. Returns True when every beat is bit-exact."""
+    mem = MemLog()
+    runner = LayerRunner(dev, mem, hw)
+    runner.fast = not check_layers
+    why = runner.enable_resident(model) if resident and hw.features & F_BASES else "not supported / disabled"
+    log.out(f"   {'Weights':<14}{'resident: loaded once, then only input + commands per beat' if runner.resident else f're-sent every beat ({why})'}")
+    conf = [[0] * 4 for _ in range(4)]                       # rows: true label, cols: FPGA argmax
+    per_rec = {}
+    rows, failures = [], []
+    n_exact = n_label_vs_gold = 0
+    tot_cycles = 0
+    t_start = time.monotonic()
+    log.out("")
+    log.out(f" {'#':>9}  {'record':<14}{'beat':>5}  true  gold  FPGA  {'result':<8}{'cycles':>11}{'wall':>8}")
+    log.out(" " + "-" * (WIDTH - 2))
+    done = 0
+    try:
+        for i, (rec, beat) in enumerate(targets):
+            x0, expect, gap, fc = load_beat(rec, beat)
+            mem.lines.clear()
+            t0 = time.monotonic()
+            err = ""
+            try:
+                ok = runner.run(model, x0, expect, gap, fc, FC2, 0)
+            except Exception as e:                       # noqa: BLE001 - serial/protocol error: report, continue
+                ok, err = False, f"{type(e).__name__}: {e}"
+            wall = time.monotonic() - t0
+            cycles = sum(c for _, _, c, _ in runner.last_results)
+            got = runner.last_out
+            pred = got[1] if got else -1
+            exact = bool(ok and got and got[0] == [int(v) for v in fc["logits"]] and pred == fc["pred"])
+            done += 1
+            n_exact += exact
+            tot_cycles += cycles
+            if 0 <= pred < 4:
+                conf[fc["label"]][pred] += 1
+                n_label_vs_gold += pred == fc["pred"]
+            r = per_rec.setdefault(rec, [0, 0])
+            r[0] += 1
+            r[1] += exact
+            res = "PASS" if exact else ("LINK ERR" if not got else "FAIL")
+            log.out(f" {i + 1:>4}/{len(targets):<4}  {rec:<14}{beat:>5}   {CLASSES[fc['label']]}     {CLASSES[fc['pred']]}     "
+                    f"{CLASSES[pred] if 0 <= pred < 4 else '-'}   {res:<8}{cycles:>11,}{wall:>7.2f}s")
+            rows.append(dict(record=rec, beat=beat, label=CLASSES[fc["label"]], golden_pred=CLASSES[fc["pred"]],
+                             fpga_pred=CLASSES[pred] if 0 <= pred < 4 else "", bit_exact=int(exact),
+                             logits=" ".join(map(str, got[0])) if got else "", golden_logits=" ".join(map(str, fc["logits"])),
+                             cycles=cycles, wall_s=round(wall, 3), error=err))
+            if not exact:
+                failures.append((rec, beat))
+                log.f and log.f.write("\n".join(["", f"   ---- detail of {rec} beat {beat} ----"] + mem.lines[-80:]
+                                                + ([f"   exception: {err}"] if err else [])) + "\n")
+                dev.resync()
+                runner.loaded = False                    # bank state unknown after an error: reload the model
+    except KeyboardInterrupt:
+        log.out("")
+        log.out(f" Interrupted by the user after {done} beat(s): the summary covers those only.")
+    wall_all = time.monotonic() - t_start
+
+    if csv_path and rows:
+        with open(csv_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+
+    log.out("")
+    log.out("=" * WIDTH)
+    log.out(f" MULTI-BEAT SUMMARY{f'PE array {hw.rows}x{hw.cols} @ {hw.clk_hz / 1e6:.2f} MHz':>{WIDTH - 19}}")
+    log.out("=" * WIDTH)
+    if not done:
+        log.out(" No beat was run.")
+        return False
+    log.out(f"   {'Hardware':<14}{n_exact}/{done} beats bit-exact with the golden (logits + argmax)"
+            f"{'' if n_exact == done else f'  -> {done - n_exact} FAILED'}")
+    n_lab = sum(map(sum, conf))                               # beats that returned a label (no link error)
+    log.out(f"   {'Argmax':<14}{n_label_vs_gold}/{n_lab} FPGA labels = golden model labels"
+            f"{f' ({done - n_lab} beat(s) without a label: link error)' if n_lab < done else ''}")
+    acc = sum(conf[c][c] for c in range(4))
+    mf1, f1s = macro_f1(conf)
+    if n_lab:
+        log.out(f"   {'Model':<14}{acc}/{n_lab} = {100.0 * acc / n_lab:.1f}% labels correct vs the TRUE label, "
+                f"macro-F1 {mf1:.3f}")
+    log.out(f"   {'':<14}(model property, not a hardware result: the golden segments are DS1 records the final")
+    log.out(f"   {'':<14} model was trained on, so this is NOT a generalization score; see DS2: macro-F1 0.603)")
+    log.out("")
+    log.out(f"   Confusion (rows true, columns FPGA):   {'   '.join(CLASSES)}    recall   F1")
+    for c in range(4):
+        t = sum(conf[c])
+        present = t or any(conf[r][c] for r in range(4))
+        log.out(f"   {'':<24}{CLASSES[c]}    " + " ".join(f"{v:>4}" for v in conf[c])
+                + f"   {f'{100.0 * conf[c][c] / t:5.1f}%' if t else '    - '}  {f'{f1s[c]:.3f}' if present else '  -'}")
+    log.out("")
+    log.out("   Per record:  " + "  ".join(f"{r} {p}/{n}" for r, (n, p) in per_rec.items()))
+    log.out(f"   {'Compute':<14}{ms(tot_cycles / done, hw.clk_hz):.2f} ms per beat on the FPGA (average)")
+    log.out(f"   {'Wall':<14}{wall_all / done:.2f} s per beat incl. UART ({wall_all / 60:.1f} min total)"
+            f"{', intermediate layers not read back' if runner.fast else ''}")
+    log.out(f"   {'Host link':<14}{runner.dev.packets:,} packets | {runner.dev.tx_bytes:,} B sent | "
+            f"{runner.dev.rx_bytes:,} B received")
+    if failures:
+        shown = ", ".join(f"{r}#{b}" for r, b in failures[:12]) + (" ..." if len(failures) > 12 else "")
+        log.out(f"   {'Failed beats':<14}{shown}")
+        log.out(f"   {'':<14}details in the log file; rerun one with --record R --beat N (all layers checked)")
+    if csv_path and rows:
+        log.out(f"   {'CSV':<14}{csv_path}")
+    return n_exact == done == len(targets)
+
+
+def main_multi(args, model):
+    segs = dict(golden_segments())
+    if args.all:
+        targets = [(r, b) for r, n in segs.items() for b in range(n)]
+        tag = "all"
+    else:
+        if args.record not in segs:
+            print(f"unknown record {args.record}; golden segments: {', '.join(segs)}", file=sys.stderr)
+            return 2
+        targets = [(args.record, b) for b in parse_beats(args.beats, segs[args.record])]
+        tag = f"{args.record}_beats{args.beats.replace(':', '-')}"
+    if not targets:
+        print("no beat selected", file=sys.stderr)
+        return 2
+    # The host-side FC reference must reproduce the golden for every selected beat before judging the FPGA.
+    for rec, b in targets:
+        _, _, gap, fc = load_beat(rec, b)
+        h_ref, lg_ref, pred_ref = fc_forward(model, gap, fc["rr"])
+        if not ((h_ref == fc["h"]).all() and (lg_ref == fc["logits"]).all() and pred_ref == fc["pred"]):
+            print(f"fc_forward() does not reproduce the golden at {rec} beat {b}", file=sys.stderr)
+            return 2
+    if not args.sim and not args.port:
+        print("a COM port or --sim is required", file=sys.stderr)
+        return 2
+
+    log_path = csv_path = None
+    if not args.no_log:
+        out_dir = Path(args.log_dir) if args.log_dir else ROOT / "results" / "hardware_logs"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        base = out_dir / f"multi_{tag}{'_sim' if args.sim else ''}_{stamp}"
+        log_path, csv_path = base.with_suffix(".log"), base.with_suffix(".csv")
+    log = Log(log_path, verbose=args.verbose)
+    banner(log, "ECG CNN1D ACCELERATOR - MULTI-BEAT TEST (conv0 .. fc2 + argmax)")
+    log.out(" Run")
+    log.out(f"   {'Date':<13}{datetime.now():%Y-%m-%d %H:%M:%S}")
+    log.out(f"   {'Port':<13}{'simulated FPGA (--sim)' if args.sim else f'{args.port} @ {args.baud} baud'}")
+    log.out(f"   {'Beats':<13}{len(targets)} ({'all golden segments' if args.all else f'{args.record} [{args.beats}]'})")
+    log.out(f"   {'Check':<13}{'every layer read back' if args.check_layers else 'final logits + argmax only (intermediate layers not read)'}")
+    if log_path:
+        log.out(f"   {'Log file':<13}{log_path}")
+    try:
+        dev = SimDevice() if args.sim else SerialDevice(args.port, args.baud, args.timeout)
+    except Exception as e:                           # noqa: BLE001
+        log.out(f" Could not open {args.port}: {e}")
+        log.close()
+        return 2
+    try:
+        hw, source, notes = query_hw(dev, log, args)
+        log.out("")
+        hw_report(log, hw, source, notes)
+        missing = [L["name"] for L in model if L["flags"] & ~hw.features]
+        if missing:
+            log.out("")
+            log.out(f" [ABORT] the bitstream does not support the CONFIG flags of {', '.join(missing)} "
+                    f"(INFO features {flag_text(hw.features)}): rebuild with the FC RTL.")
+            ok = False
+        else:
+            ok = run_multi(dev, log, hw, model, targets, args.check_layers, csv_path)
+    finally:
+        dev.close()
+    log.out("")
+    log.out(f" RESULT: {'PASS' if ok else 'FAIL'}")
+    log.out("=" * WIDTH)
+    log.close()
+    return 0 if ok else 1
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -855,6 +1186,12 @@ def main():
     ap.add_argument("--log-dir", help="log directory (default: results/hardware_logs)")
     ap.add_argument("--no-log", action="store_true", help="do not write a log file")
     ap.add_argument("--dry-run", metavar="TRACE", help="write the packet sequence to a hex file for a testbench (no board needed)")
+    ap.add_argument("--beats", metavar="A:B",
+                    help="multi-beat mode on --record: 'all', 'A:B' (end exclusive) or one index; runs conv0..fc2 per beat")
+    ap.add_argument("--all", action="store_true", help="multi-beat mode on every beat of every golden segment (1306 beats)")
+    ap.add_argument("--check-layers", action="store_true",
+                    help="multi-beat mode: also read back and compare every intermediate layer (slower)")
+    ap.add_argument("--sim", action="store_true", help="multi-beat mode without a board: a simulated FPGA echoes the golden")
     args = ap.parse_args()
     if args.root:
         global ROOT
@@ -863,6 +1200,8 @@ def main():
         ap.error("--first-layer must be <= --last-layer")
 
     model = load_model()
+    if args.beats or args.all:
+        return main_multi(args, model)
     x0, expect, gap, fc = load_beat(args.record, args.beat)
     # The host-side FC reference must reproduce the golden before it is used to judge the FPGA.
     h_ref, lg_ref, pred_ref = fc_forward(model, gap, fc["rr"])

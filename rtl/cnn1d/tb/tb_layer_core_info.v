@@ -92,7 +92,7 @@ module tb_layer_core_info;
 		check("A version", cap_pay[7:0], 2);
 		check("A rows", cap_pay[15:8], 7);
 		check("A cols", cap_pay[23:16], 7);
-		check("A features", cap_pay[31:24], 8'h0F);
+		check("A features", cap_pay[31:24], 8'h3F);
 		check("A clk_hz", cap_pay[63:32], 50000000);
 		check("A baud", cap_pay[95:64], 115200);
 		check("A ifmap depth", cap_pay[111:96], 4096);
