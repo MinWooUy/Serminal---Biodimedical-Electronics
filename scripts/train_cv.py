@@ -127,7 +127,7 @@ def main() -> None:
                 # RESUME after an interruption: this (seed, fold) run had finished; its OOF predictions are
                 # recomputed from the saved weights (training is deterministic: equal to a re-train)
                 def _load(p):
-                    c = torch.load(p, weights_only=False)
+                    c = torch.load(p, map_location="cpu", weights_only=False)
                     m_ = ECGCNN(mcfg)
                     m_.load_state_dict(c["state_dict"])
                     return m_, c

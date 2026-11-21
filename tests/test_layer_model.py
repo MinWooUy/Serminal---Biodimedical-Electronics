@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from host.ecg_layer_host import (  # noqa: E402
+from host.ecg_layer_host_pc import (  # noqa: E402
     REPO_ROOT, FC1, FC2, _fmap_expected_bytes, hardware_fit_errors,
     layer_output_shape, layer_plan, load_beat, load_model, validate_all_golden,
 )
@@ -74,7 +74,7 @@ def test_7x7_de10_lite_info_fits_all_six_layers():
 def test_layer_runner_emits_huy_command_order_without_board():
     from types import SimpleNamespace
 
-    from host.ecg_layer_host import ECGModelRunner, _fmap_expected_bytes
+    from host.ecg_layer_host_pc import ECGModelRunner, _fmap_expected_bytes
     from python.link.layer_host import RunResult
 
     class FakeHost:

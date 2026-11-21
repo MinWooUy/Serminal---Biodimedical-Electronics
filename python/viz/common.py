@@ -87,7 +87,7 @@ def oof_quant_model(rid: int, seed: int = 42, run: Path = DEFAULT_CV_RUN, n_cali
     cv = load_cv_data(cfg["beats_config"])
     d, n_main, extra_idx, _ = attach_extra_train(cfg, cv.data)
     tcfg = TrainConfig.from_dict(cfg["train"])
-    ck = torch.load(ckpt, weights_only=False)
+    ck = torch.load(ckpt, map_location="cpu", weights_only=False)
     m = ECGCNN(ModelConfig.from_dict(ck["model"]))
     m.load_state_dict(ck["state_dict"])
     idx = fold_indices(d["rec_id"][:n_main], d["r_pos"][:n_main], cv.rec_len, cv.folds, k, cv.delay, cv.half, tcfg,
@@ -149,7 +149,7 @@ def softmax_from_int_logits(logits: np.ndarray, qm: QuantModel) -> np.ndarray:
 
 
 def quantise_rr(parts: np.ndarray, rr_exp: np.ndarray, fs: int) -> np.ndarray:
-    from scripts.pipeline_int_eval import quantise_rr_parts
+    from python.quant.pipeline_int import quantise_rr_parts
     return quantise_rr_parts(parts, rr_exp, fs)
 
 

@@ -114,3 +114,13 @@ def run_integer_beats(y_int: np.ndarray, r_coarse: np.ndarray, delay: int, half_
                      dtype=np.int64)
     return {"order": order, "r_int": r_int, "beat_index": bi, "windows": windows, "z_q": zscore_int(windows),
             "rr_parts": parts}
+
+
+def quantise_rr_parts(parts: np.ndarray, rr_exp: np.ndarray, fs: int = 360) -> np.ndarray:
+    """Integer RR parts (rr_prev, rr_next, sum of up to 8 past RR, count; samples) -> int8-range rr_q with the
+    model's power-of-2 exponents (see module docstring, step 5)."""
+    rp, rn, s8, n8 = (parts[:, k].astype(np.int64) for k in range(4))
+    e = [int(v) for v in rr_exp]
+    q = np.stack([round_div(rp << e[0], fs), round_div(rn << e[1], fs), round_div(s8 << e[2], fs * n8),
+                  round_div((rp * n8) << e[3], s8)], axis=1)
+    return np.clip(q, -Q, Q)

@@ -95,7 +95,7 @@ class IntegerPipelineStream:
         c = beat["r"] + self.delay
         w = np.array([self._y(i) for i in range(c - self.half, c + self.half)], dtype=np.int64)
         z_q = zscore_int(w[None, :])
-        from scripts.pipeline_int_eval import quantise_rr_parts
+        from python.quant.pipeline_int import quantise_rr_parts
         parts = np.array([beat["parts"]], dtype=np.int64)
         logits = int_forward_q(self.qm, z_q, quantise_rr_parts(parts, self.qm.rr_exp, self.pt.fs))[0]
         self.max_latency = max(self.max_latency, self.n - beat["r"])
