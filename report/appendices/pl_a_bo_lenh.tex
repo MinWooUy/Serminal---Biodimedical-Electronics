@@ -1,0 +1,10 @@
+\chapter{Bộ lệnh UART đầy đủ và mã lỗi}\label{pl:bolenh}
+
+\begin{goiy}
+  \begin{itemize}
+    \item Lấy từ phần chú thích đầu \texttt{rtl/cnn1d/top/layer\_cmd\_controller.v}: mã lệnh, tham số (little-endian), phản hồi.
+    \item Bảng lệnh: \texttt{WRITE\_X} 0x08, \texttt{WRITE\_W} 0x09, \texttt{WRITE\_BIAS} 0x0A, \texttt{WRITE\_SHIFT} 0x0B, \texttt{SWAP} 0x0C, \texttt{CONFIG} 0x0D (11/12/16 byte), \texttt{RUN} 0x0E, \texttt{READ\_GAP} 0x0F, \texttt{READ\_FMAP} 0x10, \texttt{INFO} 0x15; các mã 0x11--0x14 dành riêng (NACK).
+    \item Phản hồi: 0x80 ACK, 0x81 NACK (mã 1 khung/CRC, 2 tham số sai, 3 sai trạng thái), 0x82 RESULT.
+    \item Định dạng \texttt{INFO} (22 byte): version, \texttt{ARRAY\_ROWS/COLS}, features, \texttt{CLK\_FREQ}, \texttt{BAUD\_RATE}, các độ sâu bộ nhớ, \texttt{COUT\_MAX}, \texttt{MAX\_PAYLOAD}.
+  \end{itemize}
+\end{goiy}

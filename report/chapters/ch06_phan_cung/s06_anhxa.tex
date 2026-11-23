@@ -1,0 +1,10 @@
+% Muc 6.6  --  phu trach: xem report/PHANCONG.md
+\section{Ánh xạ CNN lên accelerator}\label{sec:anhxa}
+\begin{goiy}
+  \begin{itemize}
+    \item Bảng sáu layer và cờ CONFIG (Bảng~\ref{tab:layers}): conv0 (pool, \texttt{pad\_next}=2), conv1--conv2 (pool), conv3 (GAP), FC1 (\texttt{row\_combine}+\texttt{gap\_in}), FC2 (\texttt{out\_int32}+\texttt{argmax}).
+    \item FC chạy như Conv1D với $K_w=1$ trên cùng mảng PE; RR đưa vào hàng 2 của FC1.
+    \item Hạn chế của ánh xạ: layer có pool dùng $\texttt{ARRAY\_ROWS}\,\&\,{\sim}1$ hàng.
+  \end{itemize}
+\end{goiy}
+\bangcho{layer · Cout · Cin · Kw · pool · gap · flags · out\_len}{Cấu hình CONFIG của sáu layer.}{tab:layers}

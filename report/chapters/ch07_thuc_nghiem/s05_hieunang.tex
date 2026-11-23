@@ -1,0 +1,10 @@
+% Muc 7.5  --  phu trach: xem report/PHANCONG.md
+\section{Hiệu năng}\label{sec:hieunang}
+\begin{goiy}
+  \begin{itemize}
+    \item Tính toán: 2\,058\,467 chu kỳ = $41.17$~ms/nhịp @50~MHz; thời gian tổng 1.37~s (921\,600 baud) và $0.85$~s (1\,500\,000 baud) mỗi nhịp.
+    \item Hiệu suất PE $\approx1.6\,\%$, nguyên nhân (loader 3 chu kỳ/byte, nạp rồi mới tính, pool dùng 2/7 hàng) và kết quả mô phỏng sau khi sửa ($\approx0.36$ M chu kỳ cho conv0--3; chưa đo lại trên board).
+    \item So với chu kỳ tim ($\approx0.8$~s): tính toán đủ nhanh; end-to-end hiện bị giới hạn bởi UART.
+  \end{itemize}
+\end{goiy}
+\hinhcho{0.25}{biểu đồ chu kỳ theo layer (đo) và ước lượng sau các bước tối ưu}{Phân bố chu kỳ theo layer và cải thiện ước tính.}{fig:chukyl}

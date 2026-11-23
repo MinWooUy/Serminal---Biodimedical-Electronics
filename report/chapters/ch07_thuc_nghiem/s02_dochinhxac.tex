@@ -1,0 +1,11 @@
+% Muc 7.2  --  phu trach: xem report/PHANCONG.md
+\section{Độ chính xác của mô hình}\label{sec:dochinhxac}
+\begin{goiy}
+  \begin{itemize}
+    \item Phát hiện R: Se $99.753\,\%$, $+P$ $99.682\,\%$ trên DS2 (TP 49\,589, FN 123, FP 158).
+    \item Phân loại trên DS2 (chạy một lần): macro-F1 của Full float, Lite float, Lite int8 (annotation) và Lite int8 end-to-end (Bảng~\ref{tab:ds2}); SVEB, VEB (Se, $+P$).
+    \item Bàn luận: vì sao Lite vượt Full trên DS2 (SVEB Se $\approx71\,\%$ so với $\approx32\,\%$); lượng tử hoá gần như không làm giảm; lớp S yếu (SVEB $+P\approx41\,\%$).
+    \item Cross-validation trên DS1 (OOF macro-F1 $\approx0.509$) và giới hạn của nó.
+  \end{itemize}
+\end{goiy}
+\bangcho{macro-F1, SVEB và VEB (Se, +P) của Full float · Lite float · Lite int8 · Lite int8 e2e (docs/final\_ds2\_results.md)}{Kết quả phân loại trên DS2.}{tab:ds2}

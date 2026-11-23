@@ -1,0 +1,8 @@
+% Muc 6.2  --  phu trach: xem report/PHANCONG.md
+\section{Bộ nhớ tensor ping-pong}\label{sec:mem}
+\begin{goiy}
+  \begin{itemize}
+    \item \texttt{tensor\_pingpong\_buffer}: host/layer ghi bank này trong khi bank kia được đọc; \texttt{SWAP} đổi vai trò. Ánh xạ vào M9K.
+    \item Bố cục dữ liệu channel-last (\texttt{addr = base + pos·Cin + k}); weight \texttt{[Cout][K]}; RAM bias, shift.
+  \end{itemize}
+\end{goiy}

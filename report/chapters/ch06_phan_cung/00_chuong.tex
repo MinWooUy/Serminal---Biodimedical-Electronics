@@ -1,0 +1,17 @@
+% Chuong 6  --  phu trach: Huy (de xuat; xem report/PHANCONG.md)
+% Moi muc la mot file s*.tex trong thu muc nay, de nhieu nguoi sua song song khong dung nhau.
+\chapter{Thiết kế phần cứng bộ tăng tốc}\label{ch:phancung}
+
+\begin{goiy}[Mục đích chương]
+Phần trọng tâm kỹ thuật: sơ đồ khối đầy đủ, từng stage của pipeline dữ liệu, điều khiển (FSM), mảng PE, hậu xử lý và cách ánh xạ CNN lên phần cứng.
+Mô tả \emph{đủ chi tiết để cài đặt lại}. Nguồn: \texttt{rtl/cnn1d/} (\texttt{top/, conv1d/, feeder/, core/, pe/, psm/, post/, mem/, arith/}). \emph{Ước lượng 14--20 trang.}
+\end{goiy}
+
+\input{chapters/ch06_phan_cung/s01_tongquanhw}
+\input{chapters/ch06_phan_cung/s02_mem}
+\input{chapters/ch06_phan_cung/s03_stage}
+\input{chapters/ch06_phan_cung/s04_pe}
+\input{chapters/ch06_phan_cung/s05_ctrl}
+\input{chapters/ch06_phan_cung/s06_anhxa}
+\input{chapters/ch06_phan_cung/s07_mophong}
+\input{chapters/ch06_phan_cung/s08_bandwidth}

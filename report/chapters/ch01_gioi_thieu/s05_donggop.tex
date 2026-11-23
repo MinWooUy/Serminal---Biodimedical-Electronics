@@ -1,0 +1,10 @@
+% Muc 1.5  --  phu trach: xem report/PHANCONG.md
+\section{Đóng góp của đề tài}\label{sec:dongGop}
+\begin{goiy}
+  \begin{enumerate}
+    \item Pipeline ECG số nguyên end-to-end (Pan-Tompkins, lọc, z-score, CNN Lite int8) có golden vectors làm chuẩn so sánh.
+    \item Bộ tăng tốc Conv1D mảng PE $7\times7$ chạy trọn 6 layer (conv0--conv3, FC1, FC2 + argmax) trên MAX~10; FC dùng chung mảng PE nhờ cờ CONFIG.
+    \item Giao thức lệnh Host--FPGA (CONFIG/RUN, stop-and-wait, CRC-16) và quy trình kiểm chứng bit-exact trên board.
+    \item Ghi rõ phần tự thiết kế và phần tái sử dụng (nếu có) để mô tả đúng đóng góp.
+  \end{enumerate}
+\end{goiy}

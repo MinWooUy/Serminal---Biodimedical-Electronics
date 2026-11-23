@@ -1,0 +1,9 @@
+% Muc 3.3  --  phu trach: xem report/PHANCONG.md
+\section{Phân chia phần cứng/phần mềm}\label{sec:hwsw}
+\begin{goiy}
+  \begin{itemize}
+    \item PC host (Python): tiền xử lý số nguyên, cắt cửa sổ 360 mẫu, z-score, RR; nạp trọng số; gửi lệnh; nhận nhãn.
+    \item FPGA: 6 layer CNN (conv0--conv3, FC1, FC2) + argmax; dữ liệu trung gian ở lại trên chip.
+    \item Lý do chia như vậy; hướng chuyển tiền xử lý vào phần cứng (Chương~\ref{ch:ketluan}).
+  \end{itemize}
+\end{goiy}

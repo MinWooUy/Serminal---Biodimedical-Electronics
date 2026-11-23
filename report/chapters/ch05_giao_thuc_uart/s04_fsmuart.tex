@@ -1,0 +1,9 @@
+% Muc 5.4  --  phu trach: xem report/PHANCONG.md
+\section{Máy trạng thái và xử lý lỗi}\label{sec:fsmuart}
+\begin{goiy}
+  \begin{itemize}
+    \item Stop-and-wait: mỗi lệnh một phản hồi 0x80 ACK, 0x81 NACK (mã lỗi 1 khung/CRC, 2 tham số sai, 3 sai trạng thái), 0x82 RESULT.
+    \item Host không tự gửi lại sau timeout/NACK (lệnh có thể không idempotent); cách phục hồi.
+    \item Quản lý quyền sở hữu bank ghi/đọc (ping-pong) và \texttt{SWAP}.
+  \end{itemize}
+\end{goiy}

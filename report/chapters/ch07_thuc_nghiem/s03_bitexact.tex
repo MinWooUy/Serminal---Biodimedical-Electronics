@@ -1,0 +1,11 @@
+% Muc 7.3  --  phu trach: xem report/PHANCONG.md
+\section{Kiểm chứng bit-exact}\label{sec:bitexact}
+\begin{goiy}
+  \begin{itemize}
+    \item 1\,306/1\,306 nhịp (8 đoạn golden): 4 logit và nhãn trùng golden; \texttt{rec208\_237600} 191/191 ở cả hai baud.
+    \item Mô phỏng phần mềm của FPGA: bản ghi 208, 2\,946/2\,946 nhịp trùng int8 software.
+    \item Chuỗi kiểm chứng float $\to$ int8 $\to$ RTL $\to$ board (Hình~\ref{fig:chuoikiemchung}).
+    \item \textbf{Lưu ý hợp lệ:} 1\,306 nhịp thuộc DS1 (mô hình đã thấy khi huấn luyện), nên chỉ kiểm chứng \emph{phần cứng}, không phải khả năng tổng quát hoá; số tổng quát hoá lấy từ DS2.
+  \end{itemize}
+\end{goiy}
+\hinhcho{0.22}{chuỗi kiểm chứng: PyTorch float $\to$ Python int8 (golden) $\to$ mô phỏng RTL $\to$ board qua UART}{Chuỗi kiểm chứng bit-exact.}{fig:chuoikiemchung}

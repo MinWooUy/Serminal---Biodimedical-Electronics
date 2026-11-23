@@ -1,0 +1,11 @@
+% Muc 4.1  --  phu trach: xem report/PHANCONG.md
+\section{Dữ liệu và giao thức đánh giá}\label{sec:dulieu}
+\begin{goiy}
+  \begin{itemize}
+    \item MIT-BIH: 48 bản ghi; loại 102, 104, 107, 217 (paced); chia DS1/DS2 (de Chazal); nhịp trong đoạn VF không tính.
+    \item Ánh xạ nhãn AAMI; số nhịp mỗi lớp mỗi tập (Bảng~\ref{tab:dulieu}); lớp Q bị loại.
+    \item Huấn luyện: 5-fold nhóm theo bản ghi trên DS1, inner-val 20\,\% cuối theo thời gian; DS2 khoá bằng \texttt{ECG\_ALLOW\_DS2}, chạy một lần.
+    \item Chỉ số: macro-F1; Se và $+P$ của SVEB, VEB; Se/$+P$ phát hiện R (dung sai $\pm150$~ms).
+  \end{itemize}
+\end{goiy}
+\bangcho{số bản ghi, số nhịp theo lớp N/S/V/F cho DS1 và DS2}{Thống kê tập dữ liệu và cách chia.}{tab:dulieu}

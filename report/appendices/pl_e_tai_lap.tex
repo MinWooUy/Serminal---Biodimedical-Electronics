@@ -1,0 +1,9 @@
+\chapter{Hướng dẫn tái lập kết quả}\label{pl:tailap}
+
+\begin{goiy}
+  \begin{itemize}
+    \item Phiên bản công cụ (Python, PyTorch, Quartus 18.1, ModelSim), commit git, SHA-256 \texttt{weights.h} và mô hình.
+    \item Lệnh chạy: kiểm tra golden (\texttt{live\_monitor.py --check all}), mô phỏng RTL, chạy board (\texttt{board\_monitor.py}, \texttt{board\_eval.py}) với cổng COM và baud.
+    \item Biên dịch bitstream: \texttt{rtl/cnn1d/cnn1d.qpf}, ràng buộc \texttt{SDC1.sdc}, nạp \texttt{.sof}.
+  \end{itemize}
+\end{goiy}

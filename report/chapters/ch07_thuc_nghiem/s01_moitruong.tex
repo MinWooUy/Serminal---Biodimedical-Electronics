@@ -1,0 +1,11 @@
+% Muc 7.1  --  phu trach: xem report/PHANCONG.md
+\section{Môi trường và phương pháp đo}\label{sec:moitruong}
+\begin{goiy}
+  \begin{itemize}
+    \item Phần cứng: DE10-Lite (MAX~10 10M50DAF484C7G), clock 50~MHz, USB-UART CH340 (COM9); PC host (cấu hình máy).
+    \item Phần mềm: PyTorch $\to$ \texttt{python/quant} $\to$ golden; Quartus Prime Lite 18.1; ModelSim--Altera.
+    \item Phép đo: chu kỳ từ \texttt{RESULT} của \texttt{RUN}; thời gian wall-clock đo ở host; baud 921\,600 và 1\,500\,000.
+    \item Tái lập: SHA-256 mô hình, git commit, lệnh chạy (Phụ lục~\ref{pl:tailap}).
+  \end{itemize}
+\end{goiy}
+\bangcho{nền tảng, công cụ, phiên bản, tham số}{Môi trường thực nghiệm.}{tab:moitruong}

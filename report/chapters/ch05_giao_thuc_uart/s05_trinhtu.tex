@@ -1,0 +1,10 @@
+% Muc 5.5  --  phu trach: xem report/PHANCONG.md
+\section{Trình tự thực thi một nhịp}\label{sec:trinhtu}
+\hinhcho{0.3}{sơ đồ trình tự Host $\leftrightarrow$ FPGA: nạp trọng số một lần $\to$ WRITE\_X $\to$ SWAP $\to$ 6$\times$(CONFIG, RUN) $\to$ nhãn}{Trình tự lệnh để phân loại một nhịp.}{fig:trinhtu}
+\begin{goiy}
+  \begin{itemize}
+    \item Nạp một lần: \texttt{WRITE\_W/BIAS/SHIFT} cho cả mô hình, mỗi layer có \texttt{w\_base}/\texttt{b\_base}.
+    \item Mỗi nhịp: \texttt{WRITE\_X} (360 B) $\to$ \texttt{SWAP} $\to$ sáu cặp \texttt{CONFIG}+\texttt{RUN} (conv0, conv1, conv2, conv3, FC1, FC2); FC2 đặt \texttt{out\_int32}+\texttt{argmax}.
+    \item Không đọc lại feature map trung gian; \texttt{RUN} trả \texttt{[status, cycles]}.
+  \end{itemize}
+\end{goiy}
