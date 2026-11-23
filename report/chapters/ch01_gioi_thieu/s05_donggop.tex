@@ -1,10 +1,12 @@
 % Muc 1.5  --  phu trach: xem report/PHANCONG.md
 \section{Đóng góp của đề tài}\label{sec:dongGop}
+Các đóng góp dưới đây cụ thể hoá định vị ở Mục~\ref{sec:mucTieu}: mỗi đóng góp gắn với một kết quả đo được trình bày ở Chương~\ref{ch:thucnghiem}.
+
 \begin{goiy}
   \begin{enumerate}
-    \item Pipeline ECG số nguyên end-to-end (Pan-Tompkins, lọc, z-score, CNN Lite int8) có golden vectors làm chuẩn so sánh.
-    \item Bộ tăng tốc Conv1D mảng PE $7\times7$ chạy trọn 6 layer (conv0--conv3, FC1, FC2 + argmax) trên MAX~10; FC dùng chung mảng PE nhờ cờ CONFIG.
-    \item Giao thức lệnh Host--FPGA (CONFIG/RUN, stop-and-wait, CRC-16) và quy trình kiểm chứng bit-exact trên board.
+    \item Pipeline ECG số nguyên end-to-end (Pan-Tompkins, lọc, z-score, CNN Lite int8) có golden vectors làm chuẩn so sánh, \emph{đánh giá liên bệnh nhân} (DS1/DS2, DS2 chạy một lần). Đo bằng: macro-F1, SVEB/VEB trên DS2.
+    \item Bộ tăng tốc Conv1D mảng PE $7\times7$ cấu hình bằng lệnh, chạy trọn 6 layer (conv0--conv3, FC1, FC2 + argmax) trên MAX~10; FC dùng chung mảng PE nhờ cờ CONFIG. Đo bằng: bit-exact trên các đoạn golden, 50~MHz, tài nguyên.
+    \item Giao thức lệnh Host--FPGA (CONFIG/RUN, stop-and-wait, CRC-16) và quy trình kiểm chứng đầu--cuối trên board, kèm phân rã độ trễ từ đỉnh R đến nhãn. Đo bằng: số nhịp khớp golden, thời gian từng thành phần.
     \item Ghi rõ phần tự thiết kế và phần tái sử dụng (nếu có) để mô tả đúng đóng góp.
   \end{enumerate}
 \end{goiy}

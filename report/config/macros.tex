@@ -28,6 +28,10 @@
     \fcolorbox{gray}{gray!6}{\parbox[c][3cm][c]{0.9\textwidth}{\centering\small\itshape [Bảng: #1]}}
   \end{table}}
 
+% --- CAU DINH VI cua de tai (xem report/DINHVI.md). Dung \dinhvi o moi noi can nhac lai de ca bai thong nhat.
+%     Dung sau cum "de tai huong toi ..." hoac "... la \dinhvi". Khong sua cau chu o cho khac; sua o day. ---
+\newcommand{\dinhvi}{một nền tảng tham chiếu số nguyên, khớp từng bit, cho phân loại nhịp ECG liên bệnh nhân: từ mẫu ADC đến nhãn N/S/V/F, với bộ tăng tốc Conv1D cấu hình bằng lệnh chạy trọn mạng trên FPGA MAX~10 và quy trình kiểm chứng đầu--cuối trên board}
+
 % --- Don vi, ky hieu hay dung ---
 \newcommand{\unit}[1]{\,\mathrm{#1}}
 \newcommand{\Se}{\mathrm{Se}}
