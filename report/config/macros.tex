@@ -1,0 +1,40 @@
+% =====================================================================
+%  config/macros.tex  --  Macro dung chung (goiy, hinhcho, bangcho, todo, cmt)
+% =====================================================================
+%  Macro tien ich
+% =====================================================================
+
+% --- Cong tac hien/an cac khung "Dan y / can dien" (dat \showhintsfalse khi nop) ---
+\newif\ifshowhints   % bat/tat trong config/metadata.tex
+
+\newsavebox{\goiybox}
+\newenvironment{goiy}[1][Dàn ý — nội dung cần điền]
+  {\begin{lrbox}{\goiybox}\begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+   \singlespacing\small\textbf{#1:}\par\vspace{2pt}}
+  {\end{minipage}\end{lrbox}%
+   \ifshowhints\par\medskip\noindent\fcolorbox{gray}{gray!10}{\usebox{\goiybox}}\par\medskip\fi}
+
+% --- Khung giu cho hinh: \hinhcho{ti le cao}{mo ta}{chu thich}{nhan} ---
+\newcommand{\hinhcho}[4]{%
+  \begin{figure}[htbp]\centering
+    \fcolorbox{gray}{gray!6}{\parbox[c][#1\textwidth][c]{0.9\textwidth}{\centering\small\itshape [Hình: #2]}}
+    \caption{#3}\label{#4}
+  \end{figure}}
+
+% --- Khung giu cho bang: \bangcho{mo ta}{chu thich}{nhan} ---
+\newcommand{\bangcho}[3]{%
+  \begin{table}[htbp]\centering
+    \caption{#2}\label{#3}
+    \fcolorbox{gray}{gray!6}{\parbox[c][3cm][c]{0.9\textwidth}{\centering\small\itshape [Bảng: #1]}}
+  \end{table}}
+
+% --- Don vi, ky hieu hay dung ---
+\newcommand{\unit}[1]{\,\mathrm{#1}}
+\newcommand{\Se}{\mathrm{Se}}
+\newcommand{\PPV}{{+}\mathrm{P}}
+
+% --- Ghi chu trong nhom (chi hien khi \showhintstrue) ---
+% \todo{viec can lam}          -> chu do, dung de danh dau cho chua xong
+% \cmt{Ten}{noi dung}          -> chu xanh, binh luan/hoi dap giua cac thanh vien
+\newcommand{\todo}[1]{\ifshowhints\textcolor{red}{\textbf{[TODO: #1]}}\fi}
+\newcommand{\cmt}[2]{\ifshowhints\textcolor{blue}{\textit{[#1: #2]}}\fi}

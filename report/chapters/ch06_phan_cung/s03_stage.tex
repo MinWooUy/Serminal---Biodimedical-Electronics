@@ -1,0 +1,14 @@
+% Muc 6.3  --  phu trach: xem report/PHANCONG.md
+\section{Pipeline dữ liệu một layer: từng stage}\label{sec:stage}
+\hinhcho{0.28}{pipeline: SRAM $\to$ loader $\to$ feeder FIFO $\to$ PE array $\to$ PSM $\to$ post-process $\to$ fmap\_writer $\to$ SWAP}{Các stage của pipeline dữ liệu trong một layer.}{fig:stage}
+\begin{goiy}
+  Mỗi stage một mục nhỏ: \emph{làm gì, vào/ra gì, bao nhiêu chu kỳ, tín hiệu valid/ready/backpressure}.
+  \begin{enumerate}
+    \item \textbf{Sinh địa chỉ và loader} (\texttt{conv1d\_address\_generating, *\_loader}): đọc SRAM; bản pipeline 1 byte/chu kỳ.
+    \item \textbf{Feeder + FIFO} (\texttt{feed\_lane, feed\_delay, ring\_buffer}): lệch pha theo hàng/cột; FIFO vòng, đọc/ghi cùng chu kỳ.
+    \item \textbf{Mảng PE} (\texttt{pe\_array}): MAC int8$\times$int8 $\to$ int32.
+    \item \textbf{PSM} (\texttt{partial\_sum\_manager, psum\_stream\_*}): cộng dồn tile khi $K$ lớn.
+    \item \textbf{Post-process} (\texttt{conv1d\_post\_process, maxpool1d2}): +bias, dịch, ReLU, MaxPool, GAP.
+    \item \textbf{Ghi kết quả} (\texttt{fmap\_writer}): ghi vào bank ghi của IFMAP, chuẩn bị \texttt{SWAP}.
+  \end{enumerate}
+\end{goiy}

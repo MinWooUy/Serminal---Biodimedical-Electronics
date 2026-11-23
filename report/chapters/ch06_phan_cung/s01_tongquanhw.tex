@@ -1,0 +1,11 @@
+% Muc 6.1  --  phu trach: xem report/PHANCONG.md
+\section{Tổng quan kiến trúc}\label{sec:tongquanhw}
+\hinhcho{0.4}{sơ đồ khối đầy đủ: uart\_crc\_top $\to$ layer\_cmd\_controller $\to$ conv1d\_layer\_top $\to$ SRAM ping-pong $\to$ loader/feeder $\to$ PE array 7$\times$7 $\to$ PSM $\to$ post-process $\to$ fmap\_writer}{Sơ đồ khối đầy đủ của bộ tăng tốc.}{fig:khoi}
+\begin{goiy}
+  \begin{itemize}
+    \item Phân cấp module: \texttt{de10\_lite\_top} $\to$ \texttt{ecg\_accel\_top} $\to$ \texttt{uart\_crc\_top} + \texttt{layer\_core} $\to$ \texttt{layer\_cmd\_controller} + \texttt{conv1d\_layer\_top} $\to$ \texttt{conv1d\_layer\_controller}, \texttt{conv1d\_tile\_top}, \texttt{fmap\_writer}.
+    \item Tham số thiết kế (Bảng~\ref{tab:thamso}): \texttt{ARRAY\_ROWS/COLS}=7, \texttt{IFMAP\_MEM\_DEPTH}=4096, \texttt{WGT\_MEM\_DEPTH}=16384, \texttt{FEEDER\_DEPTH}=1024, \texttt{COUT\_MAX}=64.
+    \item Giao diện: \texttt{MAX10\_CLK1\_50}, \texttt{KEY0} (reset), \texttt{uart\_rx}, \texttt{uart\_tx}.
+  \end{itemize}
+\end{goiy}
+\bangcho{tham số thiết kế, ý nghĩa, giá trị trên board}{Các tham số cấu hình của bộ tăng tốc.}{tab:thamso}

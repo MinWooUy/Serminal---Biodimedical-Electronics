@@ -1,0 +1,8 @@
+# Thong nhat xuong dong LF cho file van ban cua bao cao, tranh diff "ca file" giua Windows va Linux/macOS
+*.tex   text eol=lf
+*.bib   text eol=lf
+*.md    text eol=lf
+*.sty   text eol=lf
+*.png   binary
+*.jpg   binary
+*.pdf   binary

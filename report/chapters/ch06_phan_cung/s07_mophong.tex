@@ -1,0 +1,8 @@
+% Muc 6.7  --  phu trach: xem report/PHANCONG.md
+\section{Mô phỏng và kiểm thử RTL}\label{sec:mophong}
+\begin{goiy}
+  \begin{itemize}
+    \item Testbench (\texttt{tb\_conv1d\_layer\_top}, \texttt{tb\_conv1d\_tile\_corner}): so golden từng byte; ModelSim--Altera; các trường hợp biên ($K=7,80,96,192$; $3\times3$ và $7\times7$).
+    \item Các lỗi đã gặp và cách sửa (FIFO shift-register, loader không backpressure, tile treo khi $K>\texttt{DEPTH}$): xem \texttt{docs/issue/}, \texttt{rtl/cnn1d/ERRORS.md}.
+  \end{itemize}
+\end{goiy}

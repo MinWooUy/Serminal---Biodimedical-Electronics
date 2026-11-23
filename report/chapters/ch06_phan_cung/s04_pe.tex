@@ -1,0 +1,9 @@
+% Muc 6.4  --  phu trach: xem report/PHANCONG.md
+\section{Mảng PE và số học}\label{sec:pe}
+\begin{goiy}
+  \begin{itemize}
+    \item PE: \texttt{WeightRegister}, \texttt{ImageRegister}, \texttt{MAC}, \texttt{Accumulator}; nhân Wallace + Baugh--Wooley, cộng carry-lookahead (dựng bằng LE).
+    \item Mảng $7\times7$: ifmap chạy theo hàng, weight theo cột; $\texttt{compute\_en}=\texttt{act\_valid}\,\&\,\texttt{wgt\_valid}$ (chịu được chu kỳ trống).
+    \item Số chu kỳ lý tưởng một ô: $K+R+C$ (công thức/phương trình đánh số).
+  \end{itemize}
+\end{goiy}

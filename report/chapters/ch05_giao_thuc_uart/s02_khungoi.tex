@@ -1,0 +1,10 @@
+% Muc 5.2  --  phu trach: xem report/PHANCONG.md
+\section{Khung gói và CRC-16}\label{sec:khungoi}
+\begin{goiy}
+  \begin{itemize}
+    \item Khung: \texttt{A5 5A | CMD | SEQ | LEN\_LO | LEN\_HI | PAYLOAD | CRC\_LO | CRC\_HI}; CRC bao từ CMD đến hết payload (Hình~\ref{fig:khungoi}).
+    \item CRC-16/CCITT (đa thức 0x1021, khởi tạo 0xFFFF): \texttt{crc16\_ccitt\_next.v}; payload chỉ được công bố sau khi CRC đúng; timeout \texttt{packet\_rx}.
+    \item Độ dài payload tối đa (\texttt{MAX\_PAYLOAD}) và ảnh hưởng đến băng thông.
+  \end{itemize}
+\end{goiy}
+\hinhcho{0.18}{khung gói: A5 5A | CMD | SEQ | LEN(2) | PAYLOAD | CRC16(2)}{Cấu trúc khung gói UART.}{fig:khungoi}

@@ -1,0 +1,29 @@
+# File sinh ra khi bien dich LaTeX - khong dua len git
+build/
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.xdv
+*.nav
+*.snm
+*.vrb
+
+# PDF khong commit (de tranh xung dot nhi phan); chia se qua nhom/Releases
+*.pdf
+!figures/**/*.pdf
+
+# Tep tam cua trinh soan thao
+*~
+.#*
+*.swp

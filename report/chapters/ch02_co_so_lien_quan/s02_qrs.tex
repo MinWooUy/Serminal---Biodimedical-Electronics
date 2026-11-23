@@ -1,0 +1,9 @@
+% Muc 2.2  --  phu trach: xem report/PHANCONG.md
+\section{Phát hiện QRS và tiền xử lý}\label{sec:qrs}
+\begin{goiy}
+  \begin{itemize}
+    \item Thuật toán Pan--Tompkins \cite{pantompkins1985realtime}: lọc thông dải, đạo hàm, bình phương, tích phân cửa sổ, ngưỡng thích nghi.
+    \item Bộ lọc Butterworth 0.5--40~Hz (nhân quả, biquad), z-score từng nhịp.
+    \item Đặc trưng khoảng RR (rr\_prev, rr\_next, rr\_avg, ratio).
+  \end{itemize}
+\end{goiy}

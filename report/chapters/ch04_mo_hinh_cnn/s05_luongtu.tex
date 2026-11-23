@@ -1,0 +1,10 @@
+% Muc 4.5  --  phu trach: xem report/PHANCONG.md
+\section{Lượng tử hoá int8}\label{sec:luongtu}
+\begin{goiy}
+  \begin{itemize}
+    \item Gộp BN vào conv $W'=W\gamma/\sqrt{\sigma^2+\epsilon}$; gộp 1/45 của GAP và z-score RR vào FC1.
+    \item Scale luỹ thừa 2; trọng số theo kênh; requantize $y=\mathrm{clamp}\big((acc+2^{s-1})\gg s,0,127\big)$; ReLU = kẹp.
+    \item Logit int32 cùng scale $2^{-11}$; argmax thay softmax (chứng minh đơn điệu).
+    \item Ngân sách int32 (kiểm tràn) và sai khác so với float (cổng lượng tử).
+  \end{itemize}
+\end{goiy}

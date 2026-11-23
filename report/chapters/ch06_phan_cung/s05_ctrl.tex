@@ -1,0 +1,10 @@
+% Muc 6.5  --  phu trach: xem report/PHANCONG.md
+\section{Điều khiển layer và tile}\label{sec:ctrl}
+\hinhcho{0.28}{sơ đồ FSM: layer\_cmd\_controller $\to$ conv1d\_layer\_controller $\to$ conv1d\_tile\_top $\to$ cnn\_control\_fsm}{Phân cấp điều khiển từ lệnh đến FSM tile.}{fig:fsm}
+\begin{goiy}
+  \begin{itemize}
+    \item CONFIG ghi thanh ghi cấu hình layer; \texttt{RUN} khởi động \texttt{conv1d\_layer\_controller}.
+    \item Chia layer thành tile theo kích thước mảng PE; trạng thái tile: nạp $\to$ tính $\to$ xả kết quả.
+    \item Giao tiếp tín hiệu hoàn thành và \texttt{RESULT [status, cycles]}.
+  \end{itemize}
+\end{goiy}

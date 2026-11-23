@@ -1,0 +1,11 @@
+% Muc 4.2  --  phu trach: xem report/PHANCONG.md
+\section{Tiền xử lý số nguyên}\label{sec:tienxuly}
+\begin{goiy}
+  \begin{itemize}
+    \item Front-end Pan--Tompkins số nguyên: LP 11, HP 57, đạo hàm 5 điểm, $(d\gg12)^2$, MWI 54; trễ tổng 38 mẫu; \texttt{DecisionEngine} (hai ngưỡng thích nghi, search-back, chặn T-wave, refractory 200~ms).
+    \item Lọc Butterworth bậc 2 (2 biquad, DF1, hệ số Q20, accumulator int64); tinh chỉnh R (argmax $|y|$ trong $\pm18$ mẫu).
+    \item Cửa sổ 360 mẫu quanh R; z-score số nguyên $z_q=\mathrm{clamp}(\mathrm{round\_div}(16\,d,\,sd+1),\pm127)$ \,(đánh số phương trình).
+    \item Đặc trưng RR và lượng tử $\mathrm{rr}_q$ với số mũ $(6,6,6,5)$.
+  \end{itemize}
+\end{goiy}
+\hinhcho{0.28}{Sơ đồ khối pipeline tiền xử lý: lọc, phát hiện R, cửa sổ, z-score, RR}{Pipeline tiền xử lý số nguyên.}{fig:tienxuly}

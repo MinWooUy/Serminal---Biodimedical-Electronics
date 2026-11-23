@@ -1,0 +1,12 @@
+% Muc 5.3  --  phu trach: xem report/PHANCONG.md
+\section{Bộ lệnh}\label{sec:bolenh}
+\begin{goiy}
+  \begin{itemize}
+    \item Nạp dữ liệu: \texttt{WRITE\_X} 0x08, \texttt{WRITE\_W} 0x09, \texttt{WRITE\_BIAS} 0x0A, \texttt{WRITE\_SHIFT} 0x0B, \texttt{SWAP} 0x0C.
+    \item Chạy layer: \texttt{CONFIG} 0x0D (\texttt{out\_len, cout, k\_len, window\_step, pool, gap, pad\_next}, cờ, \texttt{w\_base, b\_base}), \texttt{RUN} 0x0E.
+    \item Đọc: \texttt{READ\_GAP} 0x0F, \texttt{READ\_FMAP} 0x10, \texttt{INFO} 0x15 (phần cứng tự khai báo cấu hình).
+    \item Cờ CONFIG: \texttt{out\_int32}, \texttt{argmax}, \texttt{row\_combine}, \texttt{gap\_in}; các ràng buộc hợp lệ (NACK mã 2).
+    \item Bảng đầy đủ lệnh/tham số/phản hồi (Bảng~\ref{tab:lenh}; chi tiết ở Phụ lục~\ref{pl:bolenh}).
+  \end{itemize}
+\end{goiy}
+\bangcho{mã lệnh · tham số · phản hồi · tác dụng}{Bộ lệnh điều khiển accelerator.}{tab:lenh}
