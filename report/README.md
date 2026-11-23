@@ -5,6 +5,8 @@ Báo cáo của cả nhóm nằm trong thư mục này, viết bằng LaTeX theo
 
 - **Ai làm phần nào, tiến độ:** [`PHANCONG.md`](PHANCONG.md)
 - **Thuật ngữ dùng thống nhất:** [`THUATNGU.md`](THUATNGU.md)
+- **Định vị của đề tài, quy tắc cách nói, luận điểm–bằng chứng:** [`DINHVI.md`](DINHVI.md) — đọc trước khi viết
+  (câu định vị dùng macro `\dinhvi` trong `config/macros.tex`).
 
 ## 0. Cài đặt (cả nhóm dùng cùng một bộ công cụ)
 

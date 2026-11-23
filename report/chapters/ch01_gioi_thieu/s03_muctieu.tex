@@ -1,9 +1,12 @@
 % Muc 1.3  --  phu trach: xem report/PHANCONG.md
 \section{Mục tiêu và câu hỏi nghiên cứu}\label{sec:mucTieu}
+\paragraph{Định vị của đề tài.} Đề tài hướng tới \dinhvi.
+
 \begin{goiy}
   \begin{itemize}
-    \item \textbf{Câu hỏi nghiên cứu:} có thể chạy trọn một CNN 1D int8 phân loại nhịp trên FPGA nhỏ (MAX~10 10M50) mà kết quả khớp từng bit với mô hình số nguyên phần mềm hay không?
-    \item \textbf{Mục tiêu đo được:} (i) macro-F1 trên DS2; (ii) bit-exact trên các đoạn golden; (iii) đạt 50~MHz và vừa tài nguyên chip.
+    \item \textbf{Câu hỏi nghiên cứu:} có thể chạy trọn một CNN 1D int8 phân loại nhịp trên FPGA nhỏ (MAX~10 10M50) mà kết quả khớp từng bit với mô hình số nguyên phần mềm, \emph{trên giao thức đánh giá liên bệnh nhân}, hay không?
+    \item \textbf{Mục tiêu đo được:} (i) macro-F1 và SVEB/VEB (Se, $+P$) trên DS2; (ii) bit-exact trên các đoạn golden; (iii) đạt 50~MHz và vừa tài nguyên chip; (iv) độ trễ từ đỉnh R đến nhãn được phân rã.
     \item Mục tiêu phụ: giao thức Host--FPGA tin cậy; công cụ quan sát trực tiếp trên board.
+    \item \textbf{Cách nói:} đề tài \emph{không} khẳng định nhanh hơn hay tiết kiệm công suất hơn các công trình khác; giá trị nằm ở tính kiểm chứng (xem \texttt{report/DINHVI.md}).
   \end{itemize}
 \end{goiy}
