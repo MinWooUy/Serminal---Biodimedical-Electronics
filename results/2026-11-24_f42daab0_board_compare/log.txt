@@ -1,0 +1,4 @@
+record 213, samples 0..650000 (1806 s), segmentation detector -- not DS1
+PC pre-processing of the whole record ...
+3245 beats to classify; Lite float done on the PC
+FPGA INFO: 3x3 PE, 50 MHz, 1500000 baud, features 0x1F
