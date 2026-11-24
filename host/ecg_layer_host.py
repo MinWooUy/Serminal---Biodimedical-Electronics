@@ -84,6 +84,7 @@ WIDTH = 78
 F_OUT_INT32, F_ARGMAX, F_ROW_COMBINE, F_GAP_IN = 0x1, 0x2, 0x4, 0x8
 FLAG_NAMES = {F_OUT_INT32: "out_int32", F_ARGMAX: "argmax", F_ROW_COMBINE: "row_combine", F_GAP_IN: "gap_in"}
 F_BASES = 0x10            # INFO feature (not a CONFIG flag): CONFIG takes w_base / b_base -> weights resident on chip
+F_POOL_EVEN = 0x20        # INFO feature: a layer with pool uses the largest EVEN number of PE rows (7 -> 6), not 2
 BIAS_DEPTH = 256          # bias RAM entries of that RTL (conv1d_layer_top BIAS_DEPTH)
 BANK_A, BANK_B = (0, 1, 2, 4, 5), (3,)   # resident layout: conv3 (12 KB) alone in bank B, the rest in bank A
 CLASSES = "NSVF"
@@ -383,7 +384,7 @@ def query_hw(dev, log, args):
     fb_rows, fb_cols = args.array if args.array else (3, 3)
     fallback = HwInfo.assumed(fb_rows, fb_cols, int(args.clk_mhz * 1e6), args.baud)
     if isinstance(dev, DryRunDevice):
-        fallback.features = F_OUT_INT32 | F_ARGMAX | F_ROW_COMBINE | F_GAP_IN | F_BASES   # trace for the current RTL
+        fallback.features = F_OUT_INT32 | F_ARGMAX | F_ROW_COMBINE | F_GAP_IN | F_BASES | F_POOL_EVEN   # trace for the current RTL
         return fallback, "ASSUMED (dry run, no board)", ["values taken from --array / --clk-mhz"]
     try:
         hw = HwInfo.from_payload(dev.exchange(CMD_INFO, b"", RSP_RESULT))
@@ -417,7 +418,13 @@ def ms(cycles, clk_hz):
 
 def layer_plan(L, hw):
     """Tiling the layer controller will use on THIS array (mirrors conv1d_layer_top)."""
-    rows = (2 if hw.rows >= 2 else 1) if L["pool"] else hw.rows      # pool needs pairs of output positions
+    if L["pool"]:                                                     # pool needs pairs of output positions
+        if hw.features & F_POOL_EVEN:                                 # newer RTL: largest even row count (INFO bit 5)
+            rows = (hw.rows & ~1) or 1
+        else:                                                         # older bitstreams: one pair per tile
+            rows = 2 if hw.rows >= 2 else 1
+    else:
+        rows = hw.rows
     rows = min(rows, L["out_len"])                                    # FC: 1 (fc2) or 3 (fc1) rows used
     row_tiles = math.ceil(L["out_len"] / rows)
     col_tiles = math.ceil(L["cout"] / hw.cols)

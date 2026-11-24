@@ -71,6 +71,17 @@ def test_7x7_de10_lite_info_fits_all_six_layers():
     assert layer_plan(model[FC2], hw)["rows"] == 1
 
 
+def test_layer_plan_uses_even_rows_when_the_bitstream_reports_it():
+    # INFO features bit 5 (0x20): pool layers use 6 of the 7 PE rows; conv3 (no pool) all 7, as the board's 367 091-cycle run.
+    model = load_model(REPO_ROOT)
+    hw = HardwareInfo(version=2, rows=7, cols=7, features=0x3F, clk_hz=50_000_000, baud=1_500_000,
+                      ifmap_depth=4096, wgt_depth=16384, feeder_depth=1024, cout_max=64, max_payload=128)
+    plans = [layer_plan(layer, hw) for layer in model]
+    assert [p["rows"] for p in plans] == [6, 6, 6, 7, 3, 1]
+    assert [(p["row_tiles"], p["col_tiles"]) for p in plans] == [(60, 3), (30, 5), (15, 10), (7, 10), (1, 5), (1, 1)]
+    assert sum(p["macs"] for p in plans[:4]) == 1_607_040          # conv0..conv3
+
+
 def test_layer_runner_emits_huy_command_order_without_board():
     from types import SimpleNamespace
 

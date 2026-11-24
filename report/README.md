@@ -4,6 +4,7 @@ Báo cáo của cả nhóm nằm trong thư mục này, viết bằng LaTeX theo
 (`Mau Bao cao De tai tot nghiep_2025.docx`): A4, lề 3 / 2,5 / 3 / 2 cm, Times New Roman 13 pt, giãn dòng 1,5, tài liệu tham khảo IEEE.
 
 - **Ai làm phần nào, tiến độ:** [`PHANCONG.md`](PHANCONG.md)
+- **Mốc số liệu đã chốt (mọi con số trong báo cáo lấy từ đây):** [`../docs/baseline_v1.md`](../docs/baseline_v1.md); nhận xét review: [`../docs/review_20261124.md`](../docs/review_20261124.md); cải tiến đợt sau (không dùng cho bản nộp): [`../docs/plan_cai_tien_v2.md`](../docs/plan_cai_tien_v2.md)
 - **Thuật ngữ dùng thống nhất:** [`THUATNGU.md`](THUATNGU.md)
 - **Định vị của đề tài, quy tắc cách nói, luận điểm–bằng chứng:** [`DINHVI.md`](DINHVI.md) — đọc trước khi viết
   (câu định vị dùng macro `\dinhvi` trong `config/macros.tex`).

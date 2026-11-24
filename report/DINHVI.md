@@ -49,6 +49,8 @@ Câu nào trong bài không có dòng ở bảng này thì chưa nên viết th�
 
 ## Cập nhật 24/11/2026 (số liệu phần cứng mới)
 
+Mốc chốt đầy đủ, kèm định danh bitstream và cách tái hiện: [`../docs/baseline_v1.md`](../docs/baseline_v1.md).
+
 Số liệu cũ trong báo cáo và slide ("41,17 ms/nhịp", "0,85 s/nhịp cả UART", "PE ≈ 1,6 %", "chưa đo lại trên board") đến từ bitstream trước khi sửa loader. Thay bằng:
 
 | Đại lượng | Cũ | Mới (đo 24/11) |
