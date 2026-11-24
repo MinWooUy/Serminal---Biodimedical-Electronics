@@ -1,0 +1,159 @@
+record 208, samples 0..650000 (1806 s), segmentation detector, annotation -- DS1: IN-SAMPLE (final model trained on all DS1)
+FPGA INFO: 3x3 PE, 50 MHz, 921600 baud, MAX_PAYLOAD 128, features 0x0F
+
+=== detector segmentation: PC pre-processing ===
+  [detector] 50/2946 beats, 1 s elapsed, ETA 76 s
+  [detector] 100/2946 beats, 3 s elapsed, ETA 74 s
+  [detector] 150/2946 beats, 4 s elapsed, ETA 74 s
+  [detector] 200/2946 beats, 5 s elapsed, ETA 72 s
+  [detector] 250/2946 beats, 7 s elapsed, ETA 70 s
+  [detector] 300/2946 beats, 8 s elapsed, ETA 69 s
+  [detector] 350/2946 beats, 9 s elapsed, ETA 68 s
+  [detector] 400/2946 beats, 10 s elapsed, ETA 67 s
+  [detector] 450/2946 beats, 12 s elapsed, ETA 65 s
+  [detector] 500/2946 beats, 13 s elapsed, ETA 64 s
+  [detector] 550/2946 beats, 14 s elapsed, ETA 63 s
+  [detector] 600/2946 beats, 16 s elapsed, ETA 62 s
+  [detector] 650/2946 beats, 17 s elapsed, ETA 60 s
+  [detector] 700/2946 beats, 18 s elapsed, ETA 59 s
+  [detector] 750/2946 beats, 20 s elapsed, ETA 58 s
+  [detector] 800/2946 beats, 21 s elapsed, ETA 57 s
+  [detector] 850/2946 beats, 22 s elapsed, ETA 55 s
+  [detector] 900/2946 beats, 24 s elapsed, ETA 54 s
+  [detector] 950/2946 beats, 25 s elapsed, ETA 53 s
+  [detector] 1000/2946 beats, 26 s elapsed, ETA 51 s
+  [detector] 1050/2946 beats, 28 s elapsed, ETA 50 s
+  [detector] 1100/2946 beats, 29 s elapsed, ETA 48 s
+  [detector] 1150/2946 beats, 30 s elapsed, ETA 47 s
+  [detector] 1200/2946 beats, 32 s elapsed, ETA 46 s
+  [detector] 1250/2946 beats, 33 s elapsed, ETA 45 s
+  [detector] 1300/2946 beats, 34 s elapsed, ETA 43 s
+  [detector] 1350/2946 beats, 35 s elapsed, ETA 42 s
+  [detector] 1400/2946 beats, 37 s elapsed, ETA 41 s
+  [detector] 1450/2946 beats, 38 s elapsed, ETA 39 s
+  [detector] 1500/2946 beats, 39 s elapsed, ETA 38 s
+  [detector] 1550/2946 beats, 41 s elapsed, ETA 37 s
+  [detector] 1600/2946 beats, 42 s elapsed, ETA 35 s
+  [detector] 1650/2946 beats, 43 s elapsed, ETA 34 s
+  [detector] 1700/2946 beats, 45 s elapsed, ETA 33 s
+  [detector] 1750/2946 beats, 46 s elapsed, ETA 31 s
+  [detector] 1800/2946 beats, 47 s elapsed, ETA 30 s
+  [detector] 1850/2946 beats, 48 s elapsed, ETA 29 s
+  [detector] 1900/2946 beats, 50 s elapsed, ETA 27 s
+  [detector] 1950/2946 beats, 51 s elapsed, ETA 26 s
+  [detector] 2000/2946 beats, 52 s elapsed, ETA 25 s
+  [detector] 2050/2946 beats, 54 s elapsed, ETA 23 s
+  [detector] 2100/2946 beats, 55 s elapsed, ETA 22 s
+  [detector] 2150/2946 beats, 56 s elapsed, ETA 21 s
+  [detector] 2200/2946 beats, 57 s elapsed, ETA 19 s
+  [detector] 2250/2946 beats, 59 s elapsed, ETA 18 s
+  [detector] 2300/2946 beats, 60 s elapsed, ETA 17 s
+  [detector] 2350/2946 beats, 61 s elapsed, ETA 16 s
+  [detector] 2400/2946 beats, 63 s elapsed, ETA 14 s
+  [detector] 2450/2946 beats, 64 s elapsed, ETA 13 s
+  [detector] 2500/2946 beats, 65 s elapsed, ETA 12 s
+  [detector] 2550/2946 beats, 67 s elapsed, ETA 10 s
+  [detector] 2600/2946 beats, 68 s elapsed, ETA 9 s
+  [detector] 2650/2946 beats, 69 s elapsed, ETA 8 s
+  [detector] 2700/2946 beats, 71 s elapsed, ETA 6 s
+  [detector] 2750/2946 beats, 72 s elapsed, ETA 5 s
+  [detector] 2800/2946 beats, 73 s elapsed, ETA 4 s
+  [detector] 2850/2946 beats, 75 s elapsed, ETA 3 s
+  [detector] 2900/2946 beats, 76 s elapsed, ETA 1 s
+  [detector] 2946/2946 beats, 77 s elapsed, ETA 0 s
+
+--- detector: 2946 beats, failed 0, reused 0, FPGA == software 2946/2946; link 966.3 s (0.33 s/beat sent)
+--- detector: FPGA labels vs annotations ---
+macro-F1 0.6743   macro-F1 (N/S/V) 0.6391   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9747 +P 0.9727
+cls       P       R      F1      n
+  N  0.9367  0.9670  0.9516   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9572  0.9747  0.9659    987
+  F  0.8979  0.6892  0.7798    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1523     17     27      8
+       2      0      0      0
+       4      0    962     21
+      97      2     16    255
+--- detector: FP detections 10, missed annotations N/S/V/F [10, 0, 4, 3], in VF 0; gross macro-F1 0.6714
+  HTML E:\PROJECTS\1DCNN\Serminal---Biodimedical-Electronics\results\2026-11-20_56e1fa5f_board_eval\record_208_detector_board.html (54.8 MB)
+
+=== annotation segmentation: PC pre-processing ===
+  [annotation] 50/2953 beats, 1 s elapsed, ETA 42 s
+  [annotation] 100/2953 beats, 1 s elapsed, ETA 21 s
+  [annotation] 150/2953 beats, 1 s elapsed, ETA 14 s
+  [annotation] 200/2953 beats, 1 s elapsed, ETA 10 s
+  [annotation] 250/2953 beats, 1 s elapsed, ETA 8 s
+  [annotation] 300/2953 beats, 1 s elapsed, ETA 6 s
+  [annotation] 350/2953 beats, 1 s elapsed, ETA 5 s
+  [annotation] 400/2953 beats, 1 s elapsed, ETA 8 s
+  [annotation] 450/2953 beats, 1 s elapsed, ETA 7 s
+  [annotation] 500/2953 beats, 1 s elapsed, ETA 6 s
+  [annotation] 550/2953 beats, 1 s elapsed, ETA 6 s
+  [annotation] 600/2953 beats, 1 s elapsed, ETA 5 s
+  [annotation] 650/2953 beats, 1 s elapsed, ETA 5 s
+  [annotation] 700/2953 beats, 2 s elapsed, ETA 6 s
+  [annotation] 750/2953 beats, 2 s elapsed, ETA 6 s
+  [annotation] 800/2953 beats, 2 s elapsed, ETA 5 s
+  [annotation] 850/2953 beats, 2 s elapsed, ETA 5 s
+  [annotation] 900/2953 beats, 2 s elapsed, ETA 4 s
+  [annotation] 950/2953 beats, 2 s elapsed, ETA 4 s
+  [annotation] 1000/2953 beats, 2 s elapsed, ETA 4 s
+  [annotation] 1050/2953 beats, 2 s elapsed, ETA 3 s
+  [annotation] 1100/2953 beats, 2 s elapsed, ETA 3 s
+  [annotation] 1150/2953 beats, 2 s elapsed, ETA 3 s
+  [annotation] 1200/2953 beats, 2 s elapsed, ETA 3 s
+  [annotation] 1250/2953 beats, 2 s elapsed, ETA 3 s
+  [annotation] 1300/2953 beats, 2 s elapsed, ETA 2 s
+  [annotation] 1350/2953 beats, 2 s elapsed, ETA 2 s
+  [annotation] 1400/2953 beats, 2 s elapsed, ETA 2 s
+  [annotation] 1450/2953 beats, 2 s elapsed, ETA 2 s
+  [annotation] 1500/2953 beats, 2 s elapsed, ETA 2 s
+  [annotation] 1550/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1600/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1650/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1700/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1750/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1800/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1850/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1900/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 1950/2953 beats, 3 s elapsed, ETA 2 s
+  [annotation] 2000/2953 beats, 4 s elapsed, ETA 2 s
+  [annotation] 2050/2953 beats, 4 s elapsed, ETA 2 s
+  [annotation] 2100/2953 beats, 5 s elapsed, ETA 2 s
+  [annotation] 2150/2953 beats, 5 s elapsed, ETA 2 s
+  [annotation] 2200/2953 beats, 5 s elapsed, ETA 2 s
+  [annotation] 2250/2953 beats, 5 s elapsed, ETA 2 s
+  [annotation] 2300/2953 beats, 6 s elapsed, ETA 2 s
+  [annotation] 2350/2953 beats, 6 s elapsed, ETA 2 s
+  [annotation] 2400/2953 beats, 6 s elapsed, ETA 1 s
+  [annotation] 2450/2953 beats, 6 s elapsed, ETA 1 s
+  [annotation] 2500/2953 beats, 6 s elapsed, ETA 1 s
+  [annotation] 2550/2953 beats, 6 s elapsed, ETA 1 s
+  [annotation] 2600/2953 beats, 7 s elapsed, ETA 1 s
+  [annotation] 2650/2953 beats, 7 s elapsed, ETA 1 s
+  [annotation] 2700/2953 beats, 7 s elapsed, ETA 1 s
+  [annotation] 2750/2953 beats, 7 s elapsed, ETA 0 s
+  [annotation] 2800/2953 beats, 7 s elapsed, ETA 0 s
+  [annotation] 2850/2953 beats, 7 s elapsed, ETA 0 s
+  [annotation] 2900/2953 beats, 7 s elapsed, ETA 0 s
+  [annotation] 2950/2953 beats, 7 s elapsed, ETA 0 s
+  [annotation] 2953/2953 beats, 7 s elapsed, ETA 0 s
+
+--- annotation: 2953 beats, failed 0, reused 2839, FPGA == software 2953/2953; link 37.4 s (0.33 s/beat sent)
+--- annotation: FPGA labels vs annotations ---
+macro-F1 0.6725   macro-F1 (N/S/V) 0.6398   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9768 +P 0.9729
+cls       P       R      F1      n
+  N  0.9379  0.9722  0.9548   1585
+  S  0.0000  0.0000  0.0000      2
+  V  0.9528  0.9768  0.9647    992
+  F  0.8936  0.6774  0.7706    372
+confusion (rows = true N/S/V/F, cols = pred):
+    1541      8     27      9
+       2      0      0      0
+       2      0    969     21
+      98      1     21    252
+  HTML E:\PROJECTS\1DCNN\Serminal---Biodimedical-Electronics\results\2026-11-20_56e1fa5f_board_eval\record_208_annotation_board.html (21.8 MB)
+
+link: 709921 transactions, 90517898 B, 3060 distinct beats on the board, 122.8 s wall
+results: E:\PROJECTS\1DCNN\Serminal---Biodimedical-Electronics\results\2026-11-20_56e1fa5f_board_eval

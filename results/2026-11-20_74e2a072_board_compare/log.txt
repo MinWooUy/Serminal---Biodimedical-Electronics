@@ -1,0 +1,55 @@
+record 208, samples 0..650000 (1806 s), segmentation detector -- DS1: IN-SAMPLE (final model trained on all DS1)
+PC pre-processing of the whole record ...
+2946 beats to classify; Lite float done on the PC
+FPGA INFO: 3x3 PE, 50 MHz, 921600 baud, features 0x0F
+  200/2946 beats on the FPGA, 9 s
+  400/2946 beats on the FPGA, 21 s
+  600/2946 beats on the FPGA, 31 s
+  800/2946 beats on the FPGA, 42 s
+  1000/2946 beats on the FPGA, 52 s
+  1200/2946 beats on the FPGA, 58 s
+  1400/2946 beats on the FPGA, 62 s
+  1600/2946 beats on the FPGA, 67 s
+  1800/2946 beats on the FPGA, 72 s
+  2000/2946 beats on the FPGA, 77 s
+  2200/2946 beats on the FPGA, 82 s
+  2400/2946 beats on the FPGA, 87 s
+  2600/2946 beats on the FPGA, 92 s
+  2800/2946 beats on the FPGA, 96 s
+  2946/2946 beats on the FPGA, 100 s
+
+detector: 2946 beats, FPGA answered 2946, failed 0, FPGA == int8 software 2946/2946, FPGA != float 43
+
+--- Lite float vs MIT annotation ---
+macro-F1 0.6662   macro-F1 (N/S/V) 0.6383   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9838 +P 0.9739
+cls       P       R      F1      n
+  N  0.9277  0.9695  0.9482   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9501  0.9838  0.9667    987
+  F  0.9390  0.6243  0.7500    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1527     18     26      4
+       2      0      0      0
+       5      0    971     11
+     112      2     25    231
+
+--- FPGA vs MIT annotation ---
+macro-F1 0.6743   macro-F1 (N/S/V) 0.6391   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9747 +P 0.9727
+cls       P       R      F1      n
+  N  0.9367  0.9670  0.9516   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9572  0.9747  0.9659    987
+  F  0.8979  0.6892  0.7798    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1523     17     27      8
+       2      0      0      0
+       4      0    962     21
+      97      2     16    255
+
+--- FPGA (rows) vs float (cols), N/S/V/F ---
+    1628      2      0      0
+       1     20      0      0
+       2      0   1009      0
+      19      0     19    246
+detector: FP detections 10, missed annotations N/S/V/F [10, 0, 4, 3], in VF 0
+results: E:\PROJECTS\1DCNN\Serminal---Biodimedical-Electronics\results\2026-11-20_74e2a072_board_compare

@@ -1,0 +1,248 @@
+{
+  "beats": 2946,
+  "answered": 924,
+  "failed": 0,
+  "fpga_eq_int8_sw": 924,
+  "fpga_ne_float": 18,
+  "agreement_fpga_rows_float_cols": [
+    [
+      504,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      327,
+      0
+    ],
+    [
+      11,
+      0,
+      6,
+      73
+    ]
+  ],
+  "float_vs_mit": {
+    "macro_f1": 0.6449121873282304,
+    "macro_f1_nsv": 0.6376606942154184,
+    "ec57": {
+      "SVEB": {
+        "se": 0.0,
+        "ppv": 0.0
+      },
+      "VEB": {
+        "se": 0.9814241486068112,
+        "ppv": 0.9875389408099688
+      }
+    },
+    "per_class": {
+      "N": {
+        "precision": 0.916015625,
+        "recall": 0.9791231732776617,
+        "f1": 0.9465186680121089,
+        "support": 479
+      },
+      "S": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "V": {
+        "precision": 0.9519519519519519,
+        "recall": 0.9814241486068112,
+        "f1": 0.9664634146341463,
+        "support": 323
+      },
+      "F": {
+        "precision": 0.8767123287671232,
+        "recall": 0.5378151260504201,
+        "f1": 0.6666666666666666,
+        "support": 119
+      }
+    },
+    "confusion": [
+      [
+        469,
+        2,
+        4,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        317,
+        5
+      ],
+      [
+        42,
+        1,
+        12,
+        64
+      ]
+    ],
+    "n_pred_N_as_F": 4
+  },
+  "fpga_vs_mit": {
+    "macro_f1": 0.6560846964613262,
+    "macro_f1_nsv": 0.6387349381844795,
+    "ec57": {
+      "SVEB": {
+        "se": 0.0,
+        "ppv": 0.0
+      },
+      "VEB": {
+        "se": 0.9721362229102167,
+        "ppv": 0.9874213836477987
+      }
+    },
+    "per_class": {
+      "N": {
+        "precision": 0.9282868525896414,
+        "recall": 0.9728601252609603,
+        "f1": 0.9500509683995922,
+        "support": 479
+      },
+      "S": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "V": {
+        "precision": 0.9602446483180428,
+        "recall": 0.9721362229102167,
+        "f1": 0.9661538461538461,
+        "support": 323
+      },
+      "F": {
+        "precision": 0.8222222222222222,
+        "recall": 0.6218487394957983,
+        "f1": 0.7081339712918661,
+        "support": 119
+      }
+    },
+    "confusion": [
+      [
+        466,
+        1,
+        4,
+        8
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        314,
+        8
+      ],
+      [
+        35,
+        1,
+        9,
+        74
+      ]
+    ],
+    "n_pred_N_as_F": 8
+  },
+  "fp_detections": 10,
+  "in_vf": 0,
+  "missed_annotations_NSVF": [
+    10,
+    0,
+    4,
+    3
+  ],
+  "hardware": {
+    "beats_measured": 924,
+    "pe": 9,
+    "rows": 3,
+    "cols": 3,
+    "clock_mhz": 50.0,
+    "baud": 1500000,
+    "weights": "per layer",
+    "cycles_per_beat": 327650.0,
+    "compute_ms": 6.553,
+    "link_s_per_beat": 0.20424078666806036,
+    "packets_per_beat": 232.0,
+    "tx_bytes_per_beat": 27228.0,
+    "rx_bytes_per_beat": 2353.0,
+    "uart_bytes_per_s": 144833.95056676964,
+    "uart_line_bytes_per_s": 150000.0,
+    "uart_use": 0.9655596704451309,
+    "macs_per_beat": 1609344,
+    "gops": 0.4911777811689303,
+    "peak_gops": 0.9,
+    "pe_efficiency": 0.5457530901877002,
+    "beats_per_s_compute": 152.60186174271325,
+    "beats_per_s_with_uart": 4.896181689826904,
+    "mean_rr_s": 0.6123571024335032,
+    "link_margin_x": 2.998211632570376,
+    "wait_for_window_s": 0.6209040506902014,
+    "latency_r_to_label_s": 0.8251448373582617,
+    "layers": [
+      {
+        "name": "conv0",
+        "cycles": 33481.0,
+        "macs": 40320,
+        "pe_efficiency": 0.13380723395358562
+      },
+      {
+        "name": "conv1",
+        "cycles": 102961.0,
+        "macs": 460800,
+        "pe_efficiency": 0.49727566748574703
+      },
+      {
+        "name": "conv2",
+        "cycles": 118801.0,
+        "macs": 552960,
+        "pe_efficiency": 0.5171673639110782
+      },
+      {
+        "name": "conv3",
+        "cycles": 71281.0,
+        "macs": 552960,
+        "pe_efficiency": 0.8619407696300557
+      },
+      {
+        "name": "fc1",
+        "cycles": 1013.0,
+        "macs": 2176,
+        "pe_efficiency": 0.23867500274213008
+      },
+      {
+        "name": "fc2",
+        "cycles": 113.0,
+        "macs": 128,
+        "pe_efficiency": 0.12586037364798427
+      }
+    ],
+    "weights_bytes": 23408,
+    "weights_sram_bytes": 32768,
+    "biases": 212,
+    "power_mw": null,
+    "power_source": null,
+    "energy_uj_per_beat": null,
+    "quartus": null
+  }
+}
