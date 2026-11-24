@@ -316,7 +316,13 @@ def layer_output_shape(layer: LayerModel, hw) -> tuple[int, int]:
 
 def layer_plan(layer: LayerModel, hw) -> dict[str, int]:
     s = layer.spec
-    rows = (2 if hw.rows >= 2 else 1) if s["pool"] else hw.rows
+    if s["pool"]:
+        if hw.supports_pool_even_rows:                    # INFO bit 5: largest even row count (7 -> 6)
+            rows = (hw.rows & ~1) or 1
+        else:                                             # older bitstreams: one pair of positions per tile
+            rows = 2 if hw.rows >= 2 else 1
+    else:
+        rows = hw.rows
     rows = min(rows, s["out_len"])
     row_tiles = math.ceil(s["out_len"] / rows)
     col_tiles = math.ceil(s["cout"] / hw.cols)

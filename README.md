@@ -171,7 +171,7 @@ Cờ `--resident` có ở `board_monitor.py`, `board_eval.py` và `board_compare
 thì dừng và chạy lại tiến trình để mô hình được nạp lại (chương trình tự nạp lại sau mỗi lỗi, nhưng không phát hiện được board vừa reset).
 
 Trước khi chạy trên board, nên chạy A2 và A3 để chắc phần mềm và golden không có vấn đề.
-Mỗi nhịp mất khoảng 0,85 s (1,5 Mbaud), vì vậy cả record 30 phút chạy rất lâu.
+Mỗi nhịp mất khoảng 1,0 s nếu gửi lại trọng số cho từng layer và khoảng 0,1 s với `--resident` (1,5 Mbaud); record 30 phút vì vậy mất khoảng 1,5 giờ ở chế độ mặc định, vài phút ở chế độ `--resident` (số đo ngày 24/11/2026).
 
 ### D. Biên dịch và thời gian (Quartus)
 

@@ -121,6 +121,11 @@ class HardwareInfo:
         return bool(self.features & 0x08)
 
     @property
+    def supports_pool_even_rows(self) -> bool:
+        """INFO features bit 5: a layer with pool uses the largest even number of PE rows per tile (7 -> 6)."""
+        return bool(self.features & 0x20)
+
+    @property
     def supports_resident(self) -> bool:
         """INFO features bit 4: CONFIG may carry w_base / b_base, so weights and biases can stay on the chip."""
         return bool(self.features & 0x10)
