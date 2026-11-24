@@ -56,6 +56,7 @@ class BoardResult:
     transactions: int
     tx_bytes: int
     rx_bytes: int
+    layer_cycles: tuple = ()  # FPGA clock cycles of each layer's RUN (conv0 .. fc2), same order as the model
 
 
 class BoardClassifier:
@@ -148,6 +149,7 @@ class BoardClassifier:
         n0, tx0, rx0 = s0.transactions, s0.tx_bytes, s0.rx_bytes
         t0 = h._clock()
         cycles = 0
+        layer_cycles = []
         try:
             for index, (layer, w, bias, shift, preshift) in enumerate(self._ops):
                 spec = layer.spec
@@ -176,6 +178,7 @@ class BoardClassifier:
                 if run.status != 0:
                     raise BoardError(f"{spec['name']}: RUN status {run.status} (writer overrun/error)")
                 cycles += run.cycles
+                layer_cycles.append(run.cycles)
             if self.resident and self._read_bank != 0:      # the next beat starts on weight group 0 again
                 h.swap(w=True)
                 self._read_bank = 0
@@ -196,7 +199,7 @@ class BoardClassifier:
             raise BoardError(f"inconsistent FC2 result: argmax byte {pred}, logits {logits}")
         s1 = h.stats
         return BoardResult(logits, pred, cycles, h._clock() - t0, s1.transactions - n0, s1.tx_bytes - tx0,
-                           s1.rx_bytes - rx0)
+                           s1.rx_bytes - rx0, tuple(layer_cycles))
 
     # ---------------------------------------------------------------- after a failure
     def recover(self) -> None:

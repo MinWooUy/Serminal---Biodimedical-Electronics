@@ -159,6 +159,13 @@ python scripts/board_eval.py --record 208 --serial COM5 --start 600 --dur 60
 python scripts/board_eval.py --record 208 --serial COM5
 ```
 
+Panel bên phải của `board_compare.py` (chạy trực tiếp) hiển thị theo bốn nhóm, tự cập nhật theo các nhịp FPGA đã trả lời:
+`HARDWARE` (PE, UART, logic, bộ nhớ, Fmax, công suất; lấy từ lệnh `INFO` và báo cáo Quartus trong `rtl/cnn1d/output_files/`),
+`PERFORMANCE` (chu kỳ, độ trễ UART, GOPS, hiệu suất PE, mức dùng UART, độ trễ từ đỉnh R đến nhãn), `PER LAYER` (chu kỳ và hiệu suất PE từng layer),
+`CHECK` (bit-exact với phần mềm) và `AGREEMENT WITH MIT ANNOTATION` (F1, Se, +P, EC57 SVEB/VEB, ma trận nhầm lẫn).
+Công suất tự đọc từ `cnn1d.pow.summary` nếu có (ước lượng, nêu độ tin cậy); truyền `--power-mw` để dùng số khác (ví dụ số đo bằng thiết bị USB).
+Khi kết thúc, các thông số này được ghi vào `metrics.json` (mục `hardware`) và `log.txt` của thư mục kết quả.
+
 Cờ `--resident` có ở `board_monitor.py`, `board_eval.py` và `board_compare.py`. Nó cần bitstream có INFO `features` bit 4
 (w_base/b_base; bitstream hiện tại báo `0x3F`). Mặc định vẫn là gửi lại trọng số cho từng layer. Board bị reset hay tắt nguồn
 thì dừng và chạy lại tiến trình để mô hình được nạp lại (chương trình tự nạp lại sau mỗi lỗi, nhưng không phát hiện được board vừa reset).

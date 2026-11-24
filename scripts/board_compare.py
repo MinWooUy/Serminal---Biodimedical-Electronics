@@ -30,9 +30,11 @@ all DS1): the scores show agreement, not generalisation.
 
 import argparse
 import csv
+import functools
 import hashlib
 import json
 import queue
+import re
 import sys
 import threading
 import time
@@ -62,15 +64,18 @@ NONE = -9                                                   # not answered (yet)
 QUARTUS_DIR = ROOT / "rtl" / "cnn1d" / "output_files"
 
 
+@functools.lru_cache(maxsize=1)
 def quartus_summary() -> dict | None:
-    """Static numbers of the bitstream, read from the Quartus reports in rtl/cnn1d/output_files (None if absent)."""
-    import re
-    fit, sta, rpt = (QUARTUS_DIR / n for n in ("cnn1d.fit.summary", "cnn1d.sta.summary", "cnn1d.sta.rpt"))
+    """Static numbers of the last Quartus compile and power estimate (rtl/cnn1d/output_files; None if absent).
+    Read once: these files only change when the design is compiled again."""
+    fit, sta, rpt, pow_s, fit_rpt = (QUARTUS_DIR / n for n in (
+        "cnn1d.fit.summary", "cnn1d.sta.summary", "cnn1d.sta.rpt", "cnn1d.pow.summary", "cnn1d.fit.rpt"))
     if not fit.exists():
         return None
-    t = fit.read_text(encoding="utf-8", errors="replace")
+    read = lambda p: p.read_text(encoding="utf-8", errors="replace")      # noqa: E731
+    t = read(fit)
 
-    def pick(label, which=1):
+    def pick(label):
         m = re.search(re.escape(label) + r"\s*:\s*([\d,]+)\s*/\s*([\d,]+)\s*\(\s*(\d+)\s*%", t)
         return (int(m.group(1).replace(",", "")), int(m.group(3))) if m else (None, None)
 
@@ -78,44 +83,87 @@ def quartus_summary() -> dict | None:
     regs, _ = pick("Dedicated logic registers")
     bits, bits_pct = pick("Total memory bits")
     mult, _ = pick("Embedded Multiplier 9-bit elements")
-    out = {"le": le, "le_pct": le_pct, "registers": regs, "mem_bits": bits, "mem_pct": bits_pct, "mult9": mult,
+    pins, _ = pick("Total pins")
+    out = {"le": le, "le_pct": le_pct, "registers": regs, "mem_bits": bits, "mem_pct": bits_pct, "mult9": mult, "pins": pins,
            "report_date": time.strftime("%d/%m/%Y", time.localtime(fit.stat().st_mtime))}
     if sta.exists():
-        m = re.search(r"Setup 'clk50'\s*\n\s*Slack\s*:\s*([-\d.]+)", sta.read_text(encoding="utf-8", errors="replace"))
+        m = re.search(r"Setup 'clk50'\s*\n\s*Slack\s*:\s*([-\d.]+)", read(sta))
         out["setup_slack_ns"] = float(m.group(1)) if m else None
     if rpt.exists():
-        m = re.search(r";\s*Slow 1200mV 85C Model Fmax Summary\s*;.*?;\s*([\d.]+) MHz\s*;", rpt.read_text(encoding="utf-8", errors="replace"), re.S)
+        m = re.search(r";\s*Slow 1200mV 85C Model Fmax Summary\s*;.*?;\s*([\d.]+) MHz\s*;", read(rpt), re.S)
         out["fmax_mhz"] = float(m.group(1)) if m else None
+    if fit_rpt.exists():                                          # per-module logic cells and M9K blocks (the 9 MB report, read once)
+        r = read(fit_rpt)
+        i = r.find("; Fitter Resource Utilization by Entity")
+        seg = r[i:i + 60000] if i >= 0 else ""
+        m = re.search(r";\s*\|\w+\s*;\s*([\d,]+)[^;]*;[^;]*;[^;]*;\s*([\d,]+)\s*;\s*(\d+)\s*;", seg)
+        if m:
+            out["m9k"] = int(m.group(3))
+        for key, name in (("tile_le", "conv1d_tile_top"), ("layer_top_le", "conv1d_layer_top"), ("core_le", "layer_core")):
+            m = re.search(r";\s*\|" + name + r":\w+\|\s*;\s*([\d,]+)", seg)
+            if m:
+                out[key] = int(m.group(1).replace(",", ""))
+    if pow_s.exists():
+        p = read(pow_s)
+        num = lambda label: (lambda m: float(m.group(1)) if m else None)(      # noqa: E731
+            re.search(re.escape(label) + r"\s*:\s*([\d.]+)\s*mW", p))
+        out.update(power_total_mw=num("Total Thermal Power Dissipation"),
+                   power_dynamic_mw=num("Core Dynamic Thermal Power Dissipation"),
+                   power_static_mw=num("Core Static Thermal Power Dissipation"),
+                   power_io_mw=num("I/O Thermal Power Dissipation"),
+                   power_date=time.strftime("%d/%m/%Y", time.localtime(pow_s.stat().st_mtime)))
+        m = re.search(r"Power Estimation Confidence\s*:\s*(\w+)", p)
+        out["power_confidence"] = m.group(1) if m else None
     return out
 
 
+def layer_macs(clf) -> list:
+    """Multiply-accumulates of each layer as the algorithm needs them (fc1 row_combine counted once, not on 3 PE rows)."""
+    return [layer.spec["cout"] * layer.k_len * (1 if layer.spec["flags"] & 0x4 else layer.spec["out_len"])
+            for layer in clf.model]
+
+
 def model_macs(clf) -> int:
-    """Multiply-accumulates of one beat as the algorithm needs them (fc1 row_combine counted once, not on 3 PE rows)."""
-    return sum(layer.spec["cout"] * layer.k_len * (1 if layer.spec["flags"] & 0x4 else layer.spec["out_len"])
-               for layer in clf.model)
+    return sum(layer_macs(clf))
 
 
 def hardware_stats(cmp: "Comparison", n: int, clf, power_mw: float | None = None) -> dict | None:
     """Per-beat hardware figures averaged over the beats the FPGA answered among the first n."""
     hw = clf.hw
     cyc = cmp.cycles[:n]
-    if not np.any(~np.isnan(cyc)):
+    done = ~np.isnan(cyc)
+    if not done.any():
         return None
     pe, clk = hw.rows * hw.cols, hw.clk_hz
     cycles = float(np.nanmean(cyc))
     compute_s = cycles / clk
     link = float(np.nanmean(cmp.link_s[:n]))
-    macs = model_macs(clf)
+    macs_l = layer_macs(clf)
+    macs = sum(macs_l)
     rr = float(np.mean(np.diff(cmp.r)) / cmp.fs) if len(cmp.r) > 1 else float("nan")
-    st = {"beats_measured": int(np.sum(~np.isnan(cyc))), "pe": pe, "rows": hw.rows, "cols": hw.cols, "clock_mhz": clk / 1e6,
-          "baud": hw.baud, "weights": "resident" if getattr(clf, "resident", False) else "per layer",
-          "cycles_per_beat": cycles, "compute_ms": compute_s * 1e3, "link_s_per_beat": link,
-          "packets_per_beat": float(np.nanmean(cmp.txn[:n])), "tx_bytes_per_beat": float(np.nanmean(cmp.tx_bytes[:n])),
-          "macs_per_beat": macs, "gops": 2 * macs / compute_s / 1e9, "peak_gops": 2 * pe * clk / 1e9,
-          "pe_efficiency": macs / (cycles * pe), "mean_rr_s": rr, "link_margin_x": rr / link if link > 0 else float("nan"),
-          "power_mw": power_mw, "energy_uj_per_beat": None if power_mw is None else power_mw * compute_s * 1e3,
-          "quartus": quartus_summary()}
-    return st
+    wait = float(np.mean((cmp.release[:n] - cmp.r[:n]) / cmp.fs))   # until the window and the next R exist
+    tx, rx = float(np.nanmean(cmp.tx_bytes[:n])), float(np.nanmean(cmp.rx_bytes[:n]))
+    line_bps = hw.baud / 10                                         # 8N1: 10 bits per byte
+    q = quartus_summary()
+    p = power_mw if power_mw else (q or {}).get("power_total_mw")
+    layers = []
+    for i, layer in enumerate(clf.model):
+        lc = float(np.nanmean(cmp.layer_cycles[:n, i])) if cmp.layer_cycles is not None and i < cmp.layer_cycles.shape[1] else float("nan")
+        layers.append({"name": layer.spec["name"], "cycles": lc, "macs": macs_l[i],
+                       "pe_efficiency": macs_l[i] / (lc * pe) if lc == lc and lc > 0 else float("nan")})
+    return {"beats_measured": int(done.sum()), "pe": pe, "rows": hw.rows, "cols": hw.cols, "clock_mhz": clk / 1e6,
+            "baud": hw.baud, "weights": "resident" if getattr(clf, "resident", False) else "per layer",
+            "cycles_per_beat": cycles, "compute_ms": compute_s * 1e3, "link_s_per_beat": link,
+            "packets_per_beat": float(np.nanmean(cmp.txn[:n])), "tx_bytes_per_beat": tx, "rx_bytes_per_beat": rx,
+            "uart_bytes_per_s": (tx + rx) / link, "uart_line_bytes_per_s": line_bps, "uart_use": (tx + rx) / link / line_bps,
+            "macs_per_beat": macs, "gops": 2 * macs / compute_s / 1e9, "peak_gops": 2 * pe * clk / 1e9,
+            "pe_efficiency": macs / (cycles * pe), "beats_per_s_compute": 1 / compute_s, "beats_per_s_with_uart": 1 / link,
+            "mean_rr_s": rr, "link_margin_x": rr / link if link > 0 else float("nan"),
+            "wait_for_window_s": wait, "latency_r_to_label_s": wait + link, "layers": layers,
+            "weights_bytes": sum(len(w) for _l, w, *_ in clf._ops), "weights_sram_bytes": 2 * hw.wgt_depth,
+            "biases": sum(len(b) for _l, _w, b, *_ in clf._ops),
+            "power_mw": p, "power_source": "argument" if power_mw else ("Quartus report" if p else None),
+            "energy_uj_per_beat": None if not p else p * compute_s * 1e3, "quartus": q}
 
 
 def load_float_lite(fz):
@@ -141,6 +189,17 @@ def float_predict(model, z_q: np.ndarray, rr_s: np.ndarray) -> np.ndarray:
     r = torch.as_tensor(rr_s, dtype=torch.float32)
     with torch.no_grad():
         return torch.cat([model(x[i:i + 1024], r[i:i + 1024]) for i in range(0, len(x), 1024)]).argmax(1).numpy()
+
+
+def _json_safe(o):
+    """NaN / inf -> None so metrics.json stays valid JSON."""
+    if isinstance(o, dict):
+        return {k: _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    if isinstance(o, float) and (o != o or o in (float("inf"), float("-inf"))):
+        return None
+    return o
 
 
 class Comparison:
@@ -169,6 +228,8 @@ class Comparison:
         self.link_s = np.full(n, np.nan)
         self.cycles = np.full(n, np.nan)                    # FPGA clock cycles of the six RUNs of the beat
         self.txn = np.full(n, np.nan)                       # UART packets of the beat
+        self.rx_bytes = np.full(n, np.nan)                  # bytes the host received for the beat
+        self.layer_cycles = None                            # (beats, layers) FPGA cycles of each RUN, created on the first answer
         self.tx_bytes = np.full(n, np.nan)                  # bytes the host sent for the beat
         self.errors = [""] * n
         ann = v["ann_pos"]
@@ -185,6 +246,12 @@ class Comparison:
         self.cycles[k] = res.cycles
         self.txn[k] = res.transactions
         self.tx_bytes[k] = res.tx_bytes
+        self.rx_bytes[k] = res.rx_bytes
+        lc = getattr(res, "layer_cycles", ())
+        if lc:
+            if self.layer_cycles is None:
+                self.layer_cycles = np.full((len(self.r), len(lc)), np.nan)
+            self.layer_cycles[k, :len(lc)] = lc
 
     # ---- scores over the beats answered so far
     def scores(self, upto: int | None = None) -> dict:
@@ -225,18 +292,26 @@ class Comparison:
         hws = hardware_stats(self, len(self.r), clf, power_mw) if clf is not None else None
         if hws:
             m["hardware"] = hws
-        (out / "metrics.json").write_text(json.dumps(m, indent=2), encoding="utf-8")
+        (out / "metrics.json").write_text(json.dumps(_json_safe(m), indent=2), encoding="utf-8")
         if hws:
             q = hws["quartus"] or {}
+            lay = ", ".join(f"{x['name']} {x['cycles']:,.0f} ({100 * x['pe_efficiency']:.1f} %)" for x in hws["layers"] if x["cycles"] == x["cycles"])
             log(f"\n--- hardware (mean over {hws['beats_measured']} beats) ---\n"
                 f"PE array {hws['rows']}x{hws['cols']} @ {hws['clock_mhz']:g} MHz, UART {hws['baud'] / 1e6:g} Mbaud, weights {hws['weights']}\n"
                 f"compute {hws['compute_ms']:.2f} ms/beat ({hws['cycles_per_beat']:,.0f} cycles), link {hws['link_s_per_beat']:.3f} s/beat, "
-                f"{hws['packets_per_beat']:.0f} packets, {hws['tx_bytes_per_beat']:,.0f} B sent\n"
+                f"{hws['packets_per_beat']:.0f} packets, {hws['tx_bytes_per_beat']:,.0f} B sent, {hws['rx_bytes_per_beat']:,.0f} B received\n"
                 f"{hws['macs_per_beat']:,} MAC/beat -> {hws['gops']:.3f} GOPS of {hws['peak_gops']:.1f} peak, PE efficiency {100 * hws['pe_efficiency']:.1f} %\n"
-                f"mean RR {hws['mean_rr_s']:.2f} s -> link margin x{hws['link_margin_x']:.1f}"
-                + (f"\nQuartus ({q['report_date']}): {q['le']:,} LE ({q['le_pct']} %), {q['mem_bits'] / 1000:.0f} kbit ({q['mem_pct']} %), "
-                   f"{q['mult9']} mult, Fmax {q.get('fmax_mhz')} MHz, setup slack {q.get('setup_slack_ns')} ns" if q else "")
-                + (f"\npower {hws['power_mw']:g} mW (estimate) -> {hws['energy_uj_per_beat']:.1f} uJ/beat" if hws["power_mw"] else "\npower: not measured"))
+                f"rate {hws['beats_per_s_compute']:.0f} beats/s compute, {hws['beats_per_s_with_uart']:.1f} beats/s with UART; "
+                f"UART {hws['uart_bytes_per_s'] / 1e3:.1f} kB/s = {100 * hws['uart_use']:.1f} % of the {hws['uart_line_bytes_per_s'] / 1e3:.0f} kB/s line\n"
+                f"latency R to label {hws['latency_r_to_label_s']:.2f} s = wait for window/next R {hws['wait_for_window_s']:.2f} + FPGA {hws['link_s_per_beat']:.2f}; "
+                f"mean RR {hws['mean_rr_s']:.2f} s -> margin x{hws['link_margin_x']:.1f}\n"
+                f"per layer: {lay}\n"
+                f"model {hws['weights_bytes']:,} B int8 in {hws['weights_sram_bytes']:,} B weight SRAM, {hws['biases']} biases"
+                + (f"\nQuartus ({q['report_date']}): {q['le']:,} LE ({q['le_pct']} %), PE array {q.get('tile_le', 0):,} LE, {q['mem_bits'] / 1000:.0f} kbit ({q['mem_pct']} %), "
+                   f"{q.get('m9k', '?')} M9K, {q['mult9']} mult, Fmax {q.get('fmax_mhz')} MHz, setup slack {q.get('setup_slack_ns')} ns" if q else "")
+                + (f"\npower {hws['power_mw']:g} mW (estimate, {hws['power_source']}"
+                   + (f", confidence {q['power_confidence']}" if hws["power_source"] == "Quartus report" and q.get("power_confidence") else "")
+                   + f") -> {hws['energy_uj_per_beat'] / 1000:.2f} mJ/beat over the compute time" if hws["power_mw"] else "\npower: not measured"))
         log(f"\n{self.seg}: {m['beats']} beats, FPGA answered {m['answered']}, failed {m['failed']}, "
             f"FPGA == int8 software {m['fpga_eq_int8_sw']}/{m['answered']}, FPGA != float {m['fpga_ne_float']}")
         if m["float_vs_mit"]:
@@ -294,16 +369,37 @@ def _cm_text(rep) -> str:
     return "\n".join(lines)
 
 
+def _pct(x) -> str:
+    return f"{100 * x:.1f}"
+
+
 def _score_block(name: str, rep) -> list[str]:
-    """One confusion-matrix block, 31 characters wide, so two of them fit side by side."""
+    """One block (31 characters wide, 12 lines) so two of them fit side by side: F1, Se, +P per class, EC57, confusion."""
     if rep is None:
-        return [f"{name:<31}", f"{'-':<31}"] + [" " * 31] * 6
+        return [f"{name:<31}", f"{'-':<31}"] + [" " * 31] * 10
+    pc, e = rep["per_class"], rep["ec57"]
     rows = [f"{name:<31}",
             f"macro-F1 {rep['macro_f1']:.3f}".ljust(31),
-            ("F1 " + " ".join(f"{c}{rep['per_class'][c]['f1']:.2f}" for c in CLASSES)).ljust(31),
+            ("F1 " + " ".join(f"{c}{pc[c]['f1']:.2f}" for c in CLASSES)).ljust(31),
+            ("Se " + " ".join(f"{c}{_pct(pc[c]['recall'])}" for c in CLASSES)).ljust(31),
+            ("+P " + " ".join(f"{c}{_pct(pc[c]['precision'])}" for c in CLASSES)).ljust(31),
+            f"SVEB Se {_pct(e['SVEB']['se'])} +P {_pct(e['SVEB']['ppv'])}".ljust(31),
+            f"VEB  Se {_pct(e['VEB']['se'])} +P {_pct(e['VEB']['ppv'])}".ljust(31),
             "       " + "".join(f"{c:>5}" for c in CLASSES) + " " * 4]
     rows += [(f"MIT {c}  " + "".join(f"{x:>5}" for x in row)).ljust(31) for c, row in zip(CLASSES, rep["confusion"])]
     return rows
+
+
+def _layer_block(layers, i0: int, n: int) -> list[str]:
+    """Layers i0 .. i0+n-1 as 'name  cycles  PE efficiency', each 31 characters wide."""
+    out = []
+    for i in range(i0, i0 + n):
+        if i < len(layers) and layers[i]["cycles"] == layers[i]["cycles"]:
+            L = layers[i]
+            out.append(f"{L['name']:<6}{L['cycles']:>9,.0f}  {100 * L['pe_efficiency']:>5.1f} %".ljust(31))
+        else:
+            out.append(" " * 31)
+    return out
 
 
 def _row(label: str, value: str = "", note: str = "") -> tuple:
@@ -318,30 +414,48 @@ def panel_lines(cmp: Comparison, worker: FpgaWorker, t: float, speed: float, n: 
     st = hardware_stats(cmp, n, clf, power_mw)
     q = (st or {}).get("quartus") or quartus_summary()
     resident = "resident" if getattr(clf, "resident", False) else "per layer"
+    w_bytes = sum(len(w) for _l, w, *_ in clf._ops)
+    n_bias = sum(len(b) for _l, _w, b, *_ in clf._ops)
+    model_row = _row("Model", f"{w_bytes:,} B int8", f"of {2 * hw.wgt_depth:,} B SRAM, {n_bias}/256 bias")
     L = [("title", f"RECORD {getattr(cmp, 'record', '')}   {cmp.seg}   replay {t:7.1f} s (x{speed:g})"),
          ("gap", ""),
          ("title", "HARDWARE   DE10-Lite / MAX 10"),
          _row("PE array", f"{hw.rows} x {hw.cols} ({hw.rows * hw.cols} PE)", f"{hw.clk_hz / 1e6:g} MHz"),
          _row("UART", f"{hw.baud / 1e6:g} Mbaud", f"weights: {resident}")]
     if q:
-        L += [_row("Logic", f"{q['le']:,} LE", f"{q['le_pct']} %, {q['registers']:,} regs"),
-              _row("Memory", f"{q['mem_bits'] / 1000:.0f} kbit", f"{q['mem_pct']} %, {q['mult9']} x 9-bit mult"),
+        tile = q.get("tile_le")
+        per_pe = f", {tile / 49:.0f} LE/PE" if tile and hw.rows * hw.cols == 49 else ""       # the report is of the 7 x 7 bitstream
+        mod = _row("Modules", f"PE array {tile:,} LE", f"{100 * tile / q['le']:.0f} %{per_pe}") if tile else _row("Modules")
+        L += [_row("Logic", f"{q['le']:,} LE", f"{q['le_pct']} %, {q['registers']:,} regs"), mod,
+              _row("Memory", f"{q['mem_bits'] / 1000:.0f} kbit", f"{q['mem_pct']} %, {q.get('m9k', '?')} M9K, {q['mult9']} mult"),
+              model_row,
               _row("Timing", f"Fmax {q.get('fmax_mhz', 0):.1f} MHz", f"slack {q.get('setup_slack_ns', 0):+.3f} ns")]
     else:
-        L += [_row("Logic", "no Quartus report"), _row("Memory"), _row("Timing")]
-    if power_mw:
-        e = power_mw * st["compute_ms"] if st else float("nan")
-        L += [_row("Power", f"{power_mw:g} mW (estimate)", f"{e:.1f} uJ/beat")]
+        L += [_row("Logic", "no Quartus report"), _row("Modules"), _row("Memory"), model_row, _row("Timing")]
+    p = power_mw or (q or {}).get("power_total_mw")
+    if p and st:
+        conf = (q or {}).get("power_confidence")
+        note = f"{st['energy_uj_per_beat'] / 1000:.2f} mJ/beat" + (f", conf. {conf.lower()}" if conf and not power_mw else "")
+        L += [_row("Power", f"{p:.0f} mW (estimate)", note)]
+    elif p:
+        L += [_row("Power", f"{p:.0f} mW (estimate)")]
     else:
         L += [_row("Power", "not measured")]
     L += [("gap", ""), ("title", "PERFORMANCE   mean over answered beats")]
     if st:
         L += [_row("Compute", f"{st['compute_ms']:.2f} ms/beat", f"{st['cycles_per_beat']:,.0f} cycles"),
-              _row("Link", f"{st['link_s_per_beat']:.3f} s/beat", f"{st['packets_per_beat']:.0f} pkts, {st['tx_bytes_per_beat']:,.0f} B"),
+              _row("Link", f"{st['link_s_per_beat']:.3f} s/beat", f"{st['packets_per_beat']:.0f} pkts, {st['tx_bytes_per_beat']:,.0f} B sent"),
               _row("Throughput", f"{st['gops']:.2f} GOPS", f"PE efficiency {100 * st['pe_efficiency']:.1f} % of {st['peak_gops']:.1f}"),
-              _row("Real time", f"RR {st['mean_rr_s']:.2f} s", f"margin x{st['link_margin_x']:.1f}")]
+              _row("Rate", f"{st['beats_per_s_compute']:.0f} beats/s compute", f"{st['beats_per_s_with_uart']:.1f} beats/s with UART"),
+              _row("UART use", f"{st['uart_bytes_per_s'] / 1e3:.1f} kB/s", f"{100 * st['uart_use']:.1f} % of {st['uart_line_bytes_per_s'] / 1e3:.0f} kB/s line"),
+              _row("Latency", f"{st['latency_r_to_label_s']:.2f} s R to label", f"wait {st['wait_for_window_s']:.2f} + FPGA {st['link_s_per_beat']:.2f} s"),
+              _row("Margin", f"RR {st['mean_rr_s']:.2f} s", f"link x{st['link_margin_x']:.1f} below RR")]
+        layers = st["layers"]
     else:
-        L += [_row("Compute", "waiting for the first answer"), _row("Link"), _row("Throughput"), _row("Real time")]
+        L += [_row("Compute", "waiting for the first answer")] + [_row(x) for x in ("Link", "Throughput", "Rate", "UART use", "Latency", "Margin")]
+        layers = []
+    L += [("gap", ""), ("title", "PER LAYER   cycles and PE efficiency")]
+    L += [("row", a + " " + b) for a, b in zip(_layer_block(layers, 0, 3), _layer_block(layers, 3, 3))]
     L += [("gap", ""), ("title", "CHECK   FPGA vs software"),
           _row("Beats", f"{n} / {len(cmp.r)}", f"answered {m['answered']}"),
           _row("Queue", f"{worker.pending} waiting", f"failed {m['failed']}"),
@@ -380,7 +494,9 @@ def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float,
 
     def draw_panel(lines):
         """One persistent Text per row (bold + a thin rule under every title), so nothing jumps between frames."""
-        lh = min(0.0265, 0.985 / max(len(lines), 1))
+        units = sum(0.45 if k == "gap" else 1.25 if k == "title" else 1.0 for k, _ in lines)   # height of each kind, in line pitches
+        lh = min(0.0265, 0.985 / max(units, 1))
+        fs = 8.0 if lh >= 0.0225 else 7.0 + 1.0 * max(0.0, (lh - 0.0185) / 0.004)               # shrink the font only when the panel is crowded
         y = 0.995
         for i, (kind, s) in enumerate(lines):
             if kind == "gap":
@@ -392,6 +508,7 @@ def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float,
                                          weight="bold" if kind == "title" else "normal", color="black")
             tx.set_text(s)
             tx.set_y(y)
+            tx.set_fontsize(fs)
             if kind == "title":
                 ln = rules.get(i)
                 if ln is None:
