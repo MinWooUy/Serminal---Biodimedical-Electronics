@@ -59,6 +59,65 @@ NAME = {0: "N", 1: "S", 2: "V", 3: "F", -1: "Q", FP: "FP", VF: "VF"}
 NONE = -9                                                   # not answered (yet) / failed
 
 
+QUARTUS_DIR = ROOT / "rtl" / "cnn1d" / "output_files"
+
+
+def quartus_summary() -> dict | None:
+    """Static numbers of the bitstream, read from the Quartus reports in rtl/cnn1d/output_files (None if absent)."""
+    import re
+    fit, sta, rpt = (QUARTUS_DIR / n for n in ("cnn1d.fit.summary", "cnn1d.sta.summary", "cnn1d.sta.rpt"))
+    if not fit.exists():
+        return None
+    t = fit.read_text(encoding="utf-8", errors="replace")
+
+    def pick(label, which=1):
+        m = re.search(re.escape(label) + r"\s*:\s*([\d,]+)\s*/\s*([\d,]+)\s*\(\s*(\d+)\s*%", t)
+        return (int(m.group(1).replace(",", "")), int(m.group(3))) if m else (None, None)
+
+    le, le_pct = pick("Total logic elements")
+    regs, _ = pick("Dedicated logic registers")
+    bits, bits_pct = pick("Total memory bits")
+    mult, _ = pick("Embedded Multiplier 9-bit elements")
+    out = {"le": le, "le_pct": le_pct, "registers": regs, "mem_bits": bits, "mem_pct": bits_pct, "mult9": mult,
+           "report_date": time.strftime("%d/%m/%Y", time.localtime(fit.stat().st_mtime))}
+    if sta.exists():
+        m = re.search(r"Setup 'clk50'\s*\n\s*Slack\s*:\s*([-\d.]+)", sta.read_text(encoding="utf-8", errors="replace"))
+        out["setup_slack_ns"] = float(m.group(1)) if m else None
+    if rpt.exists():
+        m = re.search(r";\s*Slow 1200mV 85C Model Fmax Summary\s*;.*?;\s*([\d.]+) MHz\s*;", rpt.read_text(encoding="utf-8", errors="replace"), re.S)
+        out["fmax_mhz"] = float(m.group(1)) if m else None
+    return out
+
+
+def model_macs(clf) -> int:
+    """Multiply-accumulates of one beat as the algorithm needs them (fc1 row_combine counted once, not on 3 PE rows)."""
+    return sum(layer.spec["cout"] * layer.k_len * (1 if layer.spec["flags"] & 0x4 else layer.spec["out_len"])
+               for layer in clf.model)
+
+
+def hardware_stats(cmp: "Comparison", n: int, clf, power_mw: float | None = None) -> dict | None:
+    """Per-beat hardware figures averaged over the beats the FPGA answered among the first n."""
+    hw = clf.hw
+    cyc = cmp.cycles[:n]
+    if not np.any(~np.isnan(cyc)):
+        return None
+    pe, clk = hw.rows * hw.cols, hw.clk_hz
+    cycles = float(np.nanmean(cyc))
+    compute_s = cycles / clk
+    link = float(np.nanmean(cmp.link_s[:n]))
+    macs = model_macs(clf)
+    rr = float(np.mean(np.diff(cmp.r)) / cmp.fs) if len(cmp.r) > 1 else float("nan")
+    st = {"beats_measured": int(np.sum(~np.isnan(cyc))), "pe": pe, "rows": hw.rows, "cols": hw.cols, "clock_mhz": clk / 1e6,
+          "baud": hw.baud, "weights": "resident" if getattr(clf, "resident", False) else "per layer",
+          "cycles_per_beat": cycles, "compute_ms": compute_s * 1e3, "link_s_per_beat": link,
+          "packets_per_beat": float(np.nanmean(cmp.txn[:n])), "tx_bytes_per_beat": float(np.nanmean(cmp.tx_bytes[:n])),
+          "macs_per_beat": macs, "gops": 2 * macs / compute_s / 1e9, "peak_gops": 2 * pe * clk / 1e9,
+          "pe_efficiency": macs / (cycles * pe), "mean_rr_s": rr, "link_margin_x": rr / link if link > 0 else float("nan"),
+          "power_mw": power_mw, "energy_uj_per_beat": None if power_mw is None else power_mw * compute_s * 1e3,
+          "quartus": quartus_summary()}
+    return st
+
+
 def load_float_lite(fz):
     """The frozen Lite model before quantisation; model.pt must match export/final_models_manifest.json."""
     import torch
@@ -108,6 +167,9 @@ class Comparison:
         self.fpga_logits = np.zeros((n, 4), dtype=np.int64)
         self.attempts = np.zeros(n, dtype=np.int64)
         self.link_s = np.full(n, np.nan)
+        self.cycles = np.full(n, np.nan)                    # FPGA clock cycles of the six RUNs of the beat
+        self.txn = np.full(n, np.nan)                       # UART packets of the beat
+        self.tx_bytes = np.full(n, np.nan)                  # bytes the host sent for the beat
         self.errors = [""] * n
         ann = v["ann_pos"]
         self.ann_sel = np.flatnonzero((ann >= a) & (ann < b))
@@ -120,6 +182,9 @@ class Comparison:
         self.fpga_pred[k] = res.pred
         self.fpga_logits[k] = res.logits
         self.link_s[k] = res.seconds
+        self.cycles[k] = res.cycles
+        self.txn[k] = res.transactions
+        self.tx_bytes[k] = res.tx_bytes
 
     # ---- scores over the beats answered so far
     def scores(self, upto: int | None = None) -> dict:
@@ -143,7 +208,7 @@ class Comparison:
                 out["missed_annotations_NSVF"] = [int(np.sum(self.v["ann_label"][missed] == c)) for c in range(4)]
         return out
 
-    def write(self, out: Path, log):
+    def write(self, out: Path, log, clf=None, power_mw: float | None = None):
         with open(out / "beats.csv", "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["seg", "r", "t_s", "mit", "float", "fpga", "int8_sw", "fpga_eq_int8_sw", "attempts", "link_s",
@@ -157,7 +222,21 @@ class Comparison:
                             int(self.attempts[k]), "" if np.isnan(self.link_s[k]) else round(float(self.link_s[k]), 4),
                             *(self.fpga_logits[k].tolist() if p != NONE else [""] * 4), self.errors[k]])
         m = self.scores()
+        hws = hardware_stats(self, len(self.r), clf, power_mw) if clf is not None else None
+        if hws:
+            m["hardware"] = hws
         (out / "metrics.json").write_text(json.dumps(m, indent=2), encoding="utf-8")
+        if hws:
+            q = hws["quartus"] or {}
+            log(f"\n--- hardware (mean over {hws['beats_measured']} beats) ---\n"
+                f"PE array {hws['rows']}x{hws['cols']} @ {hws['clock_mhz']:g} MHz, UART {hws['baud'] / 1e6:g} Mbaud, weights {hws['weights']}\n"
+                f"compute {hws['compute_ms']:.2f} ms/beat ({hws['cycles_per_beat']:,.0f} cycles), link {hws['link_s_per_beat']:.3f} s/beat, "
+                f"{hws['packets_per_beat']:.0f} packets, {hws['tx_bytes_per_beat']:,.0f} B sent\n"
+                f"{hws['macs_per_beat']:,} MAC/beat -> {hws['gops']:.3f} GOPS of {hws['peak_gops']:.1f} peak, PE efficiency {100 * hws['pe_efficiency']:.1f} %\n"
+                f"mean RR {hws['mean_rr_s']:.2f} s -> link margin x{hws['link_margin_x']:.1f}"
+                + (f"\nQuartus ({q['report_date']}): {q['le']:,} LE ({q['le_pct']} %), {q['mem_bits'] / 1000:.0f} kbit ({q['mem_pct']} %), "
+                   f"{q['mult9']} mult, Fmax {q.get('fmax_mhz')} MHz, setup slack {q.get('setup_slack_ns')} ns" if q else "")
+                + (f"\npower {hws['power_mw']:g} mW (estimate) -> {hws['energy_uj_per_beat']:.1f} uJ/beat" if hws["power_mw"] else "\npower: not measured"))
         log(f"\n{self.seg}: {m['beats']} beats, FPGA answered {m['answered']}, failed {m['failed']}, "
             f"FPGA == int8 software {m['fpga_eq_int8_sw']}/{m['answered']}, FPGA != float {m['fpga_ne_float']}")
         if m["float_vs_mit"]:
@@ -215,7 +294,68 @@ def _cm_text(rep) -> str:
     return "\n".join(lines)
 
 
-def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float, title: str):
+def _score_block(name: str, rep) -> list[str]:
+    """One confusion-matrix block, 31 characters wide, so two of them fit side by side."""
+    if rep is None:
+        return [f"{name:<31}", f"{'-':<31}"] + [" " * 31] * 6
+    rows = [f"{name:<31}",
+            f"macro-F1 {rep['macro_f1']:.3f}".ljust(31),
+            ("F1 " + " ".join(f"{c}{rep['per_class'][c]['f1']:.2f}" for c in CLASSES)).ljust(31),
+            "       " + "".join(f"{c:>5}" for c in CLASSES) + " " * 4]
+    rows += [(f"MIT {c}  " + "".join(f"{x:>5}" for x in row)).ljust(31) for c, row in zip(CLASSES, rep["confusion"])]
+    return rows
+
+
+def _row(label: str, value: str = "", note: str = "") -> tuple:
+    """Style A: label | value | note in fixed columns (12 + 21 characters, then the note)."""
+    return ("row", f"{label:<12}{value:<21}{note}".rstrip())
+
+
+def panel_lines(cmp: Comparison, worker: FpgaWorker, t: float, speed: float, n: int, power_mw: float | None) -> list:
+    """The side panel as [(kind, text)]; kind is title / row / gap.  Same number of lines every frame (stable layout)."""
+    clf, m = worker.clf, cmp.scores(n)
+    hw = clf.hw
+    st = hardware_stats(cmp, n, clf, power_mw)
+    q = (st or {}).get("quartus") or quartus_summary()
+    resident = "resident" if getattr(clf, "resident", False) else "per layer"
+    L = [("title", f"RECORD {getattr(cmp, 'record', '')}   {cmp.seg}   replay {t:7.1f} s (x{speed:g})"),
+         ("gap", ""),
+         ("title", "HARDWARE   DE10-Lite / MAX 10"),
+         _row("PE array", f"{hw.rows} x {hw.cols} ({hw.rows * hw.cols} PE)", f"{hw.clk_hz / 1e6:g} MHz"),
+         _row("UART", f"{hw.baud / 1e6:g} Mbaud", f"weights: {resident}")]
+    if q:
+        L += [_row("Logic", f"{q['le']:,} LE", f"{q['le_pct']} %, {q['registers']:,} regs"),
+              _row("Memory", f"{q['mem_bits'] / 1000:.0f} kbit", f"{q['mem_pct']} %, {q['mult9']} x 9-bit mult"),
+              _row("Timing", f"Fmax {q.get('fmax_mhz', 0):.1f} MHz", f"slack {q.get('setup_slack_ns', 0):+.3f} ns")]
+    else:
+        L += [_row("Logic", "no Quartus report"), _row("Memory"), _row("Timing")]
+    if power_mw:
+        e = power_mw * st["compute_ms"] if st else float("nan")
+        L += [_row("Power", f"{power_mw:g} mW (estimate)", f"{e:.1f} uJ/beat")]
+    else:
+        L += [_row("Power", "not measured")]
+    L += [("gap", ""), ("title", "PERFORMANCE   mean over answered beats")]
+    if st:
+        L += [_row("Compute", f"{st['compute_ms']:.2f} ms/beat", f"{st['cycles_per_beat']:,.0f} cycles"),
+              _row("Link", f"{st['link_s_per_beat']:.3f} s/beat", f"{st['packets_per_beat']:.0f} pkts, {st['tx_bytes_per_beat']:,.0f} B"),
+              _row("Throughput", f"{st['gops']:.2f} GOPS", f"PE efficiency {100 * st['pe_efficiency']:.1f} % of {st['peak_gops']:.1f}"),
+              _row("Real time", f"RR {st['mean_rr_s']:.2f} s", f"margin x{st['link_margin_x']:.1f}")]
+    else:
+        L += [_row("Compute", "waiting for the first answer"), _row("Link"), _row("Throughput"), _row("Real time")]
+    L += [("gap", ""), ("title", "CHECK   FPGA vs software"),
+          _row("Beats", f"{n} / {len(cmp.r)}", f"answered {m['answered']}"),
+          _row("Queue", f"{worker.pending} waiting", f"failed {m['failed']}"),
+          _row("Bit-exact", f"{m['fpga_eq_int8_sw']}/{m['answered']}", "FPGA == int8 software"),
+          _row("Float", f"{m['fpga_ne_float']} differ", "FPGA != Lite float"),
+          _row("Detector", f"FP {m['fp_detections']}", "false detections") if cmp.seg == "detector" else _row("Detector")]
+    left, right = _score_block("Lite float vs MIT", m["float_vs_mit"]), _score_block("FPGA vs MIT", m["fpga_vs_mit"])
+    L += [("gap", ""), ("title", "AGREEMENT WITH MIT ANNOTATION   answered beats")]
+    L += [("row", a + " " + b) for a, b in zip(left, right)]
+    L += [("gap", ""), ("row", "red letter = differs from the MIT label")]
+    return L
+
+
+def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float, title: str, power_mw: float | None = None):
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
 
@@ -226,14 +366,40 @@ def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float,
     fig.suptitle(title, fontsize=10)
     ax = fig.add_axes((0.10, 0.32, 0.56, 0.6))
     axl = fig.add_axes((0.10, 0.08, 0.56, 0.2), sharex=ax)
-    axt = fig.add_axes((0.68, 0.03, 0.31, 0.92))
+    axt = fig.add_axes((0.675, 0.03, 0.32, 0.92))
+    axt.set_xlim(0, 1)
+    axt.set_ylim(0, 1)
+    axt.autoscale(False)
     axt.axis("off")
     (line,) = ax.plot([], [], lw=0.9, color="#333")
     ax.set_ylabel("mV (0.5-40 Hz integer filter)")
     axl.set_ylim(-0.5, 2.5)
     axl.set_yticks([2, 1, 0], ["MIT (PhysioNet)", "Lite float", "FPGA"])
     axl.set_xlabel("time (s)")
-    txt = axt.text(0, 1, "", va="top", family="monospace", fontsize=8)
+    texts, rules = {}, {}
+
+    def draw_panel(lines):
+        """One persistent Text per row (bold + a thin rule under every title), so nothing jumps between frames."""
+        lh = min(0.0265, 0.985 / max(len(lines), 1))
+        y = 0.995
+        for i, (kind, s) in enumerate(lines):
+            if kind == "gap":
+                y -= lh * 0.45
+                continue
+            tx = texts.get(i)
+            if tx is None:
+                tx = texts[i] = axt.text(0.0, y, s, va="top", ha="left", family="monospace", fontsize=8,
+                                         weight="bold" if kind == "title" else "normal", color="black")
+            tx.set_text(s)
+            tx.set_y(y)
+            if kind == "title":
+                ln = rules.get(i)
+                if ln is None:
+                    ln = rules[i] = axt.plot([0, 1], [0, 0], lw=0.7, color="#444")[0]
+                ln.set_ydata([y - lh * 1.02] * 2)
+                y -= lh * 0.25
+            y -= lh
+
     artists = []
     state = {"t0": time.perf_counter(), "next": 0}
     ann_pos, ann_lab, ann_missed = v["ann_pos"], v["ann_label"], v["ann_missed"]
@@ -282,22 +448,7 @@ def run_live(cmp: Comparison, worker: FpgaWorker, speed: float, window_s: float,
                 wrong = lab >= 0 and p != lab
                 artists.append(axl.text(x, row, CLASSES[p], ha="center", va="center", fontsize=11, weight="bold",
                                         color=WRONG if wrong else COLORS[p]))
-        n = state["next"]
-        m = cmp.scores(n)
-        mean_link = np.nanmean(cmp.link_s[:n]) if np.any(~np.isnan(cmp.link_s[:n])) else float("nan")
-        hw = worker.clf.hw
-        txt.set_text(
-            f"record replay t = {t:7.1f} s  (x{speed:g})\n"
-            f"segmentation: {cmp.seg}\n\n"
-            f"beats released {n}/{len(cmp.r)}, FPGA answered {m['answered']}\n"
-            f"FPGA queue {worker.pending}, failed {m['failed']}\n"
-            f"FPGA link {mean_link:.2f} s/beat, {hw.rows}x{hw.cols} PE\n"
-            f"FPGA == int8 software: {m['fpga_eq_int8_sw']}/{m['answered']}\n"
-            f"FPGA != Lite float:    {m['fpga_ne_float']}\n"
-            + (f"FP detections {m['fp_detections']}\n" if cmp.seg == "detector" else "")
-            + f"\nLite float vs MIT (answered beats)\n{_cm_text(m['float_vs_mit'])}\n"
-            f"\nFPGA vs MIT\n{_cm_text(m['fpga_vs_mit'])}\n"
-            f"\nred letter = differs from MIT label")
+        draw_panel(panel_lines(cmp, worker, t, speed, state["next"], power_mw))
         if s >= b:
             ax.set_title("end of the replay window" + ("" if worker.pending == 0 else f", waiting for {worker.pending} FPGA answers"))
 
@@ -324,6 +475,8 @@ def main(argv=None) -> int:
     ap.add_argument("--resident", action="store_true",
                     help="write the model to the FPGA ONCE (CONFIG w_base/b_base, INFO features bit 4) instead of re-sending the weights every layer")
     ap.add_argument("--timeout", type=float, default=3.0, help="per-command response timeout (s)")
+    ap.add_argument("--power-mw", type=float, default=None,
+                    help="board power in mW (e.g. the Quartus Power Analyzer estimate): shown in the panel with the energy per beat")
     ap.add_argument("--retries", type=int, default=1, help="resend a failed beat from scratch this many times")
     ap.add_argument("--no-display", action="store_true", help="no window: classify every beat, print tables, write files")
     args = ap.parse_args(argv)
@@ -343,6 +496,7 @@ def main(argv=None) -> int:
     log(f"record {args.record}, samples {a}..{b} ({(b - a) / fz.fs:.0f} s), segmentation {args.seg} -- {note}")
     log("PC pre-processing of the whole record ...")
     cmp = Comparison(rec, fz, args.seg, (a, b))
+    cmp.record = args.record
     log(f"{len(cmp.r)} beats to classify; Lite float done on the PC")
 
     transport, clf = open_board(args)
@@ -360,11 +514,11 @@ def main(argv=None) -> int:
             worker = FpgaWorker(cmp, clf, args.retries, args.sim_pace if args.sim else 0.0)
             title = (f"Record {args.record} (PhysioNet MIT-BIH) -- MIT annotation | Lite float | "
                      f"{'FPGA (software model)' if args.sim else 'FPGA ' + args.serial} -- {note}")
-            run_live(cmp, worker, args.speed, args.window, title)
+            run_live(cmp, worker, args.speed, args.window, title, args.power_mw)
             worker.stop()
     finally:
         transport.close()
-        m = cmp.write(out, log)
+        m = cmp.write(out, log, clf, args.power_mw)
         log(f"results: {out}")
         log.close()
     ok = m["failed"] == 0 and m["fpga_eq_int8_sw"] == m["answered"]
