@@ -217,7 +217,7 @@ def open_board(args):
         from python.link.serial_link import SerialTransport
         transport = SerialTransport(args.serial, args.baud)
     host = LayerHost(transport, timeout=args.timeout)
-    return transport, BoardClassifier(host)
+    return transport, BoardClassifier(host, resident=getattr(args, "resident", False))
 
 
 # ---------------------------------------------------------------- headless check
@@ -252,6 +252,8 @@ def main() -> None:
     what.add_argument("--golden", help="segment to replay, e.g. rec208_237600 (see export/golden_manifest.json)")
     what.add_argument("--check", help="headless bit-exact check: segment name or 'all'")
     ap.add_argument("--baud", type=int, default=1500000, help="must match the bitstream")
+    ap.add_argument("--resident", action="store_true",
+                    help="write the model to the FPGA ONCE (CONFIG w_base/b_base, INFO features bit 4) instead of re-sending the weights every layer")
     ap.add_argument("--timeout", type=float, default=3.0, help="per-command response timeout (s)")
     ap.add_argument("--speed", type=float, default=1.0, help="replay speed, 1 = real time (the board needs ~0.3-1 s/beat)")
     ap.add_argument("--sim-pace", type=float, default=0.0, help="--sim: sleep the simulated link time x this factor per beat")

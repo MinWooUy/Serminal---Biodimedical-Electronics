@@ -10,8 +10,8 @@ Trong LaTeX dùng macro `\dinhvi` (định nghĩa **một chỗ** ở `config/ma
 
 ## Vì sao định vị như vậy
 
-- **Điểm mạnh thật của ta là tính kiểm chứng**, không phải tốc độ: khớp từng bit trên 1 306 nhịp; giao thức đánh giá liên bệnh nhân (DS1/DS2, DS2 chạy một lần); độ trễ đầu–cuối được phân rã.
-- Về tốc độ và công suất ta chưa mạnh (hiệu suất PE ≈ 1,6 %, 83 % LE, **chưa đo công suất**), nên không đặt khẩu hiệu "nhanh" hay "tiết kiệm".
+- **Điểm mạnh thật của ta là tính kiểm chứng**, không phải tốc độ: khớp từng bit trên 1 306 nhịp (đo lại ngày 24/11 trên bitstream hiện tại); giao thức đánh giá liên bệnh nhân (DS1/DS2, DS2 chạy một lần); độ trễ đầu–cuối được phân rã.
+- Về tốc độ và công suất ta chưa mạnh (hiệu suất PE ≈ 9 % sau khi sửa loader, trước đó 1,6 %; 83 % LE; **chưa đo công suất**), nên không đặt khẩu hiệu "nhanh" hay "tiết kiệm". Số đo tốc độ chỉ dùng để mô tả hệ thống, không dùng để so với công trình khác.
 - Khoảng trống trong tài liệu khớp với định vị này: học sâu trên phần cứng còn ít; ít công trình báo cáo nhất quán độ trễ từ thu nhận đến quyết định; một số công trình chấp nhận mất độ chính xác khi lên phần cứng hoặc đánh giá theo mẫu thay vì theo bệnh nhân.
   (Nguồn phân tích: thư mục `seminar/research`, bản `Tong_hop_nghien_cuu.pdf`.)
 
@@ -20,7 +20,7 @@ Trong LaTeX dùng macro `\dinhvi` (định nghĩa **một chỗ** ở `config/ma
 | Nên | Không nên |
 |---|---|
 | "khớp từng bit (bit-exact) với golden trên N nhịp" | "chính xác hơn" khi so với bài khác khác giao thức |
-| "độ trễ tính toán 41,17 ms/nhịp (không gồm UART)" | "nhanh hơn CPU" nếu chưa đo |
+| "độ trễ tính toán 7,34 ms/nhịp (không gồm UART)" và "đường truyền ≈ 0,1 s/nhịp khi nạp mô hình một lần" | "nhanh hơn CPU" nếu chưa đo; nói "7,34 ms" mà không nói là không gồm UART |
 | "chưa đo công suất" hoặc "ước lượng bằng công cụ, giả thiết …" | nêu số công suất khi chưa có nguồn |
 | "cùng bậc" / "không so trực tiếp được" | "tốt hơn" khi khác tập lớp hoặc giao thức |
 | mọi bảng so sánh có cột **giao thức đánh giá** và **tập lớp** | trích số của bài khác mà không đọc toàn văn |
@@ -32,17 +32,37 @@ Trong LaTeX dùng macro `\dinhvi` (định nghĩa **một chỗ** ở `config/ma
 |---|---|---|---|
 | C1 | Pipeline số nguyên tương đương bản float | Cổng (iii): chênh macro-F1 OOF ≈ 0,0007 (`docs/system_overview.md`) | Có sẵn |
 | C2 | Bản stream khớp từng bit với golden | `scripts/live_monitor.py --check all`: 8 đoạn, 1 306 nhịp (`docs/uart_protocol.md`) | Có sẵn |
-| C3 | Accelerator chạy trọn 6 layer trên board, khớp từng bit | `results/hardware_logs/` | Có sẵn |
+| C3 | Accelerator chạy trọn 6 layer trên board, khớp từng bit | `results/hardware_logs/check_all_resident_20261124.txt`: `board_monitor --serial COM4 --resident --check all`, 8 đoạn, **1 306/1 306 nhịp**, digest từng đoạn trùng golden, bitstream hiện tại (`.sof` 21/11, 1,5 Mbaud, INFO features `0x3F`). Bản cũ: `multi_all_20261118-165801.log` (bitstream trước khi sửa loader, 921 600 baud) | Đã đo 24/11 |
 | C4 | Liên bệnh nhân: macro-F1 0,603; SVEB Se 71,4 %; VEB Se 92,3 % | `docs/final_ds2_results.md` | Có sẵn |
 | C5 | 50 MHz; 83 % LE; 27 % bộ nhớ | Báo cáo Quartus | Có sẵn |
-| C6 | Tính toán 41,17 ms/nhịp | Log board, **trước** khi sửa loader | Có sẵn; cần đo lại |
-| C7 | Sau sửa loader conv0–conv3 ≈ 7,3 ms | Mô phỏng 363 732 chu kỳ (`docs/issue/L04`) | **Cần đo trên board** |
-| C8 | Hiệu suất PE ≈ 1,6 % và nguyên nhân | Tính từ MAC và chu kỳ; `docs/issue/L04` | Có sẵn (tính) |
+| C6 | Tính toán **7,34 ms/nhịp** (367 091 chu kỳ @50 MHz): conv0 21 429 · conv1 104 379 · conv2 124 603 · conv3 113 321 · fc1 3 137 · fc2 222 | Giá trị `cycles` trong `RESULT` của `RUN`, giải mã từ `layer0-5_rec101_93600_beat000_20261124-085811.raw.log` và `...112417.raw.log` (hai lần chạy cho kết quả y hệt) | Đã đo 24/11 |
+| C6' | Trước khi sửa loader: 2 058 467 chu kỳ = 41,17 ms/nhịp | `layer0-5_rec101_93600_beat121_20261118-182057.log`, `multi_all_20261118-165801.log` | Lịch sử; dùng để so "trước/sau" |
+| C7 | Sau sửa loader conv0–conv3 = 363 732 chu kỳ (7,27 ms), trùng **từng chu kỳ** với mô phỏng RTL | So log 24/11 với mô phỏng trong `docs/issue/L04` (21 429 / 104 379 / 124 603 / 113 321) | Đã đo 24/11. Hai thay đổi cùng lúc (loader 1 B/chu kỳ + pool 6 hàng) nên chưa tách được đóng góp từng cái bằng số đo |
+| C8 | Hiệu suất PE ≈ 9,0 % (1 613 696 MAC / (367 091 × 49)); trước đó 1,6 % | Tính từ MAC và chu kỳ ở C6; nguyên nhân còn lại: nạp rồi mới tính, không tái dùng dữ liệu (L04 bước 3, 4 chưa làm) | Có (tính từ số đo) |
+| C12 | Nạp mô hình một lần (`--resident`): mỗi nhịp 27 gói / 954 B thay cho 232 gói / 27 228 B; thời gian đường truyền ≈ 0,095–0,10 s/nhịp thay cho ≈ 1,0 s | Thử 6 nhịp trên board bằng script tạm (24/11, không lưu trong repo: 232 → 27 gói, 1,0 → 0,095 s) và `check_all_resident_20261124.txt` (`link 0.10 s/beat`); lần nạp ban đầu 194 gói, 26 195 B, 0,88 s | Đã đo 24/11 (6 nhịp cho 1,0 → 0,095 s; 1 306 nhịp cho 0,10 s/nhịp) |
 | C9 | Năng lượng mỗi nhịp | — | **Cần đo** (Quartus Power Analyzer) |
 | C10 | int8 là điểm cân bằng | — | **Cần quét bit trên DS1** (không dùng DS2) |
 | C11 | Độ trễ R → nhãn 1,1–2,4 s gồm ba thành phần | Giá trị lớn nhất trên 8 đoạn golden | **Cần phân rã** |
 
 Câu nào trong bài không có dòng ở bảng này thì chưa nên viết thành khẳng định.
+
+## Cập nhật 24/11/2026 (số liệu phần cứng mới)
+
+Số liệu cũ trong báo cáo và slide ("41,17 ms/nhịp", "0,85 s/nhịp cả UART", "PE ≈ 1,6 %", "chưa đo lại trên board") đến từ bitstream trước khi sửa loader. Thay bằng:
+
+| Đại lượng | Cũ | Mới (đo 24/11) |
+|---|---|---|
+| Chu kỳ tính toán mỗi nhịp | 2 058 467 (41,17 ms) | **367 091 (7,34 ms)** |
+| Hiệu suất PE | 1,6 % | **≈ 9 %** |
+| Gói UART mỗi nhịp (không đọc lại layer trung gian) | 232 gói, 27 228 B | **27 gói, 954 B** (nạp mô hình một lần) |
+| Thời gian đường truyền mỗi nhịp (1,5 Mbaud) | ≈ 1,0 s | **≈ 0,10 s** |
+| Bit-exact trên board | 1 306/1 306 (bitstream cũ, 921 600 baud) | 1 306/1 306 (bitstream hiện tại, 1,5 Mbaud, `--resident`) |
+
+Điểm nghẽn mới: độ trễ khứ hồi mỗi gói (≈ 3,5 ms, nhiều gói nhỏ theo kiểu dừng-chờ), không còn là trọng số hay tính toán (7,34 ms chỉ còn khoảng 7 % của 0,1 s).
+
+**Chưa đo:** công suất; thời gian mỗi nhịp trên đường chạy thật (không đọc lại) khi tải tiền xử lý đồng thời; đóng góp riêng của từng bước sửa loader.
+
+**Còn mặc định cũ:** `BoardClassifier` mặc định vẫn gửi lại trọng số cho từng layer; chế độ nạp một lần phải bật bằng `--resident`. Khi viết báo cáo nói rõ đây là một chế độ cấu hình của host, không phải thay đổi RTL.
 
 ## Định vị đã được áp vào đâu
 

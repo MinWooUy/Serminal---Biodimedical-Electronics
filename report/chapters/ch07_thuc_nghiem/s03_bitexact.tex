@@ -2,7 +2,7 @@
 \section{Kiểm chứng bit-exact}\label{sec:bitexact}
 \begin{goiy}
   \begin{itemize}
-    \item 1\,306/1\,306 nhịp (8 đoạn golden): 4 logit và nhãn trùng golden; \texttt{rec208\_237600} 191/191 ở cả hai baud.
+    \item 1\,306/1\,306 nhịp (8 đoạn golden): 4 logit và nhãn trùng golden, digest CRC-32 từng đoạn trùng. Đo hai lần: (i) bitstream trước khi sửa loader, 921\,600 baud (\texttt{multi\_all\_20261118-165801.log}); (ii) bitstream hiện tại, 1.5~Mbaud, nạp mô hình một lần (24/11/2026, \texttt{check\_all\_resident\_20261124.txt}). \texttt{rec208\_237600} 191/191 ở cả hai.
     \item Mô phỏng phần mềm của FPGA: bản ghi 208, 2\,946/2\,946 nhịp trùng int8 software.
     \item Chuỗi kiểm chứng float $\to$ int8 $\to$ RTL $\to$ board (Hình~\ref{fig:chuoikiemchung}).
     \item \textbf{Lưu ý hợp lệ:} 1\,306 nhịp thuộc DS1 (mô hình đã thấy khi huấn luyện), nên chỉ kiểm chứng \emph{phần cứng}, không phải khả năng tổng quát hoá; số tổng quát hoá lấy từ DS2.

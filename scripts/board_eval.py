@@ -169,6 +169,7 @@ def main(argv=None) -> int:
     ap.add_argument("--start", type=float, default=0.0, help="window start (s)")
     ap.add_argument("--dur", type=float, default=None, help="window length (s), default to the end of the record")
     ap.add_argument("--baud", type=int, default=1500000, help="must match the bitstream")
+    ap.add_argument("--resident", action="store_true", help="write the model to the FPGA ONCE (CONFIG w_base/b_base, INFO features bit 4) instead of re-sending the weights every layer")
     ap.add_argument("--timeout", type=float, default=3.0, help="per-command response timeout (s)")
     ap.add_argument("--retries", type=int, default=1, help="resend a failed beat from scratch this many times")
     ap.add_argument("--no-html", action="store_true", help="do not write the HTML view")

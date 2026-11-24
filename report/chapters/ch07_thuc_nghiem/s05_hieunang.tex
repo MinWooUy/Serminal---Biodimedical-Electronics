@@ -2,10 +2,11 @@
 \section{Hiệu năng}\label{sec:hieunang}
 \begin{goiy}
   \begin{itemize}
-    \item Tính toán: 2\,058\,467 chu kỳ = $41.17$~ms/nhịp @50~MHz; thời gian tổng 1.37~s (921\,600 baud) và $0.85$~s (1\,500\,000 baud) mỗi nhịp.
-    \item Hiệu suất PE $\approx1.6\,\%$, nguyên nhân (loader 3 chu kỳ/byte, nạp rồi mới tính, pool dùng 2/7 hàng) và kết quả mô phỏng sau khi sửa ($\approx0.36$ M chu kỳ cho conv0--3; chưa đo lại trên board).
-    \item So với chu kỳ tim ($\approx0.8$~s): tính toán đủ nhanh; end-to-end hiện bị giới hạn bởi UART.
+    \item Tính toán (đo trên board, giá trị \texttt{cycles} của \texttt{RUN}): $367\,091$ chu kỳ $=7.34$~ms/nhịp @50~MHz (conv0 $21\,429$, conv1 $104\,379$, conv2 $124\,603$, conv3 $113\,321$, FC1 $3\,137$, FC2 $222$). Trước khi sửa loader: $2\,058\,467$ chu kỳ $=41.17$~ms (Hình~\ref{fig:chukyl}).
+    \item Hiệu suất PE tăng từ $1.6\,\%$ lên $\approx9\,\%$ ($1\,613\,696$ MAC $/(367\,091\times49)$). Nguyên nhân cũ: loader 3 chu kỳ/byte, nạp rồi mới tính, pool dùng 2/7 hàng. Conv0--3 đo được $363\,732$ chu kỳ, trùng từng chu kỳ với mô phỏng RTL; hai sửa đổi (loader pipeline, pool 6 hàng) được áp cùng lúc nên chưa tách được đóng góp từng cái bằng số đo.
+    \item Đường truyền: gửi lại trọng số cho từng layer mất $\approx1.0$~s/nhịp ($232$ gói, $27\,228$~B gửi); nạp mô hình một lần (\texttt{w\_base}/\texttt{b\_base}) còn $27$ gói, $954$~B và $\approx0.10$~s/nhịp ở 1.5~Mbaud (đo trên 1\,306 nhịp); lần nạp ban đầu $194$ gói, $0.88$~s. Mỗi gói khứ hồi $\approx3.5$~ms, nên điểm nghẽn còn lại là độ trễ UART chứ không phải tính toán ($7.34$~ms chỉ còn $\approx7\,\%$).
+    \item So với chu kỳ tim ($\approx0.8$~s): cả tính toán lẫn đường truyền đều nằm trong một chu kỳ tim.
     \item \textbf{Cách nói về tốc độ (bám định vị):} chỉ nói ``nhanh hơn CPU'' nếu đã đo; không so độ trễ trực tiếp với thiết kế ánh xạ đầy đủ (mỗi lớp một khối) vì ta chọn dùng chung mảng PE để được cấu hình bằng lệnh; ghi rõ độ trễ là ``tính toán'' hay ``gồm UART''.
   \end{itemize}
 \end{goiy}
-\hinhcho{0.25}{biểu đồ chu kỳ theo layer (đo) và ước lượng sau các bước tối ưu}{Phân bố chu kỳ theo layer và cải thiện ước tính.}{fig:chukyl}
+\hinhcho{0.25}{biểu đồ chu kỳ theo layer: trước khi sửa loader ($2\,058\,467$) và sau ($367\,091$), cả hai đo trên board}{Phân bố chu kỳ theo layer trước và sau khi sửa loader.}{fig:chukyl}

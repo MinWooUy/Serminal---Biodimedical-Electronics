@@ -100,3 +100,58 @@ def test_board_source_replay_matches_golden_digest():
     r = lm.check_segment("rec101_93600", fz, source=src)
     assert lm.check_ok(r) and r["digest"]["board_ok"]
     assert src.failed == 0 and src.mismatch == 0
+
+
+# ---------------------------------------------------------------- resident weights (load the model once)
+class SimTransportHw(SimTransport):
+    def __init__(self, hw=None, **kw):
+        super().__init__(**kw)
+        if hw is not None:
+            self.link = LayerLink(LayerFpgaSim(hw))
+
+
+def test_resident_model_matches_golden_and_sends_far_less():
+    plain = BoardClassifier(LayerHost(SimTransport(), timeout=1.0))
+    clf = BoardClassifier(LayerHost(SimTransport(), timeout=1.0), resident=True)
+    for z, rr, logits, pred in _golden():
+        ref = plain.classify(z, rr)
+        res = clf.classify(z, rr)
+        assert res.logits == logits == ref.logits and res.pred == pred
+        assert res.cycles == ref.cycles
+        assert res.tx_bytes < 0.1 * ref.tx_bytes                  # ~25 kB of weights per beat are gone
+        assert res.transactions < ref.transactions // 2
+    assert clf.load_stats["tx_bytes"] > 23_000                    # the model went over the wire once
+
+
+def test_resident_model_is_loaded_exactly_once_for_many_beats():
+    transport = SimTransport()
+    clf = BoardClassifier(LayerHost(transport, timeout=1.0), resident=True)
+    z, rr, logits, _ = _golden()[0]
+    clf.classify(z, rr)
+    sent_after_first = transport.link.sim.stats["by_cmd"].get("WRITE_W", 0)
+    for _ in range(3):
+        assert clf.classify(z, rr).logits == logits
+    assert transport.link.sim.stats["by_cmd"]["WRITE_W"] == sent_after_first      # no WRITE_W after the load
+
+
+def test_resident_reloads_after_a_failed_beat_and_stays_bit_exact():
+    transport = SimTransport(corrupt_write=120)                  # one damaged command in beat 1 (the load is ~190 writes)
+    clf = BoardClassifier(LayerHost(transport, timeout=0.5), resident=True)
+    (z0, rr0, l0, _), (z1, rr1, l1, _) = _golden()[:2]
+    transport.n_writes = 200                                      # skip the first load, damage the next write instead
+    transport.corrupt_write = None
+    assert clf.classify(z0, rr0).logits == l0
+    transport.corrupt_write = transport.n_writes + 12
+    with pytest.raises(BoardError):
+        clf.classify(z1, rr1)
+    assert clf._resident_ready is False
+    clf.recover()
+    assert clf.classify(z1, rr1).logits == l1                    # reloaded from any weight-bank parity
+    assert clf.classify(z0, rr0).logits == l0
+
+
+def test_resident_needs_a_bitstream_with_w_base():
+    old = SimTransportHw(HwConfig(baud=921_600, features=0x0F))   # INFO bit 4 clear
+    with pytest.raises(BoardError, match="bit 4"):
+        BoardClassifier(LayerHost(old), resident=True)
+    BoardClassifier(LayerHost(SimTransportHw(HwConfig(baud=921_600, features=0x0F))))   # default mode still works
