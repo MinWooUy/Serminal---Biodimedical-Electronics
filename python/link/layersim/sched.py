@@ -28,7 +28,8 @@ FRAME_OVERHEAD = 8                                   # A5 5A CMD SEQ LEN(2) ... 
 NACK_CRC, NACK_ARG, NACK_STATE, NACK_CMD = 1, 2, 3, 4
 F_OUT_INT32, F_ARGMAX, F_ROW_COMBINE, F_GAP_IN = 0x1, 0x2, 0x4, 0x8
 FLAG_NAMES = {F_OUT_INT32: "out_int32", F_ARGMAX: "argmax", F_ROW_COMBINE: "row_combine", F_GAP_IN: "gap_in"}
-FEATURES_ALL = 0x0F
+FEATURES_ALL = 0x1F                                  # bit 4: CONFIG w_base / b_base (resident weights)
+BIAS_DEPTH = 256                                     # bias RAM entries (layer_cmd_controller.v BIAS_DEPTH; not in INFO)
 INFO_FMT = "<BBBBIIHHHHH"                            # layer_cmd_controller.v header comment, 22 bytes
 INFO_SIZE = struct.calcsize(INFO_FMT)
 RUN_RESULT_BYTES = 5                                 # status u8 + cycles u32 LE
@@ -120,6 +121,8 @@ class Config:
     gap: int
     pad_next: int
     flags: int = 0
+    w_base: int = 0                                  # start of the layer's weights in the READ weight bank
+    b_base: int = 0                                  # start of the layer's biases in the bias RAM
 
 
 @dataclass(frozen=True)
@@ -529,7 +532,7 @@ class LayerModel:
     def reset(self) -> None:
         hw = self.hw
         self.x, self.w = _Banks(hw.ifmap_depth), _Banks(hw.wgt_depth)
-        self.bias = np.zeros(hw.cout_max, dtype=np.int64)
+        self.bias = np.zeros(BIAS_DEPTH, dtype=np.int64)
         self.shift = np.zeros(hw.cout_max, dtype=np.int64)
         self.preshift = np.zeros(hw.cout_max, dtype=np.int64)
         self.gap_mem = np.zeros(hw.cout_max, dtype=np.int64)
@@ -555,7 +558,7 @@ class LayerModel:
                 a = cmd.base + i
                 (self.shift if a < hw.cout_max else self.preshift)[a % hw.cout_max] = v
         elif isinstance(cmd, WriteBias):
-            self._check_range(cmd.base, len(cmd.values), hw.cout_max)
+            self._check_range(cmd.base, len(cmd.values), BIAS_DEPTH)
             self.bias[cmd.base:cmd.base + len(cmd.values)] = cmd.values
         elif isinstance(cmd, Swap):
             if cmd.x:
@@ -596,7 +599,8 @@ class LayerModel:
                      or ((i32 or rc) and (c.pool != 0 or c.gap != 0 or c.pad_next != 0))
                      or (i32 and (c.out_len != 1 or 4 * c.cout + 1 > hw.ifmap_depth))
                      or (rc and (c.out_len != 3 or hw.rows < 3)))
-        if (c.out_len == 0 or c.cout == 0 or c.cout > hw.cout_max or c.k == 0 or c.k > hw.feeder_depth or c.step == 0
+        bad_base = c.w_base + c.cout * c.k > hw.wgt_depth or c.b_base + c.cout > BIAS_DEPTH
+        if (bad_base or c.out_len == 0 or c.cout == 0 or c.cout > hw.cout_max or c.k == 0 or c.k > hw.feeder_depth or c.step == 0
                 or c.pool > 1 or c.gap > 1 or (c.pool == 1 and c.out_len % 2) or bad_flags
                 or not 0 <= c.pad_next <= 255):
             raise LayerNack(NACK_ARG, f"CONFIG rejected: {c}")
@@ -614,16 +618,16 @@ class LayerModel:
                 raise LayerUndefined(f"layer reads {miss} ifmap bytes that were never written")
         return self.x.data[bank, idx]
 
-    def _read_w(self, n: int) -> np.ndarray:
-        if n > self.hw.wgt_depth:
-            raise LayerUndefined(f"layer needs {n} weight bytes > {self.hw.wgt_depth}")
+    def _read_w(self, n: int, base: int = 0) -> np.ndarray:
+        if base + n > self.hw.wgt_depth:
+            raise LayerUndefined(f"layer needs {n} weight bytes at {base} > {self.hw.wgt_depth}")
         bank = self.w.active
-        miss = int((~self.w.valid[bank, :n]).sum())
+        miss = int((~self.w.valid[bank, base:base + n]).sum())
         if miss:
             self.stats["unwritten_w"] += miss
             if self.strict:
                 raise LayerUndefined(f"layer reads {miss} weight bytes that were never written")
-        return self.w.data[bank, :n]
+        return self.w.data[bank, base:base + n]
 
     def _pack_gap(self, c: Config) -> None:
         """gap_in: gap_mem -> 3 rows (low 7 bits | high bits saturated to 127 | zeros) in the write bank, then swap."""
@@ -660,8 +664,9 @@ class LayerModel:
         T, K = c.out_len, c.k
         idx = np.arange(T)[:, None] * c.step + np.arange(K)[None, :]
         X = self._read_x(idx)                                                  # (out_len, K)
-        W = self._read_w(c.cout * K).reshape(c.cout, K)
-        raw = X @ W.T + self.bias[:c.cout][None, :]                            # every row is preloaded with the bias
+        W = self._read_w(c.cout * K, c.w_base).reshape(c.cout, K)
+        bias = self.bias[c.b_base:c.b_base + c.cout]
+        raw = X @ W.T + bias[None, :]                            # every row is preloaded with the bias
         if (np.abs(raw) > 2**31 - 1).any():
             raise LayerUndefined("tile accumulator leaves int32")
         pad = 0 if c.gap else c.pad_next
@@ -673,7 +678,7 @@ class LayerModel:
             h = np.empty(c.cout, dtype=np.int64)
             for ch in range(c.cout):
                 t0, t1, t2 = (int(v) for v in raw[:, ch])
-                b = int(self.bias[ch])
+                b = int(bias[ch])
                 comb_x = (t1 << 7) + t0 - (b << 7) - b                         # 128 * P1 + P0 (bias preloaded in every row)
                 comb_y = rsr40(comb_x, int(self.preshift[ch])) + t2            # + P2 + bias
                 h[ch] = min(max(rsr40(comb_y, int(self.shift[ch])), 0), Q)

@@ -64,6 +64,8 @@ def encode_cmd(cmd) -> tuple[int, bytes]:
         return SWAP, bytes([(1 if cmd.x else 0) | (2 if cmd.w else 0)])
     if isinstance(cmd, ls.Config):
         body = struct.pack("<HHHHBBB", cmd.out_len, cmd.cout, cmd.k, cmd.step, cmd.pool, cmd.gap, cmd.pad_next)
+        if cmd.w_base or cmd.b_base:                                              # 16 bytes: flags + w_base + b_base
+            return CONFIG, body + bytes([cmd.flags]) + struct.pack("<HH", cmd.w_base, cmd.b_base)
         return CONFIG, body + (bytes([cmd.flags]) if cmd.flags else b"")      # 11 bytes = flags 0 (older hosts keep working)
     if isinstance(cmd, ls.Run):
         return RUN, b""
@@ -93,10 +95,11 @@ def decode_cmd(code: int, p: bytes):
             raise ValueError("SWAP is one byte, bits 0..1")
         return ls.Swap(bool(p[0] & 1), bool(p[0] & 2))
     if code == CONFIG:
-        if n not in (11, 12):
-            raise ValueError("CONFIG is 11 or 12 bytes")
+        if n not in (11, 12, 16):
+            raise ValueError("CONFIG is 11, 12 or 16 bytes")
         out_len, cout, k, step, pool, gap, pad = struct.unpack("<HHHHBBB", p[:11])
-        return ls.Config(out_len, cout, k, step, pool, gap, pad, p[11] if n == 12 else 0)
+        w_base, b_base = struct.unpack("<HH", p[12:16]) if n == 16 else (0, 0)
+        return ls.Config(out_len, cout, k, step, pool, gap, pad, p[11] if n >= 12 else 0, w_base, b_base)
     if code in (RUN, READ_GAP, INFO):
         if n:
             raise ValueError("no payload expected")

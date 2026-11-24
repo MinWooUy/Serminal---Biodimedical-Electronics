@@ -197,8 +197,9 @@ class LayerHost:
         vals = tuple(int(v) for v in values)
         if not vals:
             raise ValueError("WRITE_BIAS requires at least one bias")
-        if base < 0 or base + len(vals) > info.cout_max:
-            raise ValueError("WRITE_BIAS exceeds COUT_MAX")
+        limit = pl.BIAS_DEPTH if info.supports_resident else info.cout_max     # bias RAM is deeper than COUT_MAX only with b_base
+        if base < 0 or base + len(vals) > limit:
+            raise ValueError(f"WRITE_BIAS exceeds {'BIAS_DEPTH' if info.supports_resident else 'COUT_MAX'} ({limit})")
         per_packet = min(32, (info.max_payload - 2) // 4)
         if per_packet < 1:
             raise LayerLinkError("configuration", "MAX_PAYLOAD too small for one INT32 bias", pl.CMD_WRITE_BIAS)
@@ -212,13 +213,19 @@ class LayerHost:
 
     def config(self, out_len: int, cout: int, k_len: int, window_step: int,
                pool: bool = False, gap: bool = False, pad_next: int = 0,
-               flags: int | None = None) -> None:
+               flags: int | None = None, w_base: int | None = None, b_base: int | None = None) -> None:
         info = self._require_info()
         if cout > info.cout_max or k_len > info.feeder_depth:
             raise ValueError("CONFIG cout/K exceed FPGA-reported limits")
+        if (w_base is not None or b_base is not None) and not info.supports_resident:
+            raise ValueError("this bitstream has no w_base/b_base (INFO features bit 4 clear)")
+        if w_base is not None and w_base + cout * k_len > info.wgt_depth:
+            raise ValueError("CONFIG w_base + Cout*K exceeds the weight SRAM")
+        if b_base is not None and b_base + cout > pl.BIAS_DEPTH:
+            raise ValueError("CONFIG b_base + Cout exceeds BIAS_DEPTH")
         self._exchange(
             pl.CMD_CONFIG,
-            pl.encode_config(out_len, cout, k_len, window_step, pool, gap, pad_next, flags),
+            pl.encode_config(out_len, cout, k_len, window_step, pool, gap, pad_next, flags, w_base, b_base),
             pl.RSP_ACK,
         )
 

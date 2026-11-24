@@ -151,10 +151,17 @@ python host/ecg_layer_host_pc.py COM5 --baud 1500000 --first-layer 0 --last-laye
 # 3) Cả đoạn ECG, so digest với golden
 python scripts/board_monitor.py --serial COM5 --check rec208_237600
 
+# 3b) Như trên nhưng nạp mô hình MỘT lần (cờ --resident): mỗi nhịp chỉ gửi CONFIG w_base/b_base, nhanh hơn ~10 lần
+python scripts/board_monitor.py --serial COM5 --resident --check rec208_237600
+
 # 4) Chấm cả record trên board (thử ngắn trước, rồi mới cả record)
 python scripts/board_eval.py --record 208 --serial COM5 --start 600 --dur 60
 python scripts/board_eval.py --record 208 --serial COM5
 ```
+
+Cờ `--resident` có ở `board_monitor.py`, `board_eval.py` và `board_compare.py`. Nó cần bitstream có INFO `features` bit 4
+(w_base/b_base; bitstream hiện tại báo `0x3F`). Mặc định vẫn là gửi lại trọng số cho từng layer. Board bị reset hay tắt nguồn
+thì dừng và chạy lại tiến trình để mô hình được nạp lại (chương trình tự nạp lại sau mỗi lỗi, nhưng không phát hiện được board vừa reset).
 
 Trước khi chạy trên board, nên chạy A2 và A3 để chắc phần mềm và golden không có vấn đề.
 Mỗi nhịp mất khoảng 0,85 s (1,5 Mbaud), vì vậy cả record 30 phút chạy rất lâu.

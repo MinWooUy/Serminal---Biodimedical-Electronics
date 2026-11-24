@@ -2,7 +2,9 @@
 \section{Tối ưu băng thông nạp dữ liệu (nếu đưa vào báo cáo)}\label{sec:bandwidth}
 \begin{goiy}
   \begin{itemize}
-    \item Chẩn đoán: hiệu suất PE $\approx1.6\,\%$ (1.61 M MAC / 49 PE $\approx32.8$ k chu kỳ lý tưởng so với $2.06\times10^6$ đo được).
-    \item Các bước sửa và ước lượng (loader 1 B/chu kỳ, pool 6 hàng, đọc rộng, nạp chồng tính); phần nào đã mô phỏng, phần nào đã đo trên board.
+    \item Chẩn đoán (trước khi sửa): hiệu suất PE $\approx1.6\,\%$ (1.61 M MAC / 49 PE $\approx32.9$ k chu kỳ lý tưởng so với $2.06\times10^6$ đo được).
+    \item Đã sửa và đo trên board: loader 1 B/chu kỳ và pool dùng 6 hàng. Tổng $2\,058\,467 \to 367\,091$ chu kỳ ($41.17\to7.34$~ms), hiệu suất PE $1.6\,\%\to\approx9\,\%$; conv0--3 đo $363\,732$ chu kỳ, trùng từng chu kỳ với mô phỏng RTL.
+    \item Chưa làm: đọc rộng $W$ byte mỗi chu kỳ và nạp chồng tính (ước lượng của tài liệu L04: $\approx2.5$~ms rồi $\approx1.1$~ms cho conv0--3; \emph{chỉ là ước lượng bằng mô hình, chưa đo}).
+    \item Khi tính toán chỉ còn $\approx7$~ms, đường truyền ($\approx0.1$~s/nhịp) mới là phần chính: xem Mục~\ref{sec:hieunang}.
   \end{itemize}
 \end{goiy}

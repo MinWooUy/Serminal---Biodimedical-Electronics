@@ -21,6 +21,7 @@ SOF = b"\xA5\x5A"
 HEADER_BYTES = 6
 CRC_BYTES = 2
 MAX_PAYLOAD = 256
+BIAS_DEPTH = 256                 # layer_cmd_controller.v BIAS_DEPTH (not reported by INFO); bias RAM entries (INT32)
 
 CMD_WRITE_X = 0x08
 CMD_WRITE_W = 0x09
@@ -118,6 +119,11 @@ class HardwareInfo:
     @property
     def supports_gap_in(self) -> bool:
         return bool(self.features & 0x08)
+
+    @property
+    def supports_resident(self) -> bool:
+        """INFO features bit 4: CONFIG may carry w_base / b_base, so weights and biases can stay on the chip."""
+        return bool(self.features & 0x10)
 
 
 def frame(cmd: int, seq: int, payload: bytes = b"", max_payload: int = MAX_PAYLOAD) -> bytes:
@@ -248,8 +254,13 @@ def encode_config(
     gap: bool = False,
     pad_next: int = 0,
     flags: int | None = None,
+    w_base: int | None = None,
+    b_base: int | None = None,
 ) -> bytes:
-    """Encode 11-byte CONFIG, or 12 bytes when the optional feature flags are supplied."""
+    """Encode 11-byte CONFIG, 12 bytes with feature flags, or 16 bytes with flags + w_base + b_base (INFO features bit 4).
+
+    w_base: start of this layer's weights inside the READ weight bank; b_base: start of its biases in the bias RAM.
+    Without them (11 / 12 bytes) the FPGA reads both from address 0."""
     vals16 = tuple(_check_u16(n, v) for n, v in (
         ("out_len", out_len), ("cout", cout), ("k_len", k_len), ("window_step", window_step)
     ))
@@ -264,6 +275,10 @@ def encode_config(
         if flags & 0xF0:
             raise ValueError("CONFIG feature flags may only use bits 0..3")
         payload += bytes((flags,))
+    if w_base is not None or b_base is not None:
+        if flags is None:
+            payload += bytes((0,))                      # the 16-byte form always carries the flags byte
+        payload += struct.pack("<HH", _check_u16("w_base", w_base or 0), _check_u16("b_base", b_base or 0))
     return payload
 
 
