@@ -48,11 +48,15 @@ Các ghi chú này suy ra từ việc đọc script, chưa thử trên Linux.
 ### 0. Chuẩn bị môi trường
 
 ```powershell
-python -m pip install pytest numpy scipy pyserial          # tối thiểu cho nhóm A và C
-python -m pip install torch matplotlib wfdb                # một số script/test cần thêm (đọc dữ liệu, vẽ, huấn luyện)
+python -m pip install numpy scipy scikit-learn pyserial wfdb pyyaml pytest matplotlib
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu    # bản CPU, đủ để suy luận
 python scripts/download_mitbih.py                          # tải MIT-BIH vào data/raw/mitdb (cần mạng)
 ```
 
+- Các script `board_monitor`, `live_monitor`, `board_eval`, `board_compare` đều import `wfdb`, `torch`, `yaml` và `sklearn`: thiếu một trong số đó sẽ báo `ModuleNotFoundError` ngay khi khởi động, kể cả khi chạy `--sim`.
+- Ổ C: hết chỗ thì `pip install` báo `No space left on device`. Cách tạm: cài sang ổ khác rồi trỏ `PYTHONPATH` tới đó, ví dụ
+  `python -m pip install --target D:\pylibs torch scikit-learn`, sau đó trong Git Bash `export PYTHONPATH='D:\pylibs'`
+  (PowerShell: `$env:PYTHONPATH='D:\pylibs'`) trước khi chạy script.
 - Test gắn dấu `needs_data` sẽ **tự bỏ qua (skip)** nếu thiếu dữ liệu DS1 trong `data/raw/mitdb`; các test còn lại vẫn chạy.
 - **DS2 là tập kiểm tra cuối, chỉ chạy một lần.** Đừng đặt `ECG_ALLOW_DS2=1` trừ khi đang làm đánh giá cuối và đã thống nhất trong nhóm.
 - Đánh giá trên DS1 chỉ chứng minh FPGA == phần mềm (DS1 đã nằm trong dữ liệu huấn luyện mô hình cuối), **không** dùng để nói về khả năng tổng quát hoá.
