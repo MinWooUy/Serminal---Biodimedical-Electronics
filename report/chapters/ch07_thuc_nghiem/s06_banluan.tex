@@ -3,7 +3,7 @@
 \begin{goiy}
   \begin{itemize}
     \item \textbf{Điểm mạnh (bám định vị):} kiểm chứng bit-exact và tái lập được; giao thức đánh giá liên bệnh nhân (DS2 chạy một lần); một mảng PE dùng chung cho conv và FC; độ trễ đầu--cuối được phân rã.
-    \item \textbf{Hạn chế cần nói thẳng:} hiệu suất PE $\approx9\,\%$ (nạp rồi mới tính, chưa tái dùng dữ liệu giữa các ô; trước khi sửa loader chỉ $1.6\,\%$); độ trễ UART $\approx0.1$~s/nhịp (nhiều gói nhỏ theo kiểu dừng-chờ); 83\,\% LE vì nhân dựng bằng LE; \emph{chưa đo công suất} (nếu có chỉ là ước lượng bằng công cụ, nêu rõ giả thiết); tiền xử lý còn ở PC; một cơ sở dữ liệu, một kênh; lớp S yếu (SVEB $+P\approx41\,\%$).
+    \item \textbf{Hạn chế cần nói thẳng:} hiệu suất PE $\approx9\,\%$ (nạp rồi mới tính, chưa tái dùng dữ liệu giữa các ô; trước khi sửa loader chỉ $1.6\,\%$); độ trễ UART $\approx0.1$~s/nhịp (nhiều gói nhỏ theo kiểu dừng-chờ); 83\,\% LE vì nhân dựng bằng LE; công suất chỉ là \emph{ước lượng} của Quartus (332~mW, vectorless, độ tin cậy thấp), chưa có số đo thật; tiền xử lý còn ở PC; một cơ sở dữ liệu, một kênh; lớp S yếu (SVEB $+P\approx41\,\%$).
     \item \textbf{Đe doạ tính hợp lệ:} 1\,306 nhịp dùng để kiểm chứng phần cứng thuộc DS1 nên không phản ánh tổng quát hoá (số tổng quát hoá lấy từ DS2); DS2 chỉ dùng một lần; chênh giữa chế độ annotation và end-to-end; số đo thời gian phụ thuộc cấu hình host/USB-UART.
     \item \textbf{So sánh với công trình khác:} luôn kèm cột giao thức đánh giá (liên bệnh nhân hay theo mẫu), tập lớp và định nghĩa độ trễ; dùng ``cùng bậc'' hoặc ``không so trực tiếp được'' thay cho ``tốt hơn'' khi khác giao thức.
   \end{itemize}
