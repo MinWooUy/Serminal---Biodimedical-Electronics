@@ -1,0 +1,48 @@
+% Muc 7.3  --  phu trach: xem report/PHANCONG.md
+% nguon: results/hardware_logs/check_all_resident_20261124.txt, multi_all_20261118-165801.log,
+%        results/2026-11-24_a5fb3f12_board_compare/log.txt
+\section{Kiểm chứng bit-exact}\label{sec:bitexact}
+\subsection{Chuỗi kiểm chứng}
+Mục tiêu của kiểm chứng là chứng tỏ kết quả tính trên FPGA giống hệt mô hình chuẩn, không phải chỉ gần đúng.
+Việc này được chia thành ba bước, mỗi bước so hai khâu (Hình~\ref{fig:chuoikiemchung}).
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=\textwidth]{ch07_thuc_nghiem/verify}
+  \caption{Chuỗi kiểm chứng từ mô hình số thực đến board.}\label{fig:chuoikiemchung}
+\end{figure}
+
+\begin{enumerate}
+  \item \textbf{Số thực và số nguyên.} Đường số nguyên (lọc, tinh chỉnh đỉnh R, cắt cửa sổ, chuẩn hoá, CNN) được so với đường số thực bằng macro-F1 trên DS1 (Mục~\ref{sec:dochinhxac}). Bước này so chất lượng \emph{quyết định}, không yêu cầu trùng từng bit. Riêng bản xử lý từng mẫu (stream) trùng từng bit với bản xử lý cả đoạn trên $8$ đoạn golden.
+  \item \textbf{Golden và RTL mô phỏng.} Testbench nạp vector do mô hình số nguyên sinh ra và so đầu ra từng byte (Mục~\ref{sec:mophong}).
+  \item \textbf{Golden và board.} Host gửi từng nhịp xuống board, nhận bốn logit và nhãn, rồi so với golden.
+\end{enumerate}
+
+\subsection{Kết quả trên board}
+Toàn bộ $1\,306$ nhịp của $8$ đoạn golden cho logit, nhãn và mã CRC-32 từng đoạn trùng golden (Bảng~\ref{tab:digest}).
+Phép kiểm được chạy hai lần: ngày 18/11/2026 trên bitstream trước khi sửa loader ở $921\,600$~baud, và ngày 24/11/2026 trên bitstream hiện tại ở $1{,}5$~Mbaud với chế độ nạp mô hình một lần (cờ \texttt{--resident} của host).
+
+\begin{table}[htbp]\centering
+\caption{Kết quả so board với golden ngày 24/11/2026.}\label{tab:digest}
+\small
+\begin{tabular}{@{}lrcr@{}}
+\toprule
+Đoạn & Nhịp trùng & CRC-32 (golden $=$ board) & Thời gian chạy (s) \\ \midrule
+\texttt{rec101\_93600}  & 124/124 & \texttt{0xC0339239} & 31 \\
+\texttt{rec118\_237600} & 149/149 & \texttt{0xCCA3485B} & 33 \\
+\texttt{rec119\_489600} & 129/129 & \texttt{0x50EEB298} & 29 \\
+\texttt{rec201\_522000} & 115/115 & \texttt{0x7939B65D} & 27 \\
+\texttt{rec207\_604800} & 169/169 & \texttt{0x597D7339} & 33 \\
+\texttt{rec208\_237600} & 191/191 & \texttt{0xDA42AE38} & 37 \\
+\texttt{rec209\_198000} & 239/239 & \texttt{0xC20C9B2D} & 42 \\
+\texttt{rec223\_187200} & 190/190 & \texttt{0x7D2A6890} & 35 \\ \midrule
+Tổng & 1\,306/1\,306 & không có nhịp lỗi & 267 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Ngoài các đoạn golden, ngày 24/11/2026 toàn bộ bản ghi 208 (khoảng $30$ phút tín hiệu, $2\,946$ nhịp do bộ phát hiện tìm ra) được chạy trên board.
+Board trả lời đủ $2\,946$ nhịp, và nhãn trùng với mô hình int8 phần mềm ở cả $2\,946$ nhịp.
+
+\subsection{Phạm vi của kết luận}
+Cả $8$ đoạn golden và bản ghi 208 đều thuộc DS1, tức dữ liệu mô hình đã thấy khi huấn luyện.
+Các kết quả trong mục này vì vậy chỉ chứng minh rằng \emph{phần cứng khớp phần mềm}; chúng không nói gì về khả năng tổng quát hoá, vốn lấy từ DS2 (Mục~\ref{sec:dochinhxac}).
+Khớp từng bit trên một tập vector cũng không chứng minh đúng với mọi đầu vào; các trường hợp biên của từng khối được kiểm riêng trong mô phỏng (Mục~\ref{sec:mophong}).

@@ -1,0 +1,67 @@
+% Muc 6.5  --  phu trach: xem report/PHANCONG.md
+\section{Điều khiển layer và tile}\label{sec:ctrl}
+Điều khiển được chia thành bốn tầng lồng nhau, mỗi tầng một FSM nhỏ biết đúng việc của mình (Hình~\ref{fig:fsm}): lệnh $\to$ layer $\to$ vòng lặp các ô $\to$ một ô và lõi tính toán.
+Tầng trên phát một xung \emph{start} cho tầng dưới và chờ một xung \emph{done}; không tầng nào biết chi tiết của tầng dưới ngoài hai tín hiệu đó, nên có thể thay một tầng mà không sửa các tầng còn lại.
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=0.88\textwidth]{ch06_phan_cung/fsm}
+  \caption{Phân cấp điều khiển từ lệnh đến FSM của ô.}\label{fig:fsm}
+\end{figure}
+
+\subsection{Tầng 1: giải mã lệnh (\texttt{layer\_cmd\_controller})}
+FSM này nhận khung đã qua kiểm CRC từ \texttt{uart\_crc\_top}, giải mã trường \texttt{CMD} và thực hiện lệnh (bộ lệnh đầy đủ ở Chương~\ref{ch:uart}).
+Các trạng thái chính là: nhận và ghi dữ liệu (\texttt{WRITE}, \texttt{WRITE\_BIAS}), đổi bank (\texttt{SWAP}), chạy layer (\texttt{RUN\_START}, \texttt{RUN\_WAIT}), đọc ra (\texttt{RD\_GAP}, \texttt{RD\_FMAP\_*}) và gửi trả lời (\texttt{SEND}, \texttt{TX\_LAUNCH}, \texttt{TX\_WAIT}).
+Lệnh \texttt{CONFIG} chốt cấu hình layer (\texttt{out\_len}, \texttt{cout}, \texttt{k\_len}, \texttt{window\_step}, \texttt{pool}, \texttt{gap}, \texttt{pad\_next}, cờ, \texttt{w\_base}, \texttt{b\_base}) vào các thanh ghi; cấu hình sai (tham số ngoài giới hạn, \texttt{w\_base}$+\texttt{cout}\cdot\texttt{k\_len}>\texttt{WGT\_MEM\_DEPTH}$, \texttt{b\_base}$+\texttt{cout}>\texttt{BIAS\_DEPTH}$, tổ hợp cờ không hợp lệ) bị từ chối bằng tín hiệu từ chối (Negative Acknowledge, NACK) mã $2$.
+Các lệnh \texttt{CONFIG}, \texttt{SWAP}, \texttt{RUN} và các lệnh đọc gửi khi layer đang chạy, hoặc \texttt{RUN} khi chưa có \texttt{CONFIG} hợp lệ, bị từ chối với mã $3$.
+Lệnh \texttt{RUN} đặt bộ đếm chu kỳ về $0$, phát xung bắt đầu layer, chờ xung kết thúc và trả về $\texttt{RESULT}=[\text{status}:\mathrm{u8},\ \text{cycles}:\mathrm{u32}]$: \texttt{cycles} là số chu kỳ xung nhịp từ lúc bắt đầu đến lúc xong, \texttt{status} khác $0$ nếu bộ ghi báo \texttt{overrun}.
+Chính giá trị \texttt{cycles} này được dùng làm số đo thời gian tính toán ở Chương~\ref{ch:thucnghiem}.
+Mọi lệnh chỉ nhận được khi FSM ở trạng thái rảnh; byte đến trong lúc bộ điều khiển đang bận bị bỏ (bộ thu chỉ được bật ở \texttt{IDLE}), nên giao thức phía host phải theo kiểu gửi một lệnh, chờ trả lời (Chương~\ref{ch:uart}).
+
+\subsection{Tầng 2: FSM layer (\texttt{conv1d\_layer\_top})}
+Khi nhận xung bắt đầu, FSM layer chốt cấu hình rồi đi qua các bước sau, bước nào không cần thì bị bỏ qua:
+\begin{itemize}
+  \item \texttt{L\_GPACK}, \texttt{L\_GSWAP} (chỉ layer FC1, cờ \texttt{gap\_in}): đóng gói ba hàng giá trị GAP vào bank ghi rồi đổi bank để chúng thành ifmap của layer;
+  \item \texttt{L\_PAD} (chỉ khi \texttt{pad\_next}$\neq0$ và không phải layer GAP): ghi số không vào vùng đệm của đầu ra, $2\cdot\texttt{pad\_next}\cdot C_{out}$ byte;
+  \item \texttt{L\_RUN}: phát lệnh chạy cho bộ điều khiển vòng lặp ô (tầng 3) và chờ nó báo xong;
+  \item \texttt{L\_PRED} (chỉ layer INT32 có argmax, tức FC2): ghi chỉ số kênh có giá trị lớn nhất;
+  \item \texttt{L\_FIN}: phát xung kết thúc layer và tự \texttt{SWAP} ifmap nếu không phải layer GAP.
+\end{itemize}
+Tầng này cũng nối các khối dữ liệu: bộ ghi \texttt{fmap\_writer}, các bộ nhớ, và ô \texttt{conv1d\_tile\_top}.
+Với hai layer FC có thêm một FSM phụ (các trạng thái \texttt{XS\_*}): ở FC1 nó ghép ba hàng của ô thành một hàng (mỗi cột tốn $4$ chu kỳ) rồi đưa cho \texttt{fmap\_writer}; ở FC2 nó tự ghi $4$ byte INT32 của mỗi kênh và theo dõi giá trị lớn nhất; khi xong nó báo \texttt{xs\_done}, đóng vai xung \emph{commit} thay cho bộ ghi.
+
+\subsection{Tầng 3: vòng lặp các ô (\texttt{conv1d\_layer\_controller})}
+Bộ điều khiển chia layer thành các ô và lần lượt phát từng ô.
+Thứ tự duyệt là: với mỗi \emph{nhóm vị trí} (hàng ô), duyệt hết các \emph{nhóm kênh} (cột ô) rồi mới sang nhóm vị trí kế tiếp.
+Địa chỉ gốc của ô được cập nhật theo hai quy tắc:
+\begin{itemize}
+  \item sang nhóm kênh kế tiếp: $\mathrm{w\_base}\mathrel{+}=C\cdot K$ (chuyển $C$ bộ lọc, ifmap giữ nguyên);
+  \item sang nhóm vị trí kế tiếp: $\mathrm{ifmap\_base}\mathrel{+}=R_{\text{eff}}\cdot\texttt{window\_step}$ và $\mathrm{w\_base}$ quay về đầu.
+\end{itemize}
+Với bốn ô đầu của một layer có hai nhóm kênh và hai nhóm vị trí, thứ tự là: (nhóm vị trí 0, kênh 0), (vị trí 0, kênh 1), (vị trí 1, kênh 0), (vị trí 1, kênh 1).
+Các bộ đếm \texttt{rows\_remaining} và \texttt{cols\_remaining} cho biết ô cuối của mỗi chiều chỉ còn bao nhiêu hàng hoặc cột (\texttt{active\_rows}, \texttt{active\_cols}); số hàng mỗi ô lấy theo cờ pool (Mục~\ref{sec:anhxa}).
+FSM chỉ có bốn trạng thái: \texttt{S\_IDLE}, \texttt{S\_TILE\_START} (phát xung bắt đầu ô), \texttt{S\_TILE\_WAIT} (chờ ô xong) và \texttt{S\_DONE}.
+
+\textbf{Chỉ phát ô sau khi ô trước đã ghi xong.} Ô kế tiếp chỉ được phát khi ô trước đã báo \emph{commit} (\texttt{fmap\_writer} ghi xong) \emph{và} \texttt{conv1d\_tile\_top} đã quay về rảnh.
+Điều này bảo đảm \texttt{fmap\_writer} không bao giờ phải ghi hai ô cùng lúc và là nguyên nhân khiến các ô không chồng lên nhau trong thời gian (Mục~\ref{sec:bandwidth}).
+
+\subsection{Tầng 4: FSM của ô (\texttt{conv1d\_tile\_top}) và lõi tính toán}
+FSM của ô có sáu trạng thái: \texttt{S\_IDLE}, \texttt{S\_LOAD\_START} (xung bắt đầu nạp cho cả hai loader), \texttt{S\_LOAD\_WAIT}, \texttt{S\_CORE\_START}, \texttt{S\_COMPUTE} và \texttt{S\_DONE}.
+Điểm quan trọng nhất là \texttt{S\_LOAD\_WAIT}: FSM chờ \emph{cả hai} loader (ifmap và trọng số) báo xong rồi mới cho lõi bắt đầu tính, nên nạp và tính nối tiếp nhau; đây là chỗ nảy sinh hệ số $K\cdot\max(R_u,C_u)$ trong công thức~\eqref{eq:otile}.
+Một ô có $K=0$ hoặc $K>\texttt{FEEDER\_DEPTH}$ bị từ chối ngay: cờ lỗi cấu hình được bật, ô kết thúc không chạy loader (tránh trường hợp FIFO tràn làm treo ô, xem Mục~\ref{sec:mophong}).
+
+Trong \texttt{S\_COMPUTE}, \texttt{cnn\_control\_fsm} điều khiển lõi qua bảy trạng thái:
+\begin{enumerate}
+  \item \texttt{S\_IDLE}: chờ \texttt{start} của ô.
+  \item \texttt{S\_LOAD}: xung \texttt{psm\_clr} xoá PSM và chốt số hàng, số cột đang dùng.
+  \item \texttt{S\_PRE\_KICK}: xung \texttt{preload\_start} cho PSM bắt đầu bơm bias vào chuỗi thanh ghi bóng.
+  \item \texttt{S\_PRE\_WAIT}: chờ \texttt{preload\_done}; khi bias đã nằm sẵn trong mọi hàng mới phát xung \texttt{feeder\_start} cho hai feeder và chuyển sang \texttt{S\_COMPUTE}.
+  \item \texttt{S\_COMPUTE}: mảng PE chạy; FSM chờ tín hiệu \texttt{sa\_tile\_done} (mọi PE đã nhận cờ \texttt{last}).
+  \item \texttt{S\_DRAIN}: bật \texttt{scan\_en} và \texttt{capture\_en}, xả kết quả qua PSM, chờ \texttt{psm\_capture\_done}.
+  \item \texttt{S\_DONE}: báo ô xong cho tầng trên rồi về rảnh khi \texttt{start} hạ.
+\end{enumerate}
+Bước bơm bias (\texttt{S\_PRE\_KICK}, \texttt{S\_PRE\_WAIT}) nối tiếp \emph{trước} khi dữ liệu bắt đầu vào mảng, nên tốn thêm khoảng $C_u+4$ chu kỳ mỗi ô (PSM dịch $C_u$ lần, cộng độ trễ của các thanh ghi tín hiệu); thời gian này nằm trong phần $\delta$ của công thức~\eqref{eq:otile}.
+Khi \texttt{o\_tile\_valid} lên, post-process nhận tile và sau $R+1$ chu kỳ trả kết quả cho \texttt{fmap\_writer} (Mục~\ref{sec:stage}).
+
+\subsection{Tín hiệu hoàn thành và kết quả \texttt{RUN}}
+Chuỗi xung hoàn thành đi ngược lên: \texttt{cnn\_control\_fsm} $\to$ ô xong $\to$ \texttt{fmap\_writer} commit $\to$ bộ điều khiển layer chuyển sang ô kế hoặc kết thúc $\to$ xung kết thúc layer $\to$ \texttt{layer\_cmd\_controller} dừng bộ đếm chu kỳ và gửi \texttt{RESULT}.
+Một layer chỉ được coi là xong khi mọi ô đã \emph{commit}, kể cả ô cuối, nên \texttt{cycles} bao gồm cả thời gian ghi kết quả của ô cuối cùng.

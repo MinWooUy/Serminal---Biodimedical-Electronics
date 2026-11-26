@@ -1,0 +1,61 @@
+% =====================================================================
+%  Tieu luan do an: Phan loai nhip ECG bang CNN INT8 tren FPGA
+%  Bien dich: XeLaTeX + BibTeX (xem README.md hoac chay .\build.ps1)
+%  KHONG viet noi dung vao file nay: moi nguoi sua file trong chapters/, frontmatter/, ...
+% =====================================================================
+\documentclass[12pt,a4paper,oneside]{extreport}  % co chu 13pt dat trong config/preamble.tex
+
+\input{config/preamble}      % goi lenh, dinh dang (le, font, gian dong, tieu de)
+\input{config/macros}        % macro: goiy, hinhcho, bangcho, todo, cmt
+\input{config/metadata}      % ten de tai, sinh vien, GVHD, thang/nam, cong tac an/hien goi y
+
+\begin{document}
+
+% ---------- PHAN DAU (so trang La Ma) ----------
+\pagenumbering{gobble}
+\input{frontmatter/bia}                  % bia chinh + bia phu
+\pagenumbering{roman}
+\setcounter{page}{1}
+\input{frontmatter/camdoan}              % Loi cam doan
+\input{frontmatter/thuyetminh}           % Thuyet minh chinh sua de tai (neu co)
+\input{frontmatter/nhanxet}              % Nhan xet GVHD / GVPB (ban co chu ky do giao vu cung cap)
+\input{frontmatter/loicamon}             % Loi cam on
+\input{frontmatter/decuong}              % De cuong chi tiet
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+\input{frontmatter/viettat}              % Danh muc ky hieu, chu viet tat
+\input{frontmatter/tomtat}               % Tom tat (200-300 tu)
+
+% ---------- NOI DUNG CHINH (so trang A-rap) ----------
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\input{chapters/ch01_gioi_thieu/00_chuong}
+\input{chapters/ch02_co_so_lien_quan/00_chuong}
+\input{chapters/ch03_tong_quan_he_thong/00_chuong}
+\input{chapters/ch04_mo_hinh_cnn/00_chuong}
+\input{chapters/ch05_giao_thuc_uart/00_chuong}
+\input{chapters/ch06_phan_cung/00_chuong}
+\input{chapters/ch07_thuc_nghiem/00_chuong}
+\input{chapters/ch08_ket_luan/00_chuong}
+
+% ---------- PHAN CUOI ----------
+\input{backmatter/congtrinh}             % Danh muc cong trinh cua tac gia
+
+% Tai lieu tham khao (IEEE). \nocite{*} chi de xem het khung; xoa khi da trich dan that.
+\nocite{*}
+\bibliographystyle{IEEEtran}
+\bibliography{bib/references}
+
+\appendix
+\input{appendices/pl_a_bo_lenh}
+\input{appendices/pl_b_luong_tu_hoa}
+\input{appendices/pl_c_tai_nguyen}
+\input{appendices/pl_d_ket_qua_ds2}
+\input{appendices/pl_e_tai_lap}
+
+\end{document}

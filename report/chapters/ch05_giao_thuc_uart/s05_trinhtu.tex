@@ -1,0 +1,11 @@
+% Muc 5.5  --  phu trach: xem report/PHANCONG.md
+\section{Trình tự thực thi một nhịp}\label{sec:trinhtu}
+\hinhcho{0.3}{sơ đồ trình tự Host $\leftrightarrow$ FPGA: nạp trọng số một lần $\to$ WRITE\_X $\to$ SWAP $\to$ 6$\times$(CONFIG, RUN) $\to$ nhãn}{Trình tự lệnh để phân loại một nhịp.}{fig:trinhtu}
+\begin{goiy}
+  \begin{itemize}
+    \item Nạp một lần: \texttt{WRITE\_W/BIAS} cho cả mô hình, mỗi layer có \texttt{w\_base}/\texttt{b\_base} (CONFIG 16 byte; INFO \texttt{features} bit 4). Hai bank trọng số $16\,384$~B không chứa vừa $23\,408$~B của mô hình trong một bank: conv0--2 ($8\,816$~B) nằm ở bank 0, conv3, FC1, FC2 ($14\,592$~B) ở bank 1; mỗi nhịp đổi bank đọc hai lần bằng \texttt{SWAP} (trước conv3, sau FC2). Bias của sáu layer (212 giá trị) nằm liên tiếp trong bias RAM; \texttt{WRITE\_SHIFT} vẫn ghi cho từng layer vì bộ nhớ shift chỉ có 64 mục.
+    \item Đo trên board: lần nạp ban đầu $194$ gói, $26\,195$~B, $0.88$~s; sau đó mỗi nhịp $27$ gói, $954$~B (trước: $232$ gói, $27\,228$~B). Chế độ này bật bằng cờ \texttt{--resident} của host; mặc định vẫn gửi lại trọng số từng layer. Board bị reset thì phải nạp lại (host nạp lại sau mỗi lỗi nhưng không tự phát hiện reset).
+    \item Mỗi nhịp: \texttt{WRITE\_X} (360 B) $\to$ \texttt{SWAP} $\to$ sáu cặp \texttt{CONFIG}+\texttt{RUN} (conv0, conv1, conv2, conv3, FC1, FC2); FC2 đặt \texttt{out\_int32}+\texttt{argmax}.
+    \item Không đọc lại feature map trung gian; \texttt{RUN} trả \texttt{[status, cycles]}.
+  \end{itemize}
+\end{goiy}

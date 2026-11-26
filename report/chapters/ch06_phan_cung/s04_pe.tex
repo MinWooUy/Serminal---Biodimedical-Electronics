@@ -1,0 +1,62 @@
+% Muc 6.4  --  phu trach: xem report/PHANCONG.md
+\section{Mảng PE và số học}\label{sec:pe}
+\subsection{Một phần tử xử lý (PE)}
+Mỗi PE (\texttt{ProcessingElement}, đóng gói trong \texttt{pe\_top}) gồm bốn phần (Hình~\ref{fig:pe}):
+\begin{itemize}
+  \item \texttt{ImageRegister} và \texttt{WeightRegister}: hai thanh ghi $8$ bit chuyển tiếp dữ liệu sang PE bên cạnh, ifmap sang phải và trọng số xuống dưới, mỗi bước một chu kỳ.
+  \item \texttt{MAC}: nhân hai số $8$ bit có dấu rồi cộng vào bộ tích luỹ $32$ bit.
+  \item \texttt{Accumulator}: thanh ghi $32$ bit giữ tổng riêng; được xoá bằng \texttt{clear} và chỉ cập nhật khi có \texttt{compute\_en}.
+  \item \texttt{shadow\_register}: thanh ghi $32$ bit chép bộ tích luỹ lúc kết thúc ô (\texttt{capture}) và dịch kết quả sang PE kế tiếp (\texttt{scan}) để đưa ra khỏi mảng.
+\end{itemize}
+Cùng với dữ liệu, mỗi PE chuyển tiếp một bộ cờ \texttt{valid}, \texttt{first}, \texttt{last} (một bộ cho ifmap, một bộ cho trọng số), cũng mỗi bước một chu kỳ, và tự suy ra hai tín hiệu điều khiển cục bộ:
+\begin{equation}\label{eq:pe-ctrl}
+  \begin{aligned}
+    \texttt{compute\_en}&=\texttt{act\_valid}\ \&\ \texttt{wgt\_valid},\\
+    \texttt{acc\_init}&=\texttt{act\_first}\ \&\ \texttt{wgt\_first}.
+  \end{aligned}
+\end{equation}
+Vì tín hiệu điều khiển đi cùng dữ liệu nên PE không cần bộ đếm hay FSM riêng, và chịu được các chu kỳ trống: nếu một trong hai luồng chưa có dữ liệu thì \texttt{compute\_en}$=0$ và bộ tích luỹ giữ nguyên.
+
+\begin{sidewaysfigure}\centering
+  \includegraphics[width=\textheight,height=0.88\textwidth,keepaspectratio]{ch06_phan_cung/pe}
+  \caption{Cấu trúc một phần tử xử lý.}\label{fig:pe}
+\end{sidewaysfigure}
+
+\subsection{Bộ nhân và bộ cộng}
+Phép nhân dùng bộ nhân cây Wallace~\cite{wallace1964} $8\times8$ có dấu (\texttt{wallace\_tree\_multiplier}), gồm ba bước:
+\begin{enumerate}
+  \item \emph{Tích riêng Baugh--Wooley}~\cite{baughwooley1973} (\texttt{baugh\_wooley\_partial\_product}): ma trận $8\times8$ các phép AND; các tích ở hàng và cột cuối (bit dấu) được đảo để xử lý số có dấu bù hai mà không cần mở rộng dấu từng hàng.
+  \item \emph{Rút gọn Wallace} (\texttt{wallace\_tree\_reducer}): cây bộ cộng đầy đủ rút ma trận tích riêng còn hai hàng (\emph{sum} và \emph{carry}).
+  \item \emph{Cộng cuối} bằng bộ cộng nhớ trước (Carry-Lookahead Adder, CLA) $16$ bit (\texttt{final\_carry\_lookahead\_adder}), rồi đảo bit cao nhất để hoàn tất hiệu chỉnh Baugh--Wooley.
+\end{enumerate}
+Kết quả là tích $16$ bit có dấu.
+Tích này đi qua một thanh ghi pipeline (\texttt{Mul\_Add\_pipe}) cắt đường tới hạn giữa nhân và cộng, rồi được mở rộng dấu lên $32$ bit và cộng với giá trị tích luỹ bằng bộ cộng CLA $32$ bit (\texttt{CarryLookaheadAdder\_32\_bit}).
+Ở lần MAC đầu tiên của một ô (\texttt{acc\_init}), toán hạng tích luỹ không phải đầu ra hiện tại mà là giá trị preload lấy từ thanh ghi bóng, nhờ đó bias được cộng vào bộ tích luỹ mà không cần thêm một phép cộng sau khi tính; việc bơm bias vào thanh ghi bóng chạy riêng, trước khi dữ liệu vào mảng (Mục~\ref{sec:stage}).
+Toàn bộ chuỗi cho thông lượng một MAC mỗi chu kỳ với độ trễ một tầng pipeline.
+
+\textbf{Độ rộng bộ tích luỹ.} Mỗi tích có trị tuyệt đối không quá $127\cdot127=16\,129$; với $K\le192$ trong mô hình Lite, tổng $\sum_{k}|x_kw_k|\le192\cdot16\,129\approx3{,}1\cdot10^{6}<2^{31}$ nên bộ tích luỹ $32$ bit không tràn, kể cả sau khi cộng bias.
+Điều kiện này được mô hình lượng tử hoá bảo đảm và phần cứng không có kiểm tra tràn riêng.
+
+\textbf{Tài nguyên.} Phép nhân được dựng hoàn toàn bằng phần tử logic (LE), không dùng khối nhân nhúng; khối nhân nhúng chỉ được dùng $8$ trên $288$ ở các phần khác của thiết kế.
+Đây là lý do khối \texttt{conv1d\_tile\_top} (mảng PE cùng bộ nạp và FIFO) chiếm khoảng $66\,\%$ số LE (Chương~\ref{ch:thucnghiem}); chuyển phép nhân vào khối xử lý tín hiệu số (Digital Signal Processing, DSP) là một hướng tối ưu chưa thực hiện.
+
+\subsection{Mảng $R\times C$ và luồng dữ liệu systolic}
+\texttt{pe\_array} ghép $R\times C=7\times7$ PE (\texttt{generate} hai vòng) theo kiểu systolic~\cite{kung1982systolic} với luồng dữ liệu \emph{output-stationary}~\cite{chen2017eyeriss}: mỗi PE ở hàng $r$, cột $c$ giữ nguyên tích luỹ của phần tử đầu ra $(r,c)$ trong suốt $K$ bước.
+Luồng ifmap của hàng $r$ vào từ bên trái và chảy sang phải qua các cột; luồng trọng số của cột $c$ vào từ trên và chảy xuống qua các hàng (Hình~\ref{fig:mang-pe}).
+
+\begin{sidewaysfigure}\centering
+  \includegraphics[width=\textheight,height=0.88\textwidth,keepaspectratio]{ch06_phan_cung/mangpe}
+  \caption{Mảng PE và luồng dữ liệu systolic.}\label{fig:mang-pe}
+\end{sidewaysfigure}
+
+Do các làn được trễ theo hàng và cột (Mục~\ref{sec:stage}), PE $(r,c)$ nhận cặp $(x_k,w_k)$ ở chu kỳ $k+r+c$.
+Vì vậy PE cuối cùng, ở góc $(R-1,C-1)$, nhận cặp cuối cùng ($k=K-1$) ở chu kỳ $K+R+C-3$, và số chu kỳ lý tưởng để một ô tính xong cỡ
+\begin{equation}\label{eq:tile-ideal}
+  T_{\text{tính}}\approx K+R+C.
+\end{equation}
+Mức dùng PE lý tưởng của một ô $R_u\times C_u$ so với tổng $R\cdot C$ PE gọi là \emph{mức lấp đầy}; các ô cuối của layer có thể nhỏ hơn $R\times C$ khi $T$ hay $C_{out}$ không chia hết (Mục~\ref{sec:anhxa}).
+Với mảng $7\times7$ và $K=192$ (conv3), một ô lý tưởng tính trong khoảng $206$ chu kỳ; thực tế một ô tốn nhiều hơn rất nhiều vì phải nạp dữ liệu trước (Mục~\ref{sec:bandwidth}).
+
+\subsection{Chụp và đưa kết quả ra}
+Khi tất cả PE đã nhận cờ \texttt{last}, \texttt{cnn\_control\_fsm} phát \texttt{capture} để mọi PE chép bộ tích luỹ sang thanh ghi bóng rồi bật \texttt{scan}; các thanh ghi bóng của mỗi hàng nối thành chuỗi và được \texttt{partial\_sum\_manager} đọc theo từng cột (Mục~\ref{sec:stage}, stage~4).
+Thanh ghi bóng tách việc xả kết quả khỏi bộ tích luỹ; trong thiết kế hiện tại bộ điều khiển chỉ phát ô kế tiếp sau khi ô trước đã được ghi xong vào bộ nhớ (Mục~\ref{sec:ctrl}), nên các ô không chồng lên nhau.

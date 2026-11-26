@@ -1,0 +1,64 @@
+% Muc 6.1  --  phu trach: xem report/PHANCONG.md
+\section{Tổng quan kiến trúc}\label{sec:tongquanhw}
+Bộ tăng tốc (accelerator) là một thiết kế ở mức truyền thanh ghi (Register-Transfer Level, RTL), mô tả bằng ngôn ngữ Verilog và cài đặt trên mạch tích hợp lập trình được (Field-Programmable Gate Array, FPGA) họ MAX~10 (\texttt{10M50DAF484C7G}) của board DE10-Lite, với xung nhịp $50$~MHz.
+Mỗi khi nhận lệnh từ máy chủ (host) qua giao tiếp nối tiếp không đồng bộ (Universal Asynchronous Receiver/Transmitter, UART), bộ tăng tốc thực hiện trọn vẹn \emph{một lớp} (layer) tích chập một chiều hoặc kết nối đầy đủ (Fully Connected, FC): nhân--tích luỹ (Multiply-Accumulate, MAC), cộng hệ số bias, lượng tử hoá về $8$ bit, hàm kích hoạt chỉnh lưu (Rectified Linear Unit, ReLU), MaxPool hoặc trung bình toàn cục (Global Average Pooling, GAP) tuỳ cấu hình, rồi giữ kết quả trên chip làm đầu vào của lớp kế tiếp.
+Host điều khiển toàn bộ trình tự: nạp dữ liệu, cấu hình layer (\texttt{CONFIG}), chạy (\texttt{RUN}) và đọc nhãn cuối (Chương~\ref{ch:uart}).
+Cách phân chia này cho phép chạy mô hình bất kỳ thoả các giới hạn ở Bảng~\ref{tab:thamso}, và là lý do thiết kế dùng \emph{một} mảng phần tử xử lý (Processing Element, PE) chung cho cả tích chập lẫn FC.
+
+\begin{sidewaysfigure}\centering
+  \includegraphics[width=\textheight,height=0.88\textwidth,keepaspectratio]{ch06_phan_cung/khoi}
+  \caption{Sơ đồ khối đầy đủ của bộ tăng tốc.}\label{fig:khoi}
+\end{sidewaysfigure}
+
+\subsection{Phân cấp module}
+Phân cấp từ đỉnh xuống, mỗi cấp một thư mục RTL:
+\begin{itemize}
+  \item \texttt{de10\_lite\_top}: nối chân board. Đặt các tham số thiết kế (Bảng~\ref{tab:thamso}) và đảo nút \texttt{KEY0} thành tín hiệu reset tích cực mức cao.
+  \item \texttt{ecg\_accel\_top}: gộp đường UART và lõi layer.
+  \begin{itemize}
+    \item \texttt{uart\_crc\_top} (\texttt{comm/}): thu nhận khung \texttt{A5 5A $|$ CMD $|$ SEQ $|$ LEN $|$ PAYLOAD $|$ CRC16}, kiểm tra dư thừa vòng (Cyclic Redundancy Check, CRC), phát khung trả lời.
+    \item \texttt{layer\_core} (\texttt{top/}): giải mã lệnh và chạy layer.
+    \begin{itemize}
+      \item \texttt{layer\_cmd\_controller}: máy trạng thái hữu hạn (Finite State Machine, FSM) giải mã lệnh, ghi bộ nhớ, chốt cấu hình layer, đếm chu kỳ của \texttt{RUN}, trả \texttt{ACK/NACK/RESULT}.
+      \item \texttt{conv1d\_layer\_top} (\texttt{conv1d/}): tự chạy trọn một layer.
+      \begin{itemize}
+        \item \texttt{conv1d\_layer\_controller}: vòng lặp các ô của layer.
+        \item \texttt{conv1d\_tile\_top}: một ô (tile), gồm hai \texttt{tensor\_pingpong\_buffer} (ifmap và trọng số), hai cụm nạp (\texttt{conv1d\_*\_feeder\_top}, mỗi cụm gồm bộ nạp (loader), khối sinh địa chỉ (Address Generation Unit, AGU) và bộ cấp dữ liệu (feeder)), \texttt{cnn\_compute\_core} (\texttt{core/}) chứa \texttt{cnn\_control\_fsm}, \texttt{pe\_array} (\texttt{pe/}) và khối quản lý tổng riêng (Partial Sum Manager, PSM) \texttt{partial\_sum\_manager} (\texttt{psm/}), và \texttt{conv1d\_post\_process} (\texttt{post/}) lượng tử hoá một ô (bật bằng tham số \texttt{POST\_ENABLE}).
+        \item \texttt{fmap\_writer} (\texttt{post/}): ghi kết quả (kèm MaxPool và GAP) vào bank ghi của ifmap.
+      \end{itemize}
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+Các khối số học (bộ nhân Wallace, bộ cộng nhớ trước) nằm ở \texttt{arith/}.
+
+\subsection{Tham số thiết kế}
+Bảng~\ref{tab:thamso} liệt kê các tham số của thiết kế và giá trị dùng trên board.
+Phần lớn (số hàng, số cột, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp, baud, \texttt{MAX\_PAYLOAD}) được bitstream tự khai báo qua lệnh \texttt{INFO} (Chương~\ref{ch:uart}) để phần mềm không phải đoán; riêng \texttt{BIAS\_DEPTH} không có trong \texttt{INFO}.
+
+\begin{table}[htbp]\centering
+\caption{Các tham số cấu hình của bộ tăng tốc và giá trị trên board.}\label{tab:thamso}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{3.6cm}p{7.6cm}r@{}}
+\toprule
+Tham số & Ý nghĩa & Giá trị \\ \midrule
+\texttt{ARRAY\_ROWS} & số hàng PE = số vị trí đầu ra mỗi ô & 7 \\
+\texttt{ARRAY\_COLS} & số cột PE = số kênh đầu ra mỗi ô & 7 \\
+\texttt{DATA\_W} / \texttt{ACC\_W} & độ rộng dữ liệu và bộ tích luỹ (bit) & 8 / 32 \\
+\texttt{IFMAP\_MEM\_DEPTH} & byte mỗi bank ifmap (hai bank) & 4\,096 \\
+\texttt{WGT\_MEM\_DEPTH} & byte mỗi bank trọng số (hai bank) & 16\,384 \\
+\texttt{FEEDER\_DEPTH} & độ sâu bộ đệm vào trước ra trước (First-In First-Out, FIFO) mỗi làn nạp ($7+7$ làn) & 1\,024 \\
+\texttt{COUT\_MAX} & số kênh đầu ra tối đa mỗi layer (cỡ bộ nhớ shift) & 64 \\
+\texttt{BIAS\_DEPTH} & số bias INT32 trong RAM bias & 256 \\
+\texttt{MAX\_PAYLOAD} & byte tải tối đa mỗi khung UART & 128 \\
+\texttt{CLK\_FREQ} & xung nhịp (Hz) & 50\,000\,000 \\
+\texttt{BAUD\_RATE} & tốc độ UART 8N1 (baud) & 1\,500\,000 \\
+\texttt{RX\_TIMEOUT\_CLKS} & bỏ khung nhận dở sau từng này chu kỳ ($=\texttt{CLK\_FREQ}/10$, $100$~ms) & 5\,000\,000 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Một kiểm tra khi mô phỏng (\texttt{\$fatal} trong \texttt{ecg\_accel\_top}, không có trong bản tổng hợp) bảo vệ các tham số này: tỉ số $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}$ phải không nhỏ hơn $8$, $\texttt{MAX\_PAYLOAD}\le256$ và $2\cdot\texttt{COUT\_MAX}\le\texttt{MAX\_PAYLOAD}$ (để đọc được bộ nhớ GAP trong một khung).
+
+\subsection{Giao diện với board}
+Bộ tăng tốc chỉ có bốn tín hiệu ra ngoài: xung nhịp \texttt{MAX10\_CLK1\_50}, nút \texttt{KEY0} (reset), \texttt{uart\_rx} (chân \texttt{PIN\_AB5}) và \texttt{uart\_tx} (chân \texttt{PIN\_AB6}).
+Đây là UART mức logic, nối với bộ chuyển USB--UART bên ngoài, không phải RS-232.
+Tài nguyên sử dụng của thiết kế (số phần tử logic, bộ nhớ, tần số tối đa) được trình bày ở Chương~\ref{ch:thucnghiem}.

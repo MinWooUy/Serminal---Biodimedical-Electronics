@@ -1,0 +1,83 @@
+% Muc 6.6  --  phu trach: xem report/PHANCONG.md
+\section{Ánh xạ CNN lên accelerator}\label{sec:anhxa}
+Mô hình CNN Lite gồm sáu layer chạy tuần tự trên \emph{cùng một mảng PE}: bốn layer tích chập (conv0--conv3), một layer kết nối đầy đủ ẩn (FC1) và một layer đầu ra (FC2).
+Mỗi layer là một cặp lệnh \texttt{CONFIG} và \texttt{RUN} (Chương~\ref{ch:uart}); bộ tăng tốc tự chia layer thành các ô (tile) và tự quản lý việc nạp, tính, hậu xử lý và ghi kết quả.
+Mục này mô tả bằng cách nào mỗi layer được biểu diễn dưới dạng một phép tích chập một chiều với các tham số cấu hình, và vì sao FC cũng chạy được trên cùng đường dữ liệu.
+
+\subsection{Quy ước biểu diễn một layer}
+Một layer tích chập một chiều có $C_{in}$ kênh vào, $C_{out}$ kênh ra, nhân độ dài $K_w$ và bước trượt $1$ (không có bước nhảy, không giãn).
+Dữ liệu được lưu theo thứ tự \emph{kênh cuối} (channel-last): phần tử vị trí $t$, kênh $c$ nằm ở địa chỉ $(t+\mathrm{pad})\cdot C+c$.
+Nhờ vậy $K_w$ vị trí liên tiếp của một cửa sổ nằm liền nhau trong bộ nhớ, và cửa sổ thứ $n$ chiếm $K=K_w\cdot C_{in}$ byte bắt đầu từ $\mathrm{base}+n\cdot\texttt{window\_step}$, với $\texttt{window\_step}=C_{in}$.
+Trọng số được lưu theo $[C_{out}][K]$ với chỉ số $k=j\cdot C_{in}+i$ ($j$ là vị trí trong nhân, $i$ là kênh vào), nên trọng số của một kênh ra cũng liền nhau.
+Như vậy mỗi vị trí đầu ra là một tích vô hướng độ dài $K$ giữa cửa sổ và một bộ lọc, và cả layer là phép nhân ma trận $(\text{số vị trí}\times K)\cdot(K\times C_{out})$.
+
+Mảng PE ánh xạ phép nhân ma trận này thành các ô: \emph{hàng} của mảng là các vị trí đầu ra, \emph{cột} là các kênh đầu ra, và mỗi PE tích lũy một phần tử đầu ra qua $K$ bước (Mục~\ref{sec:pe}).
+Với $T$ vị trí và $C_{out}$ kênh, số ô là
+\begin{equation}\label{eq:soo}
+  N_{\text{ô}}=\left\lceil \frac{T}{R_{\text{eff}}}\right\rceil\cdot\left\lceil \frac{C_{out}}{C}\right\rceil,\qquad
+  R_{\text{eff}}=\begin{cases}R\mathbin{\&}{\sim}1 & \text{layer có pool,}\\ R & \text{ngược lại,}\end{cases}
+\end{equation}
+trong đó $R\times C=7\times7$ là kích thước mảng và $R\mathbin{\&}{\sim}1=6$ là số chẵn lớn nhất không vượt quá $R$.
+
+\subsection{Sáu layer của mô hình Lite}
+Bảng~\ref{tab:layers} liệt kê cấu hình \texttt{CONFIG} của sáu layer, số ô trên mảng $7\times7$ và số chu kỳ đo được trên board.
+Cột ``cờ'' là byte cờ của \texttt{CONFIG}: bit~0 \texttt{out\_int32}, bit~1 \texttt{argmax}, bit~2 \texttt{row\_combine}, bit~3 \texttt{gap\_in}.
+
+\begin{table}[htbp]\centering
+\caption{Cấu hình \texttt{CONFIG} của sáu layer, số ô trên mảng $7\times7$ và chu kỳ đo trên board (24/11/2026).}\label{tab:layers}
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrrccrrr@{}}
+\toprule
+Layer & $C_{in}$ & $C_{out}$ & $K_w$ & $K$ & $T$ & pool/gap & cờ & số ô & chu kỳ & MAC \\ \midrule
+conv0 & 1  & 16 & 7 & 7   & 360 & pool & 0x0 & 180 & 21\,429  & 40\,320 \\
+conv1 & 16 & 32 & 5 & 80  & 180 & pool & 0x0 & 150 & 104\,379 & 460\,800 \\
+conv2 & 32 & 64 & 3 & 96  & 90  & pool & 0x0 & 150 & 124\,603 & 552\,960 \\
+conv3 & 64 & 64 & 3 & 192 & 45  & gap  & 0x0 & 70  & 113\,321 & 552\,960 \\
+fc1   & 68 & 32 & 1 & 68  & 3   & ---  & 0xC & 5   & 3\,137   & 2\,176 \\
+fc2   & 32 & 4  & 1 & 32  & 1   & ---  & 0x3 & 1   & 222      & 128 \\ \midrule
+Tổng  &    &    &   &     &     &      &     & 556 & 367\,091 & 1\,609\,344 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize $T$: số vị trí đầu ra trước pool (\texttt{out\_len}). MAC của fc1 tính theo thuật toán ($32\times68$); phần cứng thực hiện $3\times$ vì dùng ba hàng PE.
+Nguồn: \texttt{docs/baseline\_v1.md}, \texttt{host/ecg\_layer\_host\_pc.py} (\texttt{layer\_plan}).
+\end{table}
+
+Đầu ra của mỗi layer là đầu vào của layer kế tiếp, nằm sẵn trong bank ifmap (Mục~\ref{sec:mem}); layer tự thêm $\texttt{pad\_next}$ vị trí đệm số không ở mỗi đầu để layer sau không phải xử lý biên.
+Sau conv0 đầu ra là $184\times16$ ($180$ vị trí sau pool cộng $2\cdot2$ vị trí đệm), sau conv1 là $92\times32$, sau conv2 là $47\times64$.
+
+\subsection{Layer có pool}
+MaxPool kích thước 2, bước 2 được thực hiện \emph{ngay trong} \texttt{fmap\_writer}: với hai vị trí liên tiếp của cùng một kênh, bộ ghi giữ phần tử lớn hơn và coi đó là một vị trí đầu ra (Mục~\ref{sec:stage}).
+Do đó một ô phải chứa trọn các cặp vị trí, nên số hàng của ô là số chẵn $R\mathbin{\&}{\sim}1=6$ chứ không phải $7$ (công thức~\eqref{eq:soo}).
+Bản đầu của thiết kế cố định $2$ hàng cho layer có pool; việc nâng lên $6$ hàng là một trong hai sửa đổi được mô tả ở Mục~\ref{sec:bandwidth} và được bitstream báo bằng bit~5 của trường \texttt{features} trong lệnh \texttt{INFO}.
+Hệ quả: conv0--conv2 dùng $6$ trong $7$ hàng PE, tức mức lấp đầy hàng tối đa $6/7=85{,}7\,\%$.
+
+\subsection{conv3 và trung bình toàn cục (GAP)}
+conv3 kết thúc bằng trung bình toàn cục theo vị trí.
+Thay vì ghi $45\times64$ giá trị ra bộ nhớ, \texttt{fmap\_writer} cộng dồn từng kênh vào một bộ nhớ GAP riêng (số nguyên $16$ bit) khi cờ \texttt{gap} bật; tổng của $45$ giá trị không quá $45\cdot127=5\,715$ nên vừa $16$ bit.
+Hệ số $1/45$ đã được gộp sẵn vào trọng số của FC1 khi lượng tử hoá, nên phần cứng chỉ cần phép cộng và không cần phép chia.
+
+\subsection{FC1: ghép ba hàng PE (\texttt{row\_combine})}
+FC1 có $K=68$ đầu vào: $64$ giá trị GAP (số nguyên $16$ bit, quá rộng cho PE $8$ bit) cộng $4$ đặc trưng khoảng RR (khoảng thời gian giữa hai đỉnh R liên tiếp của điện tâm đồ, $8$ bit).
+Giải pháp là tách mỗi giá trị GAP thành hai phần $8$ bit: $\text{thấp}=\text{gap}\,\&\,127$ và $\text{cao}=\min(\text{gap}\gg7,127)$, đặt vào \emph{hàng 0} và \emph{hàng 1} của mảng; bốn đặc trưng RR (do host ghi) nằm ở \emph{hàng 2}, các vị trí còn lại của mỗi hàng bằng $0$.
+Cờ \texttt{gap\_in} làm bước đóng gói này trước khi chạy layer (đọc bộ nhớ GAP, ghi vào bank ghi rồi \texttt{SWAP}).
+Cả ba hàng dùng chung một bộ trọng số $[32][68]$; gọi $P_r$ là tổng của hàng $r$ thì cờ \texttt{row\_combine} ghép ba hàng của cùng một kênh thành một đầu ra:
+\begin{equation}\label{eq:rowcombine}
+  \mathrm{acc}=\mathrm{rsr}\big((P_1\ll7)+P_0,\ S_G\big)+P_2+\text{bias},\qquad h=\mathrm{clamp}\big(\mathrm{rsr}(\mathrm{acc},S_O),\,0,\,127\big),
+\end{equation}
+với $\mathrm{rsr}$ là phép dịch phải làm tròn, $S_G$ là độ dịch ``trước'' (địa chỉ $\texttt{COUT\_MAX}+\text{kênh}$ trong bộ nhớ shift) và $S_O$ là độ dịch lượng tử hoá của kênh.
+Vì bias được nạp sẵn vào bộ tích lũy của \emph{mỗi} hàng (Mục~\ref{sec:stage}), khối ghép phải trừ phần bias thừa ($129\cdot\text{bias}$) trước khi cộng đúng một lần.
+Layer này yêu cầu $\texttt{out\_len}=3$ và $R\ge3$.
+
+\subsection{FC2: đầu ra số nguyên và \texttt{argmax}}
+FC2 có $K=32$ và $4$ kênh ra, $\texttt{out\_len}=1$ nên chỉ dùng hàng~0 của mảng.
+Cờ \texttt{out\_int32} bỏ bước lượng tử hoá và ghi giá trị $32$ bit thô của hàng~0 (little-endian, $4$ byte mỗi kênh) vào bank ghi; cờ \texttt{argmax} ghi thêm chỉ số kênh lớn nhất ở địa chỉ $4\cdot C_{out}$, so sánh ``lớn hơn'' ngặt theo thứ tự kênh tăng dần nên khi hoà chọn chỉ số nhỏ nhất.
+Kết quả cuối của một nhịp là $17$ byte: bốn logit $32$ bit và một byte nhãn, host đọc bằng một lệnh \texttt{READ\_FMAP}.
+
+\subsection{Hạn chế của ánh xạ}
+\begin{itemize}
+  \item Layer có pool chỉ dùng $6$ trong $7$ hàng; FC1 dùng $3$ hàng và FC2 dùng $1$ hàng (mức lấp đầy hàng $42{,}9\,\%$ và $14{,}3\,\%$), nhưng hai layer này chỉ chiếm $0{,}9\,\%$ thời gian.
+  \item $\texttt{Cout}\le\texttt{COUT\_MAX}=64$ và $K\le\texttt{FEEDER\_DEPTH}=1024$; mô hình Lite thoả với dư địa ($K_{\max}=192$).
+  \item Bộ trọng số $23\,408$ byte lớn hơn một bank ($16\,384$ byte), nên không thể giữ cả mô hình trong một bank (Mục~\ref{sec:mem}).
+  \item Mảng chỉ tính một ô tại một thời điểm và nạp lại dữ liệu cho mỗi ô, không tái sử dụng dữ liệu giữa các ô (Mục~\ref{sec:bandwidth}).
+\end{itemize}

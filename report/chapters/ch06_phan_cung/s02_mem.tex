@@ -1,0 +1,79 @@
+% Muc 6.2  --  phu trach: xem report/PHANCONG.md
+\section{Bộ nhớ tensor ping-pong}\label{sec:mem}
+Mọi dữ liệu của lớp (layer) đang xử lý (đầu vào, trọng số, bias, hệ số dịch) nằm trên chip; host chỉ ghi vào và đọc ra qua UART.
+Mục này mô tả cấu trúc các bộ nhớ, cách chúng được đổi vai giữa nạp và tính, bố cục dữ liệu và ngân sách bộ nhớ.
+
+\subsection{SRAM và bộ đệm ping-pong}
+\texttt{tensor\_sram} là một bộ nhớ truy cập ngẫu nhiên tĩnh (Static Random-Access Memory, SRAM) rộng $8$ bit, có một cổng ghi và một cổng đọc đồng bộ (đọc ở chu kỳ $n$, dữ liệu ở chu kỳ $n+1$ kèm cờ \texttt{rd\_valid}).
+Nó được viết theo mẫu RAM hai cổng đơn giản (\texttt{ramstyle = ``M9K, no\_rw\_check''}) để Quartus ánh xạ vào khối RAM nhúng M9K ($9$~kbit) của MAX~10; viết lại để đọc và ghi trong cùng một khối \texttt{always} là cần thiết, nếu không Quartus 18.1 coi đây là đọc bất đồng bộ và dựng RAM bằng thanh ghi và bộ chọn.
+Vì hai cổng luôn truy cập hai bank khác nhau (xem dưới), đọc và ghi cùng địa chỉ không bao giờ xảy ra nên bỏ được kiểm tra xung đột.
+
+\texttt{tensor\_pingpong\_buffer} gồm hai bank \texttt{tensor\_sram} và một bit \texttt{read\_bank}:
+\begin{itemize}
+  \item cổng ghi luôn đi vào bank \emph{không} đang đọc (\emph{bank ghi}), cổng đọc luôn đọc bank \emph{đang đọc} (\emph{bank đọc});
+  \item tín hiệu \texttt{SWAP} đảo \texttt{read\_bank}, tức là đổi vai hai bank trong một chu kỳ mà không sao chép dữ liệu.
+\end{itemize}
+Nhờ vậy việc nạp dữ liệu mới (từ UART hoặc từ đầu ra của layer trước) không bao giờ làm hỏng dữ liệu đang được tính.
+
+Thiết kế có hai bộ đệm ping-pong, đều tạo trong \texttt{conv1d\_tile\_top}:
+\begin{itemize}
+  \item \emph{ifmap} (\texttt{u\_ifmap\_mem}): $2\times4\,096$ byte. Host ghi vào bank ghi của layer đầu và \texttt{SWAP}; mỗi layer đọc bank đọc và ghi đầu ra vào bank ghi, và cuối layer (không phải GAP) tự \texttt{SWAP}, nên đầu ra của layer này thành đầu vào của layer sau mà không rời chip.
+  \item \emph{trọng số} (\texttt{u\_wgt\_mem}): $2\times16\,384$ byte. Host ghi vào bank ghi rồi \texttt{SWAP}; layer đọc trọng số ở bank đọc tại $\texttt{w\_base}+c\cdot K+k$. Cơ chế này không tự đổi bank sau mỗi layer.
+\end{itemize}
+
+\subsection{Bố cục dữ liệu}
+\begin{itemize}
+  \item \textbf{ifmap, kênh cuối (channel-last).} Phần tử vị trí $t$, kênh $c$ ở địa chỉ $(t+\mathrm{pad})\cdot C+c$; $\texttt{pad\_next}$ vị trí đệm số không ở hai đầu được ghi $0$ trước khi ô đầu tiên của layer chạy (trạng thái \texttt{L\_PAD}).
+  \item \textbf{Trọng số, $[C_{out}][K]$.} Bộ lọc của kênh $c$ chiếm $K$ byte liên tiếp bắt đầu tại $\texttt{w\_base}+c\cdot K$, với chỉ số $k=j\cdot C_{in}+i$.
+  \item \textbf{Bias.} RAM $\texttt{BIAS\_DEPTH}=256$ mục INT32; bias của kênh $c$ ở $\texttt{b\_base}+c$.
+  \item \textbf{Hệ số dịch.} Hai vùng mỗi vùng $\texttt{COUT\_MAX}=64$ mục $8$ bit có dấu: vùng đầu là độ dịch lượng tử hoá $S_O$ của từng kênh, vùng sau là độ dịch ``trước'' $S_G$ chỉ dùng cho FC1 (công thức~\eqref{eq:rowcombine}). Chúng được địa chỉ hoá theo kênh nên phải ghi lại cho từng layer.
+  \item \textbf{GAP.} Một bộ nhớ $\texttt{COUT\_MAX}$ mục $16$ bit chứa tổng theo kênh của conv3, đọc bằng lệnh \texttt{READ\_GAP} hoặc đóng gói vào ifmap cho FC1 (cờ \texttt{gap\_in}).
+\end{itemize}
+
+\subsection{Ngân sách bộ nhớ}
+Bảng~\ref{tab:bonho} cộng dung lượng các bộ nhớ lớn từ các tham số thiết kế.
+Tổng $451\,584$ bit khớp với $452\,390$ bit mà báo cáo Quartus (21/11/2026) ghi cho cả thiết kế, chênh $806$ bit ($0{,}2\,\%$) thuộc các bộ nhớ nhỏ khác; đây là phép đối chiếu tính toán, không phải phép đo riêng từng bộ nhớ.
+
+\begin{table}[htbp]\centering
+\caption{Ngân sách bộ nhớ trên chip tính từ tham số thiết kế.}\label{tab:bonho}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Bộ nhớ & Cấu hình & Bit \\ \midrule
+ifmap ping-pong & $2\times4\,096\times8$ & 65\,536 \\
+trọng số ping-pong & $2\times16\,384\times8$ & 262\,144 \\
+FIFO các làn nạp & $14\times1\,024\times8$ & 114\,688 \\
+RAM bias & $256\times32$ & 8\,192 \\
+RAM hệ số dịch & $2\times64\times8$ & 1\,024 \\ \midrule
+Cộng & & 451\,584 \\
+Báo cáo Quartus (toàn bộ) & & 452\,390 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Nguồn: tính từ các tham số ở Bảng~\ref{tab:thamso}; báo cáo Quartus ngày 21/11/2026.
+\end{table}
+
+\subsection{Bố trí trọng số thường trú}
+Bộ trọng số của mô hình Lite là $23\,408$ byte, lớn hơn một bank ($16\,384$ byte) nhưng nhỏ hơn hai bank ($32\,768$ byte).
+Nhờ \texttt{w\_base} và \texttt{b\_base} trong \texttt{CONFIG} (bit $4$ của \texttt{INFO}), host có thể nạp \emph{một lần} toàn bộ mô hình thay vì nạp lại cho mỗi layer: các layer lần lượt được xếp vào bank thứ nhất cho đến khi hết chỗ, phần còn lại vào bank thứ hai, và host đổi bank đọc bằng \texttt{SWAP} khi cần (Bảng~\ref{tab:thuongtru}).
+Mỗi nhịp cần hai lần \texttt{SWAP} (trước conv3 và sau FC2).
+Các bias của sáu layer ($212$ giá trị) nằm liên tiếp trong RAM bias.
+
+\begin{table}[htbp]\centering
+\caption{Bố trí trọng số và bias khi nạp một lần (do phần mềm host chọn).}\label{tab:thuongtru}
+\small
+\begin{tabular}{@{}lccrr@{}}
+\toprule
+Layer & Bank & \texttt{w\_base} & Byte trọng số & \texttt{b\_base} \\ \midrule
+conv0 & 0 & 0 & 112 & 0 \\
+conv1 & 0 & 112 & 2\,560 & 16 \\
+conv2 & 0 & 2\,672 & 6\,144 & 48 \\
+conv3 & 1 & 0 & 12\,288 & 112 \\
+fc1 & 1 & 12\,288 & 2\,176 & 176 \\
+fc2 & 1 & 14\,464 & 128 & 208 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Bank~0 dùng $8\,816$ byte và bank~1 dùng $14\,592$ byte, đều trong giới hạn $16\,384$.
+Hệ số dịch không thường trú được vì bộ nhớ này chỉ có $\texttt{COUT\_MAX}$ mục theo kênh nên mỗi layer vẫn ghi lại (khoảng $314$ byte mỗi nhịp).
+Kết quả đo của hai chế độ nạp được trình bày ở Chương~\ref{ch:thucnghiem}.

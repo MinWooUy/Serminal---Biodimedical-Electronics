@@ -1,0 +1,14 @@
+# Step 3: beat segmentation (360 samples) + 4 RR features, cached per record (DS1 only).
+name: beats
+dataset: DS1
+detector_config: configs/detector_pt.yaml   # filter + Pan-Tompkins + realign_mode (abs)
+beats:
+  rr_source: detector        # detector | annotation (build_beats.py can build both)
+  half_window: 180           # window = 180 before + 180 after R (R at index 180)
+  match_tol_ms: 150          # one-to-one detection <-> annotation matching for labels
+  rr_avg_n: 8                # rr_avg = mean of up to 8 past RRs (incl. rr_prev)
+  rr_clip_s: [0.2, 3.0]      # every RR interval clipped before computing the 4 features
+  beat_norm:
+    type: zscore
+    eps: 1.0e-6
+    clip: 8.0                # scripts/clip_stats.py: smallest int with <= 0.5% clipped beats per class

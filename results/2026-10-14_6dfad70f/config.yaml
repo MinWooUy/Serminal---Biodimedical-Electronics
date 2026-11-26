@@ -1,0 +1,25 @@
+name: detector_pt
+dataset: DS1
+filter:
+  low_hz: 0.5
+  high_hz: 40.0
+  order: 2
+pan_tompkins:
+  fs: 360
+  lp_len: 11
+  hp_len: 57
+  deriv_shift: 12
+  mwi_len: 54
+  refractory: 72
+  twave_window: 130
+  learn_len: 720
+  peak_confirm: 36
+  sb_buffer: 16
+  hist_len: 128
+  filt_buffer: 4096
+  irregular_halving: true
+  realign_mode: abs
+eval:
+  tolerances_ms:
+  - 150
+  - 75

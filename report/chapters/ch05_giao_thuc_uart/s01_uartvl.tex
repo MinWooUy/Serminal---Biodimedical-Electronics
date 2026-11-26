@@ -1,0 +1,9 @@
+% Muc 5.1  --  phu trach: xem report/PHANCONG.md
+\section{Tầng vật lý UART}\label{sec:uartvl}
+\begin{goiy}
+  \begin{itemize}
+    \item 8N1, không flow control; \texttt{CLK\_FREQ}=50~MHz, \texttt{BAUD\_RATE}=1\,500\,000 (đã chạy ở 921\,600 và 1\,500\,000); cầu USB-UART CH340.
+    \item \texttt{uart\_rx} đồng bộ 2 tầng, lấy mẫu giữa bit, loại bỏ start giả/stop lỗi; \texttt{uart\_tx} giữ đủ stop bit.
+    \item Điều kiện $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}\ge8$.
+  \end{itemize}
+\end{goiy}

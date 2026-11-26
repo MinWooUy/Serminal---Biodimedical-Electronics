@@ -1,0 +1,37 @@
+% Muc 7.6  --  phu trach: xem report/PHANCONG.md
+\section{Bàn luận và đe doạ tính hợp lệ}\label{sec:banluan}
+\subsection{Điểm đã làm được}
+Điểm mạnh của đề tài nằm ở tính kiểm chứng hơn là ở tốc độ.
+\begin{itemize}
+  \item Kết quả trên board khớp từng bit với golden trên $1\,306$ nhịp, và nhãn khớp mô hình int8 trên cả bản ghi 208; các phép kiểm chạy lại được bằng script có sẵn.
+  \item Độ chính xác đánh giá liên bệnh nhân, DS2 chỉ chạy một lần sau khi đóng băng mô hình.
+  \item Một mảng PE dùng chung cho cả các layer tích chập và hai layer kết nối đầy đủ, cấu hình bằng lệnh qua UART, nên đổi kích thước layer không cần tổng hợp lại trong giới hạn của bộ nhớ.
+  \item Số chu kỳ mô phỏng RTL trùng số đo trên board, nên các phân tích hiệu năng dựa trên mô phỏng có cơ sở.
+\end{itemize}
+
+\subsection{Hạn chế}
+\begin{itemize}
+  \item Hiệu suất mảng PE chỉ khoảng $9\,\%$: mỗi ô phải nạp xong mới tính, chưa tái dùng dữ liệu giữa các ô (Mục~\ref{sec:bandwidth}).
+  \item Đường UART mất khoảng $0{,}1$~s mỗi nhịp do nhiều gói nhỏ theo kiểu gửi rồi chờ.
+  \item Dùng $83\,\%$ LE và độ dư thời gian chỉ $+0{,}082$~ns, còn rất ít chỗ để mở rộng trên chip này.
+  \item Công suất chỉ là ước lượng của công cụ ($332$~mW, độ tin cậy thấp); chưa có số đo trên board.
+  \item Tiền xử lý (lọc, phát hiện đỉnh R, chuẩn hoá) vẫn chạy trên máy host.
+  \item Lớp S có độ chính xác dương khoảng $41\,\%$ và lớp F không được nhận đúng trên DS2.
+  \item Chỉ dùng một kênh tín hiệu và một bộ dữ liệu kiểm tra.
+\end{itemize}
+
+\subsection{Các yếu tố có thể làm sai lệch kết luận}
+\begin{itemize}
+  \item \textbf{Dữ liệu kiểm chứng phần cứng thuộc DS1.} $1\,306$ nhịp golden và bản ghi 208 chỉ chứng minh phần cứng khớp phần mềm; khả năng tổng quát hoá lấy từ DS2.
+  \item \textbf{DS2 chỉ có một lần chạy.} Điều này tránh việc chỉnh mô hình theo tập kiểm tra, nhưng cũng không cho biết độ biến thiên của kết quả trên tập đó.
+  \item \textbf{So sánh Lite và Full bị trộn yếu tố} do hai mô hình khác cả dữ liệu huấn luyện (Mục~\ref{sec:dochinhxac}).
+  \item \textbf{Vị trí nhịp.} Kết quả theo chú thích cao hơn kết quả đầu--cuối; số nêu ra phải ghi rõ chế độ nào.
+  \item \textbf{Thời gian đo ở host} phụ thuộc máy tính, bộ chuyển USB--UART và chương trình host, nên không lặp lại chính xác trên máy khác.
+  \item \textbf{Hai sửa đổi loader áp cùng lúc,} nên mọi con số chia phần đóng góp của từng sửa đổi chỉ là dự báo từ mô hình.
+\end{itemize}
+
+\subsection{So sánh với công trình khác}
+Các công trình phân loại ECG trên phần cứng khác nhau về cách chia dữ liệu (liên bệnh nhân hay theo mẫu), tập lớp và định nghĩa độ trễ.
+Vì vậy báo cáo chỉ so khi nêu đủ ba yếu tố đó, và dùng cách nói ``cùng bậc'' hoặc ``không so trực tiếp được'' thay cho ``tốt hơn'' khi giao thức khác nhau.
+Báo cáo cũng không so độ trễ với thiết kế ánh xạ mỗi lớp thành một khối riêng, vì kiến trúc ở đây chọn dùng chung một mảng PE để đổi lấy khả năng cấu hình bằng lệnh.
+\todo{thêm bảng so sánh với 2--3 công trình (cột giao thức đánh giá, tập lớp, định nghĩa độ trễ) sau khi đọc toàn văn.}

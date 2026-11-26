@@ -1,0 +1,33 @@
+name: cnn_full
+dataset: DS1
+beats_config: configs/beats.yaml
+model:
+  channels:
+  - 64
+  - 128
+  - 256
+  - 512
+  kernels:
+  - 7
+  - 5
+  - 3
+  - 3
+  hidden: 256
+  dropout_conv: 0.2
+  dropout_head: 0.5
+train:
+  batch_size: 256
+  max_epochs: 8
+  lr: 0.001
+  weight_decay: 0.01
+  class_weight: sqrt_inverse
+  plateau_factor: 0.5
+  plateau_patience: 3
+  early_stop_patience: 6
+  inner_val_frac: 0.2
+  inner_buffer_s: 1.0
+  early_stopping: false
+seeds:
+- 42
+folds: []
+_cache: beats_detector_a4eaff51

@@ -1,0 +1,108 @@
+% nguon: rtl/cnn1d/top/layer_cmd_controller.v, comm/protocol/packet_rx.v, packet_tx.v
+\chapter{Bộ lệnh UART đầy đủ và mã lỗi}\label{pl:bolenh}
+Phụ lục này liệt kê giao thức giữa host và bộ tăng tốc theo đúng mã RTL hiện tại.
+Cách hoạt động và lý do thiết kế được trình bày ở Chương~\ref{ch:uart}.
+
+\section*{Khung gói}
+Mọi khung, cả hai chiều, có dạng
+\begin{center}
+\texttt{A5 5A $|$ CMD $|$ SEQ $|$ LEN\_LO LEN\_HI $|$ PAYLOAD $|$ CRC\_LO CRC\_HI}
+\end{center}
+Trường nhiều byte xếp byte thấp trước (little-endian).
+CRC-16/CCITT-FALSE (đa thức \texttt{0x1021}, giá trị đầu \texttt{0xFFFF}) tính từ \texttt{CMD} đến hết \texttt{PAYLOAD}.
+\texttt{LEN} không quá \texttt{MAX\_PAYLOAD} ($128$ byte trên board).
+Bộ thu bỏ khung nhận dở sau $100$~ms không có byte mới, và quay về chờ \texttt{A5} khi gặp lỗi khung UART; hai trường hợp này không có trả lời.
+Bộ điều khiển chỉ nhận lệnh khi đang rảnh, nên host gửi một lệnh rồi chờ trả lời mới gửi tiếp.
+
+\section*{Trả lời}
+\begin{table}[H]\centering
+\caption{Các loại trả lời. \texttt{SEQ} của trả lời lặp lại \texttt{SEQ} của lệnh.}\label{tab:pl-traloi}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Mã & Tên & Tải \\ \midrule
+\texttt{0x80} & ACK & \texttt{[cmd, 0]} \\
+\texttt{0x81} & NACK & \texttt{[cmd, code]} \\
+\texttt{0x82} & RESULT & tuỳ lệnh \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering
+\caption{Mã lỗi trong NACK.}\label{tab:pl-nack}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}c>{\raggedright\arraybackslash}p{12.5cm}@{}}
+\toprule
+\texttt{code} & Nguyên nhân \\ \midrule
+1 & lỗi khung: sai CRC hoặc \texttt{LEN} lớn hơn \texttt{MAX\_PAYLOAD} \\
+2 & tham số hoặc độ dài tải sai (địa chỉ vượt bộ nhớ, cấu hình ngoài giới hạn) \\
+3 & sai trạng thái: layer đang chạy, hoặc \texttt{RUN} khi chưa có \texttt{CONFIG} hợp lệ; \texttt{READ\_FMAP} sai tham số cũng trả mã này \\
+4 & mã lệnh không được hỗ trợ (gồm \texttt{0x11}--\texttt{0x14}) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Lệnh}
+\begin{table}[H]\centering
+\caption{Các lệnh được hỗ trợ.}\label{tab:pl-lenh}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l l >{\raggedright\arraybackslash}p{3.5cm}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{3.8cm}@{}}
+\toprule
+Mã & Lệnh & Tải gửi & Trả lời & Tác dụng \\ \midrule
+\texttt{0x08} & \texttt{WRITE\_X} & \texttt{addr:u16, data[n]} & ACK & ghi bank ghi của bộ nhớ ifmap \\
+\texttt{0x09} & \texttt{WRITE\_W} & \texttt{addr:u16, data[n]} & ACK & ghi bank ghi của bộ nhớ trọng số \\
+\texttt{0x0A} & \texttt{WRITE\_BIAS} & \texttt{base:u16, int32[n]} & ACK & ghi bias từ địa chỉ \texttt{base} \\
+\texttt{0x0B} & \texttt{WRITE\_SHIFT} & \texttt{base:u16, int8[n]} & ACK & hệ số dịch theo kênh; từ \texttt{COUT\_MAX} trở đi là hệ số dịch trước khi ghép hàng \\
+\texttt{0x0C} & \texttt{SWAP} & \texttt{flags:u8} (bit0 ifmap, bit1 trọng số) & ACK & đổi bank \\
+\texttt{0x0D} & \texttt{CONFIG} & $11$, $12$ hoặc $16$ byte (Bảng~\ref{tab:pl-config}) & ACK & chốt cấu hình layer \\
+\texttt{0x0E} & \texttt{RUN} & rỗng & RESULT \texttt{[status:u8, cycles:u32]} & chạy layer, trả khi xong \\
+\texttt{0x0F} & \texttt{READ\_GAP} & rỗng & RESULT $\texttt{COUT\_MAX}\times$\texttt{u16} & đọc bộ cộng dồn GAP \\
+\texttt{0x10} & \texttt{READ\_FMAP} & \texttt{offset:u16, len:u8} & RESULT \texttt{len} byte & đọc bank đọc của ifmap \\
+\texttt{0x15} & \texttt{INFO} & rỗng & RESULT $22$ byte & cấu hình phần cứng (Bảng~\ref{tab:pl-info}) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\texttt{WRITE\_X}, \texttt{WRITE\_W} yêu cầu địa chỉ cuối không vượt độ sâu bộ nhớ; \texttt{WRITE\_SHIFT} không vượt $2\cdot\texttt{COUT\_MAX}$; \texttt{WRITE\_BIAS} cần số byte dữ liệu là bội của $4$ và không vượt \texttt{BIAS\_DEPTH}.
+\texttt{status} của \texttt{RUN} khác $0$ khi bộ ghi báo \texttt{overrun}.
+Với \texttt{READ\_FMAP}, host phải giữ $\texttt{len}\le\texttt{MAX\_PAYLOAD}$: RTL không từ chối giá trị lớn hơn, và khi đó bộ phát bỏ khung trả lời nên host chỉ thấy hết thời gian chờ.
+
+\begin{table}[H]\centering
+\caption{Tải của \texttt{CONFIG} theo thứ tự byte.}\label{tab:pl-config}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rll>{\raggedright\arraybackslash}p{9cm}@{}}
+\toprule
+Byte & Trường & Kiểu & Ràng buộc \\ \midrule
+0--1 & \texttt{out\_len} & u16 & khác $0$; chẵn khi \texttt{pool}$=1$ \\
+2--3 & \texttt{cout} & u16 & $1\ldots\texttt{COUT\_MAX}$ \\
+4--5 & \texttt{k\_len} & u16 & $1\ldots\texttt{FEEDER\_DEPTH}$ \\
+6--7 & \texttt{window\_step} & u16 & khác $0$ \\
+8 & \texttt{pool} & u8 & $0$ hoặc $1$ \\
+9 & \texttt{gap} & u8 & $0$ hoặc $1$ \\
+10 & \texttt{pad\_next} & u8 & số vị trí đệm không cho layer sau \\
+11 & \texttt{flags} & u8 & tuỳ chọn; bit0 \texttt{out\_int32}, bit1 \texttt{argmax}, bit2 \texttt{row\_combine}, bit3 \texttt{gap\_in} \\
+12--13 & \texttt{w\_base} & u16 & tuỳ chọn; $\texttt{w\_base}+\texttt{cout}\cdot\texttt{k\_len}\le\texttt{WGT\_MEM\_DEPTH}$ \\
+14--15 & \texttt{b\_base} & u16 & tuỳ chọn; $\texttt{b\_base}+\texttt{cout}\le\texttt{BIAS\_DEPTH}$ \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Ràng buộc của \texttt{flags}: các bit $4$--$7$ bằng $0$; \texttt{argmax} cần \texttt{out\_int32}; \texttt{out\_int32} không đi cùng \texttt{row\_combine}, cần \texttt{out\_len}$=1$ và $4\cdot\texttt{cout}+1\le\texttt{IFMAP\_MEM\_DEPTH}$; \texttt{row\_combine} cần \texttt{out\_len}$=3$ và mảng có ít nhất $3$ hàng; \texttt{gap\_in} cần \texttt{row\_combine}; hai chế độ đầu ra đặc biệt không dùng \texttt{pool}, \texttt{gap}, \texttt{pad\_next}.
+\end{table}
+
+\begin{table}[H]\centering
+\caption{Trả lời của \texttt{INFO} ($22$ byte).}\label{tab:pl-info}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}r>{\raggedright\arraybackslash}p{10.5cm}r@{}}
+\toprule
+Byte & Trường & Giá trị trên board \\ \midrule
+0 & phiên bản định dạng & 2 \\
+1, 2 & \texttt{ARRAY\_ROWS}, \texttt{ARRAY\_COLS} & 7, 7 \\
+3 & features: bit0--3 như \texttt{flags}; bit4 \texttt{w\_base}/\texttt{b\_base}; bit5 pool dùng số hàng chẵn lớn nhất & \texttt{0x3F} \\
+4--7 & \texttt{CLK\_FREQ} (Hz) & 50\,000\,000 \\
+8--11 & \texttt{BAUD\_RATE} & 1\,500\,000 \\
+12--13 & \texttt{IFMAP\_MEM\_DEPTH} & 4\,096 \\
+14--15 & \texttt{WGT\_MEM\_DEPTH} & 16\,384 \\
+16--17 & \texttt{FEEDER\_DEPTH} & 1\,024 \\
+18--19 & \texttt{COUT\_MAX} & 64 \\
+20--21 & \texttt{MAX\_PAYLOAD} & 128 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Các mã \texttt{0x11} (\texttt{CONFIG\_ALL}), \texttt{0x12} (\texttt{LOAD\_COMMIT}), \texttt{0x13} (\texttt{RUN\_ALL}) và \texttt{0x14} (\texttt{GET\_RESULT}) được dành cho bộ tuần tự nhiều layer nhưng chưa được xử lý, nên bị trả NACK mã $4$.

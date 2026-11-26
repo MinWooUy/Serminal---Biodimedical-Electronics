@@ -1,0 +1,15 @@
+name: beats
+dataset: DS1
+detector_config: configs/detector_pt.yaml
+beats:
+  rr_source: detector
+  half_window: 180
+  match_tol_ms: 150
+  rr_avg_n: 8
+  rr_clip_s:
+  - 0.2
+  - 3.0
+  beat_norm:
+    type: zscore
+    eps: 1.0e-06
+    clip: 5.0

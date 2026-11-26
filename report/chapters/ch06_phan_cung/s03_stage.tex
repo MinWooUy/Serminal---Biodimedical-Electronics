@@ -1,0 +1,125 @@
+% Muc 6.3  --  phu trach: xem report/PHANCONG.md
+\section{Pipeline dữ liệu một layer: từng stage}\label{sec:stage}
+Mục này đi theo dữ liệu của \emph{một ô} qua sáu stage, từ bộ nhớ đến bộ nhớ.
+Một layer là chuỗi các ô như vậy; việc điều khiển chuỗi được trình bày ở Mục~\ref{sec:ctrl}.
+Mỗi stage được mô tả theo bốn khía cạnh: chức năng, dữ liệu vào và ra, số chu kỳ cần thiết và cách điều tiết dòng dữ liệu (tín hiệu \texttt{valid} và cơ chế điều tiết ngược, backpressure).
+
+\begin{sidewaysfigure}\centering
+  \includegraphics[width=\textheight,height=0.88\textwidth,keepaspectratio]{ch06_phan_cung/stage}
+  \caption{Các stage của pipeline dữ liệu của một ô.}\label{fig:stage}
+\end{sidewaysfigure}
+
+\begin{table}[htbp]\centering
+\caption{Sáu stage của pipeline một ô với $R\times C$ là số hàng và cột đang dùng ($R_u\times C_u$), $K$ là độ dài tích vô hướng.}\label{tab:stage}
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}c>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.4cm}@{}}
+\toprule
+\# & Module RTL & Vào & Ra & Thời gian \\ \midrule
+1 & \texttt{conv1d\_*\_loader}, \texttt{conv1d\_address\_generating} & SRAM (ifmap, trọng số) & byte vào FIFO từng làn & $K\cdot\max(R_u,C_u)$ chu kỳ (1 byte/chu kỳ/loader) \\
+2 & \texttt{ifmap\_feeder}, \texttt{weight\_feeder} (\texttt{feed\_lane}, \texttt{ring\_buffer}, \texttt{feed\_delay}) & FIFO từng làn & luồng đã lệch pha vào mảng PE & $K$ chu kỳ cộng độ lệch $R+C$ \\
+3 & \texttt{pe\_array} ($R\times C$ \texttt{pe\_top}) & $R$ luồng ifmap, $C$ luồng trọng số & $R\cdot C$ tổng riêng INT32 & $K+R+C$ chu kỳ \\
+4 & \texttt{partial\_sum\_manager} & chuỗi shadow của PE & tile INT32 ($R\times C$) & $\approx C$ chu kỳ xả, cộng $\approx C+4$ chu kỳ bơm bias trước khi tính \\
+5 & \texttt{conv1d\_post\_process} & tile INT32 & tile INT8 & $R+1$ chu kỳ \\
+6 & \texttt{fmap\_writer} & tile INT8 & byte vào bank ghi ifmap (hoặc bộ nhớ GAP) & $\le R\cdot C$ chu kỳ (1 byte/chu kỳ) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Stage 1: sinh địa chỉ và loader}
+\textbf{Chức năng.} Đọc từ SRAM các byte mà mảng PE sẽ cần cho cả ô và đưa vào FIFO của từng làn.
+Mỗi \emph{làn} (lane) là một hàng PE (với ifmap) hoặc một cột PE (với trọng số); một ô cần $R_u$ làn ifmap, mỗi làn là một cửa sổ $K$ byte, và $C_u$ làn trọng số, mỗi làn là một bộ lọc $K$ byte.
+
+\textbf{Sinh địa chỉ.} Khối \texttt{conv1d\_address\_generating} (AGU) phát lần lượt các địa chỉ
+\begin{equation}\label{eq:agu}
+  \mathrm{addr}=\mathrm{base}+n\cdot\texttt{window\_step}+k,\qquad k=0,\dots,K-1,\ \ n=0,\dots,R_u-1,
+\end{equation}
+cho cửa sổ $n$ của ifmap; với trọng số, $\mathrm{addr}=\texttt{w\_base}+c\cdot K+k$ cho bộ lọc $c$.
+Kèm theo mỗi địa chỉ là các cờ \texttt{valid}, \texttt{k\_first}, \texttt{k\_last}, \texttt{window\_first}, \texttt{window\_last}; chỉ số phẳng $k=j\cdot C_{in}+i$ (Mục~\ref{sec:anhxa}) đã gộp sẵn nên AGU chỉ cần một bộ đếm.
+
+\textbf{Loader (pipeline $1$ byte/chu kỳ).} Ở chu kỳ $n$, loader phát lệnh đọc SRAM và cho AGU tiến một bước; ở chu kỳ $n+1$ SRAM (đọc đồng bộ, trễ một chu kỳ) trả byte và loader ghi thẳng vào FIFO của làn tương ứng.
+Nếu FIFO của làn đó đầy, byte trên đường được giữ trong một thanh ghi đệm (skid) và loader ngừng phát lệnh đọc mới cho đến khi ghi được; thứ tự $k$ vì thế không bị đảo và không mất dữ liệu.
+Tại mọi thời điểm có tối đa một byte đang trên đường \emph{hoặc} một byte trong thanh ghi đệm, không bao giờ cả hai.
+Làn được nạp lần lượt: hết $K$ byte của làn $0$ rồi sang làn $1$, \dots, nên nạp ifmap mất $R_u\cdot K$ chu kỳ và nạp trọng số mất $C_u\cdot K$ chu kỳ.
+Hai loader (ifmap và trọng số) đọc từ hai SRAM riêng và chạy song song, nên thời gian nạp một ô là $K\cdot\max(R_u,C_u)$.
+Đây là thành phần chiếm đa số thời gian của thiết kế hiện tại (Mục~\ref{sec:bandwidth}).
+
+\subsection{Stage 2: feeder, FIFO từng làn và lệch pha}
+\textbf{Chức năng.} Giữ dữ liệu đã nạp và phát ra cho mảng PE đúng thứ tự và đúng nhịp.
+Mỗi làn gồm một \texttt{ring\_buffer} và một \texttt{feed\_delay}, ghép bởi \texttt{feed\_lane}.
+
+\textbf{FIFO vòng.} \texttt{ring\_buffer} là bộ nhớ $\texttt{FEEDER\_DEPTH}=1\,024$ byte với hai con trỏ đọc và ghi chạy vòng, mỗi con trỏ thêm một bit đánh dấu vòng để phân biệt đầy và rỗng; có thể đọc và ghi trong cùng một chu kỳ, và đọc có độ trễ một chu kỳ.
+Dữ liệu nằm yên trong RAM và con trỏ dịch chuyển, nên FIFO được ánh xạ vào một khối M9K cho mỗi làn thay vì thành hàng nghìn thanh ghi dịch (Mục~\ref{sec:mophong}).
+Cờ \texttt{mem\_full} chặn ghi và là tín hiệu điều tiết ngược (backpressure) về loader.
+
+\textbf{Đọc đồng bộ toàn mảng.} Mỗi feeder có \emph{một} bộ đếm $k$ dùng chung cho mọi làn đang hoạt động.
+Khi \emph{tất cả} làn đang hoạt động đều không rỗng (\texttt{all\_ready}) và lõi tính toán cấp tín hiệu bước (\texttt{feed\_step}), tất cả các làn cùng đọc một byte (\texttt{rd\_fire\_all}), nên các hàng (hoặc các cột) luôn ở cùng một giá trị $k$.
+Feeder sinh luôn các cờ \texttt{first} (khi $k=0$) và \texttt{last} (khi $k=K-1$) đi kèm dữ liệu để các PE biết khi nào khởi tạo và kết thúc phép tích luỹ.
+
+\textbf{Lệch pha (skew).} Mảng PE là mảng systolic: giá trị ifmap đi từ trái sang phải và trọng số đi từ trên xuống dưới, mỗi PE chuyển tiếp dữ liệu một chu kỳ mỗi bước.
+Để PE ở hàng $r$, cột $c$ nhận cặp $(x_k,w_k)$ cùng lúc ở chu kỳ $k+r+c$, làn ifmap $r$ được trễ $r$ chu kỳ và làn trọng số $c$ được trễ $c$ chu kỳ; \texttt{feed\_delay} là chuỗi thanh ghi dài $r$ (hoặc $c$) bước mang theo cả \texttt{valid}, \texttt{first}, \texttt{last}.
+Độ lệch này là lý do một ô tốn thêm $R+C$ chu kỳ ngoài $K$ (Mục~\ref{sec:pe}).
+
+\subsection{Stage 3: mảng PE}
+Mỗi PE nhân hai số nguyên có dấu $8$ bit và cộng vào bộ tích luỹ (accumulator) $32$ bit của chính nó.
+Cấu trúc bên trong và số học được trình bày ở Mục~\ref{sec:pe}; đặc điểm cần lưu ý là phép tính của một ô \emph{không có điểm phụ thuộc dữ liệu giữa các PE}: mỗi PE tích luỹ riêng một phần tử đầu ra qua $K$ bước, và kết thúc sau $K+R+C$ chu kỳ kể từ lúc dữ liệu đầu tiên vào mảng.
+Bộ tích luỹ của mọi PE được \emph{khởi tạo} bằng giá trị preload (bias của kênh) ở bước $k=0$ thay vì bằng $0$, nên không cần phép cộng bias riêng sau khi tính; cái giá là bước bơm bias vào chuỗi bóng (stage~4), chạy nối tiếp trước khi dữ liệu bắt đầu vào mảng.
+
+\subsection{Stage 4: quản lý tổng riêng (PSM)}
+\textbf{Chức năng.} Lấy kết quả của ô ra khỏi mảng PE và đưa vào post-process; nạp bias vào mảng trước khi ô bắt đầu.
+Mỗi PE có một thanh ghi \emph{bóng} (shadow register, \texttt{shadow\_register}); khi ô kết thúc, tín hiệu \texttt{capture} chép bộ tích luỹ sang thanh ghi bóng và các thanh ghi bóng của một hàng nối thành chuỗi dịch (\texttt{scan}) về phía \texttt{partial\_sum\_manager}.
+Chuỗi này được đọc theo thứ tự cột từ $C_u-1$ về $0$, mỗi chu kỳ một cột; khi cột cuối được chụp, \texttt{partial\_sum\_manager} báo tile hợp lệ và xung \texttt{capture\_done}, nên thời gian xả bằng $C_u$ chu kỳ.
+Phía đọc có cơ chế bắt tay valid/ready: chuỗi chỉ dịch khi khối phía sau nhận được, nên post-process chậm không làm mất dữ liệu.
+
+\textbf{Preload bias.} Trước khi ô bắt đầu, chuỗi bóng được dùng theo chiều ngược lại để bơm bias (đọc từ RAM bias tại $\texttt{b\_base}+\text{kênh}$) vào từng cột của mọi hàng; cờ \texttt{acc\_init} của lần MAC đầu tiên nạp giá trị này từ thanh ghi bóng vào bộ tích luỹ.
+Bước này do \texttt{cnn\_control\_fsm} điều khiển (\texttt{S\_PRE\_KICK} phát \texttt{preload\_start}, \texttt{S\_PRE\_WAIT} chờ \texttt{preload\_done} rồi mới cho feeder chạy): PSM dịch chuỗi $C_u$ lần, mỗi lần đọc một giá trị bias từ RAM (từ cột $C_u-1$ về $0$) và phát chung cho mọi hàng, nên mất khoảng $C_u+4$ chu kỳ mỗi ô.
+Bias vì thế nằm sẵn trong \emph{mọi hàng}, và là lý do FC1 phải trừ phần bias thừa khi ghép ba hàng (công thức~\eqref{eq:rowcombine}).
+
+\subsection{Stage 5: hậu xử lý (lượng tử hoá)}
+\textbf{Chức năng.} Biến tile INT32 thành INT8 theo đúng quy tắc của mô hình lượng tử hoá Python:
+\begin{equation}\label{eq:requant}
+  q=\begin{cases}(a+2^{s-1})\gg s & s>0,\\ a & s=0,\\ a\ll(-s) & s<0,\end{cases}\qquad
+  y=\begin{cases}\mathrm{clamp}(q,0,127) & \text{có ReLU,}\\ \mathrm{clamp}(q,-127,127) & \text{không ReLU,}\end{cases}
+\end{equation}
+với $a$ là giá trị INT32 của một phần tử \emph{đã gồm bias} (bias được nạp vào bộ tích luỹ nhờ preload ở stage 4, nên stage này không cộng lại) và $s$ là độ dịch của kênh (lưu trong RAM shift, mỗi kênh một giá trị $8$ bit có dấu).
+Phép làm tròn là ``nửa hướng về $+\infty$'' kể cả số âm, giống \texttt{python/quant/int8.py}; phép cộng hằng $2^{s-1}$ và phép dịch dùng trung gian $64$ bit để không tràn.
+Với độ dịch lớn kết quả bão hoà theo toán học chứ không bị quấn vòng.
+Giá trị $-128$ không được dùng (đối xứng $\pm127$).
+
+\textbf{Chi phí.} Mỗi \emph{cột} có một bộ lượng tử hoá riêng đi qua các hàng, mỗi chu kỳ một hàng; chi phí phần cứng vì thế tăng theo số cột chứ không theo $R\cdot C$.
+Độ trễ là $R+1$ chu kỳ từ lúc nhận tile đến khi có kết quả, và đầu vào của tile phải giữ nguyên trong thời gian đó.
+
+\subsection{Stage 6: ghi kết quả (\texttt{fmap\_writer})}
+\textbf{Chức năng.} Nhận một tile INT8 song song ($R\times C$ giá trị cùng lúc) và ghi từng phần tử vào đúng vị trí trong bank ghi của ifmap, mỗi chu kỳ một byte (SRAM chỉ có một cổng ghi $8$ bit).
+Địa chỉ của phần tử ở hàng $r$, cột $c$ của ô là
+\begin{equation}\label{eq:wraddr}
+  \mathrm{addr}=\mathrm{out\_base}+(\mathrm{out\_pos}+\mathrm{pad})\cdot C_{out}+(\mathrm{col\_base}+c),
+\end{equation}
+với $\mathrm{out\_base}$ là địa chỉ gốc của vùng đầu ra, $\mathrm{pad}$ là số vị trí đệm ở đầu vùng, $C_{out}$ là số kênh đầu ra, $\mathrm{col\_base}$ là kênh đầu tiên của ô, $c$ là chỉ số cột trong ô và $\mathrm{out\_pos}=\mathrm{row\_base}+r$; khi có pool, hàng đầu ra thứ $j$ của ô có $\mathrm{out\_pos}=\mathrm{row\_base}/2+j$.
+Vị trí của ô trong layer (\texttt{row\_base}, \texttt{col\_base}) được chốt lúc nhận tile.
+
+\textbf{MaxPool và GAP.} Nếu layer có pool, bộ ghi so sánh hai hàng liền nhau $(2j,2j+1)$ và chỉ ghi phần tử lớn hơn, nên một ô chỉ sinh $R/2$ vị trí đầu ra.
+Nếu layer có GAP, thay vì ghi ra ifmap bộ ghi cộng dồn giá trị vào bộ nhớ GAP theo chỉ số kênh.
+
+\textbf{Điều tiết.} Post-process chỉ gửi ô mới khi \texttt{o\_ready}; nếu vẫn gửi trong lúc bộ ghi đang ghi, cờ \texttt{overrun} được bật và trả về host dưới dạng trạng thái khác $0$ của \texttt{RUN} (Mục~\ref{sec:ctrl}).
+Khi ghi xong, bộ ghi báo \emph{commit}, cho bộ điều khiển layer phát ô kế tiếp.
+Sau ô cuối cùng của layer (không phải GAP), bank ghi tự đổi thành bank đọc (\texttt{SWAP}) và đầu ra trở thành đầu vào của layer sau.
+
+\subsection{Thời gian của một ô}
+Cộng các stage cho một ô nạp xong mới tính (như thiết kế hiện tại):
+\begin{equation}\label{eq:otile}
+  \tau=\underbrace{K\cdot\max(R_u,C_u)}_{\text{nạp}}+\underbrace{(K+R_u+C_u)}_{\text{tính}}+\delta,
+\end{equation}
+trong đó $\delta$ gom các chu kỳ cố định còn lại của một ô (bơm bias, xả, hậu xử lý, ghi, bắt tay, đổi trạng thái).
+Các mốc thời gian của từng ô được ghi bằng mô phỏng RTL (testbench \texttt{tb\_tile\_timing}, conv0, $180$ ô, tổng $21\,429$ chu kỳ trùng số đo board). Với $N_{\text{out}}$ là số byte bộ ghi ghi cho một ô ($R_uC_u$ khi không pool, $R_uC_u/2$ khi có pool), $\delta$ gồm:
+\begin{itemize}
+  \item nạp: $6$ chu kỳ trễ của loader và FIFO ngoài $K\cdot\max(R_u,C_u)$;
+  \item cấp xung cho lõi (\texttt{S\_CORE\_START}): $1$;
+  \item bơm bias (\texttt{S\_LOAD}, \texttt{S\_PRE\_KICK}, \texttt{S\_PRE\_WAIT}): $C_u+5$;
+  \item tính: $3$ chu kỳ ngoài $K+R_u+C_u$;
+  \item xả chuỗi shadow: $C_u+1$;
+  \item hậu xử lý: $8=R+1$ với mảng $R=7$ hàng;
+  \item ghi: $N_{\text{out}}+1$, tức một byte mỗi chu kỳ;
+  \item bắt tay \texttt{commit} và phát ô kế tiếp: $1+1$.
+\end{itemize}
+Cộng lại $\delta=27+2C_u+N_{\text{out}}$. Ô $6\times7$ của conv0 ($N_{\text{out}}=21$) cho $\delta=62$ và ô $6\times2$ ($N_{\text{out}}=6$) cho $\delta=37$, đúng bằng đo.
+Công thức này, áp dụng cho mọi ô của conv0--conv3, cho tổng số chu kỳ thấp hơn số đo board đúng bằng phần layer ghi vùng đệm $2\cdot\texttt{pad\_next}\cdot C_{out}$ byte (conv0 $64$, conv1 $64$, conv2 $128$, conv3 $0$) cộng $5$ chu kỳ đóng layer.
+Với mảng $R$ hàng, công thức viết thành $\delta=20+R+2C_u+N_{\text{out}}$. Mô hình dự báo ở Mục~\ref{sec:bandwidth} dùng công thức này cho các layer conv và giữ hằng số $55$ chu kỳ cho FC1, FC2 là hai layer chưa được ghi mốc.

@@ -1,0 +1,66 @@
+% Muc 6.7  --  phu trach: xem report/PHANCONG.md
+\section{Mô phỏng và kiểm thử RTL}\label{sec:mophong}
+\subsection{Môi trường và nguyên tắc}
+Mọi mô phỏng RTL chạy bằng ModelSim--Intel FPGA Edition (đi kèm Quartus Lite 18.1) qua một script duy nhất, \texttt{rtl/cnn1d/sim/run\_tb.sh}: chạy một testbench, chạy toàn bộ (\texttt{all}, hồi quy), ghi dạng sóng (\texttt{--wave}) hoặc mở giao diện (\texttt{--gui}); tham số có thể đổi từ dòng lệnh (ví dụ \texttt{--param ARRAY\_ROWS=7}).
+Script trả mã thoát $0$ khi mọi testbench đạt, $1$ khi có lỗi, nên dùng được trong quy trình tự động.
+Một số nhóm có script Icarus Verilog riêng (\texttt{run\_comm\_tests.sh}, \texttt{run\_post\_tests.sh}, \texttt{run\_pc\_layer\_tests.sh}, \texttt{run\_gvu\_tests.sh}).
+Có $27$ testbench Verilog trong \texttt{rtl/cnn1d/tb/} (cộng các testbench SystemVerilog của khối GVU).
+
+Nguyên tắc chung: \emph{so với golden từng byte}.
+Các vector kỳ vọng do mô hình số nguyên bằng Python sinh ra (cùng nguồn với golden dùng trên board) và được nạp vào testbench bằng \texttt{\$readmemh} từ \texttt{rtl/cnn1d/sim/hex/}; testbench so từng byte và báo lỗi khi có byte khác.
+Điều này tạo một chuỗi kiểm chứng liên tục: mô hình float $\to$ mô hình số nguyên (golden) $\to$ RTL mô phỏng $\to$ board (Chương~\ref{ch:thucnghiem}).
+
+\subsection{Các testbench chính}
+\begin{table}[htbp]\centering
+\caption{Các testbench chính của phần lõi tính toán và những gì chúng kiểm.}\label{tab:tb}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{10.7cm}@{}}
+\toprule
+Testbench & Nội dung kiểm \\ \midrule
+\texttt{tb\_ring\_buffer} & FIFO vòng so với một mô hình hàng đợi (scoreboard) chạy song song: mỗi chu kỳ so \texttt{count}, \texttt{mem\_full}, \texttt{mem\_empty} và dữ liệu đọc; hai cấu hình \texttt{DEPTH}=4 (quay vòng nhanh) và 16 \\
+\texttt{tb\_feed\_lane} & phần tử đầu tiên xuất hiện ở \texttt{o\_data} đúng \texttt{LANE\_N} nhịp sau khi \texttt{o\_valid} lên (độ trễ skew) và theo đúng thứ tự FIFO \\
+\texttt{tb\_conv1d\_weight\_loader}, \texttt{tb\_conv1d\_addr\_gen} & đường nạp trọng số và bộ sinh địa chỉ \\
+\texttt{tb\_conv1d\_tile\_top} & kiểm tra khói một ô, co giãn theo kích thước mảng ($3\times3$, $7\times7$ bằng \texttt{--param}); độ trễ hậu xử lý không quá $\texttt{ARRAY\_ROWS}+1$ chu kỳ \\
+\texttt{tb\_conv1d\_tile\_corner} & một ô so với mô hình tham chiếu viết ngay trong testbench, giữ bản sao cả hai bank; các trường hợp biên: $K=16,17$ với \texttt{FEEDER\_DEPTH}=16 và tới $K=1\,025$ với 1\,024, preload bias, xả có backpressure, mảng $3\times3$ và $7\times7$, ô ngẫu nhiên (ô nhớ chưa ghi mang giá trị \texttt{x} để lộ việc đọc ra ngoài vùng hợp lệ) \\
+\texttt{tb\_post\_process} & lượng tử hoá: $1\,308$ vector số nguyên sinh bằng Python (\texttt{run\_post\_tests.sh}) gồm các giá trị biên của INT32, độ dịch âm, bằng $0$ và lớn, có và không ReLU; mảng $7\times7$ so với mô hình tham chiếu $64$ bit; ô một phần hàng hoặc cột; \texttt{i\_valid} khi đang bận bị bỏ qua và cấu hình được chốt khi nhận \\
+\texttt{tb\_fmap\_writer} & địa chỉ ghi với pool (cặp hàng $(2p,2p+1)$ lấy max), pad và GAP (phát \texttt{o\_gap\_*} thay vì ghi SRAM); dữ liệu vào đã chốt không bị đổi khi đang ghi; chạy được với mảng $7\times7$ \\
+\texttt{tb\_tensor\_pingpong\_buffer}, \texttt{tb\_tensor\_sram} & bộ nhớ và bộ đệm ping-pong \\
+\texttt{tb\_conv1d\_layer\_controller} & bộ điều khiển vòng lặp ô: vị trí \texttt{row\_base}, địa chỉ gốc của từng ô \\
+\texttt{tb\_conv1d\_layer\_top} & bốn layer conv của mô hình Lite nối tiếp trên \texttt{conv1d\_layer\_top}, mỗi layer so với đầu ra golden từng byte (conv0 $+$ pool $\to$ \texttt{exp0}, conv1 $+$ pool $\to$ \texttt{exp1}, conv2 $+$ pool $\to$ \texttt{exp2}, conv3 $+$ GAP $\to$ \texttt{gap}); tham số \texttt{LAST\_LAYER} chọn chạy đến layer nào vì chạy đủ bốn layer mất nhiều thời gian mô phỏng \\
+\texttt{tb\_tile\_timing} & chạy như \texttt{tb\_conv1d\_layer\_top} và ghi mốc thời gian từng ô qua tham chiếu phân cấp, không sửa RTL; tự kiểm đầu ra golden, số ô, thứ tự các mốc và, với mảng $7\times7$, số chu kỳ trùng board (Mục~\ref{sec:stage}) \\
+\texttt{tb\_fc\_layers} & FC1 (ghép ba hàng, \texttt{gap\_in}) và FC2 (\texttt{out\_int32}, \texttt{argmax}) trên bốn nhịp đại diện N, S, V, F, so logit và nhãn; chế độ \texttt{RESIDENT}=1 kiểm cơ chế \texttt{w\_base}/\texttt{b\_base} (nạp một lần). Vector sinh bằng \texttt{scripts/rtl/gen\_fc\_hex.py}, script này tự dựng lại FC1/FC2 theo đúng cách phần cứng làm và khẳng định khớp golden trước khi ghi \\
+\texttt{tb\_pc\_to\_fpga\_layer\_flow} & luồng khung UART từ host qua bộ giải mã lệnh, SRAM ping-pong, layer Conv1D và đường trả lời UART \\
+\texttt{tb\_layer\_core\_info} & lệnh \texttt{INFO} với hai cấu hình ($7\times7$ @ 50~MHz, 115\,200 baud và $3\times3$ @ 25~MHz, 230\,400 baud, SRAM nhỏ hơn) để chứng minh các giá trị khai báo do tham số tổng hợp quyết định chứ không phải hằng số trong host \\
+\texttt{tb\_uart*}, \texttt{tb\_packet\_rx}, \texttt{tb\_crc16*} & thu phát UART ở nhiều tốc độ, bộ thu khung, CRC-16 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Liên hệ với board.} Số chu kỳ của conv0--conv3 mô phỏng bằng \texttt{tb\_conv1d\_layer\_top} (mảng $7\times7$) là $21\,429$, $104\,379$, $124\,603$ và $113\,321$ (tổng $363\,732$) \emph{trùng từng chu kỳ} với giá trị \texttt{cycles} đo trên board cho cùng bốn layer (Chương~\ref{ch:thucnghiem}).
+Sự trùng khớp này cho thấy mô hình mô phỏng và phần cứng thật có cùng cấu hình.
+
+\subsection{Các lỗi thiết kế đã gặp và cách sửa}
+Bốn vấn đề lớn đã được tìm thấy khi chạy các testbench với kích thước thật của mô hình ECG:
+
+\begin{table}[htbp]\centering
+\caption{Các vấn đề của đường dữ liệu đã tìm ra và cách sửa.}\label{tab:loi}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{3.2cm}p{4.9cm}p{5.5cm}@{}}
+\toprule
+Vấn đề & Hậu quả & Sửa \\ \midrule
+FIFO dạng thanh ghi dịch (L01) & mọi lần đọc dịch cả mảng; không ánh xạ được vào M9K (khoảng $16$k flip-flop cho $8$ làn sâu $256$); không đọc và ghi cùng chu kỳ & \texttt{ring\_buffer}: dữ liệu nằm yên trong RAM, hai con trỏ chạy vòng, đọc ghi đồng thời \\
+Loader không có backpressure, $K$ bị giới hạn bởi độ sâu FIFO (L02) & khi $K>\texttt{DEPTH}$ các lần ghi thừa bị bỏ và ô \emph{treo} ở trạng thái tính, không có cờ lỗi. Xác nhận bằng mô phỏng với $K=20$, $\texttt{DEPTH}=16$ & \texttt{FEEDER\_DEPTH}=1\,024 (đủ cho $K_{\max}=192$); loader có thanh ghi đệm và dừng khi FIFO đầy; cờ lỗi cấu hình khi $K>\texttt{DEPTH}$ \\
+Kết quả ô bị xoá bởi ô sau, chưa có hậu xử lý (L03) & không nối được nhiều layer & \texttt{conv1d\_post\_process} và \texttt{fmap\_writer}; ghi kết quả vào bank ifmap để làm đầu vào layer sau \\
+Băng thông nạp (L04) & nạp tốn $3$ chu kỳ mỗi byte, layer pool chỉ dùng $2$ hàng PE; hiệu suất PE $1{,}6\,\%$ & loader pipeline $1$ byte/chu kỳ và pool dùng $6$ hàng (Mục~\ref{sec:bandwidth}) \\ \bottomrule
+\end{tabular}
+\end{table}
+
+Nhận xét chung: các testbench ban đầu chỉ thử $K=3$ nên không phát hiện lỗi $K>\texttt{DEPTH}$; mô phỏng với kích thước thật của mô hình (và các ô biên) là điều kiện để tìm ra lỗi, và phải so với golden chứ không chỉ chạy qua.
+
+\subsection{Vấn đề còn mở và hạn chế của kiểm thử}
+Danh sách đầy đủ nằm ở \texttt{rtl/cnn1d/ERRORS.md}; những điểm đáng chú ý:
+\begin{itemize}
+  \item \texttt{cnn\_pipeline\_controller} (bộ tuần tự layer tự động) và \texttt{layer\_config\_ram} có testbench riêng nhưng \emph{chưa} nối vào \texttt{layer\_core}; các lệnh \texttt{CONFIG\_ALL}, \texttt{LOAD\_COMMIT}, \texttt{RUN\_ALL}, \texttt{GET\_RESULT} mới được dành mã. Vì vậy máy tính phải cấu hình và chạy từng layer.
+  \item Đường UART là dừng--chờ (mỗi lệnh một tín hiệu xác nhận \texttt{ACK}); chưa có FIFO yêu cầu hay chế độ gửi liên tục.
+  \item Một số testbench cũ của tầng UART (\texttt{tb\_uart\_crc\_top}) vẫn dùng giao diện tham số cũ của \texttt{ecg\_accel\_top} nên chưa phải là kiểm thử UART đầu--cuối hợp lệ; phần đầu--cuối thực tế được kiểm chứng trên board và qua \texttt{tb\_pc\_to\_fpga\_layer\_flow}.
+  \item Mô phỏng không thay thế đo thời gian: các số về tần số tối đa và độ dư thời gian lấy từ báo cáo của Quartus (Chương~\ref{ch:thucnghiem}).
+\end{itemize}

@@ -1,0 +1,34 @@
+% Muc 7.1  --  phu trach: xem report/PHANCONG.md
+% nguon: docs/baseline_v1.md muc 1; docs/quartus/*.summary; vsim -version
+\section{Môi trường và phương pháp đo}\label{sec:moitruong}
+\subsection{Môi trường thực nghiệm}
+Bộ tăng tốc chạy trên board DE10-Lite dùng chip MAX~10 10M50DAF484C7G ở xung nhịp $50$~MHz.
+Máy chủ (host) làm toàn bộ tiền xử lý tín hiệu, gửi từng nhịp tim đã chuẩn hoá xuống board qua UART và nhận kết quả về (Chương~\ref{ch:uart}).
+Bảng~\ref{tab:moitruong} liệt kê cấu hình dùng cho các số đo trong chương.
+
+\begin{table}[htbp]\centering
+\caption{Môi trường thực nghiệm.}\label{tab:moitruong}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{11cm}@{}}
+\toprule
+Thành phần & Cấu hình \\ \midrule
+Board & DE10-Lite, MAX~10 10M50DAF484C7G ($49\,760$ phần tử logic) \\
+Cấu hình RTL & mảng PE $7\times7$, $50$~MHz; UART $1{,}5$~Mbaud 8N1; ifmap $2\times4\,096$~B, trọng số $2\times16\,384$~B; \texttt{INFO} features \texttt{0x3F} \\
+Bitstream & \texttt{cnn1d.sof} ngày 21/11/2026, SHA-256 \texttt{6f4c3b6a}\ldots\texttt{c21168} \\
+Tổng hợp, phân tích & Quartus Prime Lite 18.1.0 (Build 625), mô hình thời gian và công suất \emph{Final} \\
+Mô phỏng & ModelSim ALTERA Starter Edition 10.5b \\
+Mô hình & CNN Lite int8: $23\,408$~B trọng số, $212$ bias; \texttt{weights.h} SHA-256 \texttt{1c84f26b}\ldots\texttt{56d0032e} \\
+Golden & $8$ đoạn tín hiệu, $1\,306$ nhịp, thuộc tập DS1 \\
+Phần mềm host & Python, PyTorch; mô hình số nguyên làm chuẩn so sánh \\
+Máy host & \todo{ghi CPU, RAM, hệ điều hành, phiên bản Python và PyTorch, loại bộ chuyển USB--UART của máy dùng để đo} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Phương pháp đo}
+\begin{itemize}
+  \item \textbf{Chu kỳ tính toán} lấy từ trường \texttt{cycles} trong trả lời của lệnh \texttt{RUN}. Bộ đếm nằm trong \texttt{layer\_cmd\_controller} và đếm số chu kỳ xung nhịp từ lúc bắt đầu đến lúc xong một layer, nên \emph{không} gồm thời gian truyền UART. Thời gian tính một nhịp là tổng của sáu lệnh \texttt{RUN} chia cho $50$~MHz.
+  \item \textbf{Thời gian đường truyền} đo ở host theo đồng hồ thực, kèm số gói và số byte. Giá trị này phụ thuộc cả host và bộ chuyển USB--UART.
+  \item \textbf{Khớp từng bit} (bit-exact) kiểm bằng cách so bốn logit và nhãn của board với golden ở từng nhịp, cùng mã kiểm dư vòng CRC-32 tích luỹ của từng đoạn (Mục~\ref{sec:bitexact}).
+  \item \textbf{Độ chính xác phân loại} đánh giá liên bệnh nhân: huấn luyện trên DS1, kiểm tra trên DS2 \emph{một lần duy nhất} (Chương~\ref{ch:cnn}).
+  \item \textbf{Tài nguyên và thời gian mạch} lấy từ báo cáo Fitter và Timing Analyzer của Quartus; \textbf{công suất} là ước lượng của Quartus Power Analyzer, không phải số đo.
+\end{itemize}

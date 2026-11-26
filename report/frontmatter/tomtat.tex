@@ -1,0 +1,17 @@
+\chapter*{Tóm tắt}
+\addcontentsline{toc}{chapter}{Tóm tắt}
+
+[Viết liền mạch 200--300 từ, văn phong học thuật, khách quan, không gạch đầu dòng.]
+
+\begin{goiy}[Dàn ý tóm tắt (5 ý, theo mẫu của khoa)]
+  \begin{enumerate}
+    \item \textbf{Bối cảnh và vấn đề (1--3 câu):} theo dõi ECG liên tục cần phân loại loạn nhịp nhanh, chính xác, tiết kiệm tài nguyên; khoảng trống: học sâu trên phần cứng còn ít, ít công trình kiểm chứng khớp từng bit và báo cáo độ trễ đầu--cuối.
+    \item \textbf{Mục tiêu (1 câu):} xây dựng \dinhvi.
+    \item \textbf{Phương pháp (1--3 câu):} pipeline tiền xử lý số nguyên; CNN Lite 23~KB int8; accelerator mảng PE $7\times7$ điều khiển qua UART bằng bộ lệnh CONFIG/RUN; một mảng PE dùng chung cho conv và FC; kiểm chứng float $\to$ int8 $\to$ RTL $\to$ board.
+    \item \textbf{Kết quả chính (1--2 câu):} macro-F1 trên DS2 $\approx 0.603$ (liên bệnh nhân, chạy một lần); 1\,306/1\,306 nhịp khớp bit-exact với golden (đo trên board, bitstream hiện tại); 83\,\% LE, 50~MHz; 7.34~ms/nhịp tính toán (367\,091 chu kỳ) và khoảng 0.1~s/nhịp đầu--cuối qua UART khi nạp mô hình một lần; công suất ước lượng 332~mW (Quartus, độ tin cậy thấp). (Đối chiếu lại số liệu cuối cùng trước khi nộp; nguồn: \texttt{report/DINHVI.md}.)
+    \item \textbf{Kết luận (1--2 câu):} giá trị nằm ở tính kiểm chứng; hạn chế (độ trễ UART, công suất mới ước lượng, lớp S) và hướng mở rộng.
+  \end{enumerate}
+\end{goiy}
+
+\medskip
+\noindent\textbf{Từ khoá:} ECG; phân loại nhịp tim; CNN 1D; lượng tử hoá int8; FPGA; bộ tăng tốc; UART; kiểm chứng bit-exact.

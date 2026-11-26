@@ -1,0 +1,133 @@
+evaluation on records [100, 103, 105, 111, 113, 117, 121, 123, 200, 202, 210, 212, 213, 214, 219, 221, 222, 228, 231, 232, 233, 234]; git HEAD 752630b55fc874408f0b33a2326041a8c2b66e10
+frozen models: Full 2026-10-15_961709ff_final_cnn_full, Lite 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3 (+ lite_int8.npz)
+provenance: weights.h SHA-256 1c84f26ba1f22773264982156a40b7c80a5545688f0ac769fba9bce056d0032e (regenerated from 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3/lite_int8.npz); model file hashes in config.yaml / metrics.json
+  100: detector Se 99.96 +P 100.00; annotation beats 2271
+  103: detector Se 99.95 +P 100.00; annotation beats 2082
+  105: detector Se 99.57 +P 97.19; annotation beats 2565
+  111: detector Se 99.95 +P 99.91; annotation beats 2122
+  113: detector Se 99.94 +P 100.00; annotation beats 1793
+  117: detector Se 100.00 +P 100.00; annotation beats 1533
+  121: detector Se 99.89 +P 100.00; annotation beats 1861
+  123: detector Se 100.00 +P 100.00; annotation beats 1516
+  200: detector Se 99.88 +P 99.96; annotation beats 2599
+  202: detector Se 99.81 +P 99.91; annotation beats 2134
+  210: detector Se 99.09 +P 99.73; annotation beats 2648
+  212: detector Se 99.96 +P 100.00; annotation beats 2746
+  213: detector Se 99.88 +P 100.00; annotation beats 3249
+  214: detector Se 99.82 +P 100.00; annotation beats 2258
+  219: detector Se 99.95 +P 100.00; annotation beats 2152
+  221: detector Se 99.88 +P 100.00; annotation beats 2425
+  222: detector Se 99.64 +P 97.79; annotation beats 2481
+  228: detector Se 97.52 +P 99.26; annotation beats 2051
+  231: detector Se 100.00 +P 100.00; annotation beats 1569
+  232: detector Se 100.00 +P 99.94; annotation beats 1778
+  233: detector Se 99.94 +P 100.00; annotation beats 3077
+  234: detector Se 100.00 +P 100.00; annotation beats 2751
+
+=== 2. CLASSIFIER, annotation segmentation — full_float ===
+macro-F1 0.5553   macro-F1 (N/S/V) 0.7164   SVEB Se 0.3186 +P 0.5030   VEB Se 0.9376 +P 0.6967
+cls       P       R      F1      n
+  N  0.9673  0.9621  0.9647  44218
+  S  0.5030  0.3186  0.3901   1836
+  V  0.6890  0.9376  0.7943   3219
+  F  0.1367  0.0490  0.0721    388
+confusion (rows = true N/S/V/F, cols = pred):
+   42543    493   1065    117
+    1002    585    249      0
+     114     84   3018      3
+     320      1     48     19
+
+=== 2. CLASSIFIER, annotation segmentation — lite_float ===
+macro-F1 0.6062   macro-F1 (N/S/V) 0.8083   SVEB Se 0.7070 +P 0.4254   VEB Se 0.9230 +P 0.9375
+cls       P       R      F1      n
+  N  0.9799  0.9610  0.9704  44218
+  S  0.4254  0.7070  0.5312   1836
+  V  0.9235  0.9230  0.9232   3219
+  F  0.0000  0.0000  0.0000    388
+confusion (rows = true N/S/V/F, cols = pred):
+   42495   1557    140     26
+     480   1298     58      0
+      52    194   2971      2
+     338      2     48      0
+
+=== 2. CLASSIFIER, annotation segmentation — lite_integer ===
+macro-F1 0.6029   macro-F1 (N/S/V) 0.8039   SVEB Se 0.7141 +P 0.4079   VEB Se 0.9230 +P 0.9396
+cls       P       R      F1      n
+  N  0.9801  0.9577  0.9688  44218
+  S  0.4079  0.7141  0.5192   1836
+  V  0.9247  0.9230  0.9238   3219
+  F  0.0000  0.0000  0.0000    388
+confusion (rows = true N/S/V/F, cols = pred):
+   42347   1708    139     24
+     473   1311     52      0
+      53    193   2971      2
+     335      2     51      0
+
+=== 3a. END-TO-END, matched beats — full_float ===
+macro-F1 0.5542   macro-F1 (N/S/V) 0.7147   SVEB Se 0.3196 +P 0.4970   VEB Se 0.9312 +P 0.6947
+cls       P       R      F1      n
+  N  0.9671  0.9618  0.9644  44132
+  S  0.4970  0.3196  0.3891   1824
+  V  0.6870  0.9312  0.7907   3198
+  F  0.1357  0.0495  0.0725    384
+confusion (rows = true N/S/V/F, cols = pred):
+   42445    507   1062    118
+     994    583    247      0
+     135     82   2978      3
+     316      1     48     19
+=== 3b. END-TO-END gross — full_float: missed per class [85, 12, 22, 4], FP detections predicted per class [75, 19, 64, 0]
+
+=== 3a. END-TO-END, matched beats — lite_float ===
+macro-F1 0.6024   macro-F1 (N/S/V) 0.8032   SVEB Se 0.7050 +P 0.4173   VEB Se 0.9143 +P 0.9315
+cls       P       R      F1      n
+  N  0.9792  0.9594  0.9692  44132
+  S  0.4173  0.7050  0.5243   1824
+  V  0.9178  0.9143  0.9160   3198
+  F  0.0000  0.0000  0.0000    384
+confusion (rows = true N/S/V/F, cols = pred):
+   42342   1604    161     25
+     484   1286     54      0
+      80    191   2924      3
+     336      1     47      0
+=== 3b. END-TO-END gross — lite_float: missed per class [85, 12, 22, 4], FP detections predicted per class [43, 41, 74, 0]
+
+=== 3a. END-TO-END, matched beats — lite_integer ===
+macro-F1 0.5991   macro-F1 (N/S/V) 0.7988   SVEB Se 0.7122 +P 0.4001   VEB Se 0.9143 +P 0.9336
+cls       P       R      F1      n
+  N  0.9793  0.9560  0.9675  44132
+  S  0.4001  0.7122  0.5123   1824
+  V  0.9189  0.9143  0.9166   3198
+  F  0.0000  0.0000  0.0000    384
+confusion (rows = true N/S/V/F, cols = pred):
+   42192   1758    160     22
+     477   1299     48      0
+      82    189   2924      3
+     333      1     50      0
+=== 3b. END-TO-END gross — lite_integer: missed per class [85, 12, 22, 4], FP detections predicted per class [43, 41, 74, 0]
+
+==============================================================================================================
+SUMMARY
+Detector (22 records): +-150 ms Se 99.753%  +P 99.682%  (TP 49589 FN 123 FP 158);  +-75 ms Se 99.692%  +P 99.622%
+model         mode                 macro-F1   N/S/V  SVEB Se  SVEB +P   VEB Se   VEB +P
+full_float    annotation             0.5553  0.7164   0.3186   0.5030   0.9376   0.6967
+full_float    e2e matched            0.5542  0.7147   0.3196   0.4970   0.9312   0.6947
+full_float    e2e gross              0.5504  0.7098   0.3175   0.4891   0.9248   0.6844
+lite_float    annotation             0.6062  0.8083   0.7070   0.4254   0.9230   0.9375
+lite_float    e2e matched            0.6024  0.8032   0.7050   0.4173   0.9143   0.9315
+lite_float    e2e gross              0.5972  0.7963   0.7004   0.4118   0.9081   0.9101
+lite_integer  annotation             0.6029  0.8039   0.7141   0.4079   0.9230   0.9396
+lite_integer  e2e matched            0.5991  0.7988   0.7122   0.4001   0.9143   0.9336
+lite_integer  e2e gross              0.5940  0.7921   0.7075   0.3951   0.9081   0.9120
+
+confusion matrices (rows true N/S/V/F, cols predicted N/S/V/F; gross adds missed beats and FP detections):
+  full_float    annotation    42543    493   1065    117 |   1002    585    249      0 |    114     84   3018      3 |    320      1     48     19
+  full_float    e2e matched   42445    507   1062    118 |    994    583    247      0 |    135     82   2978      3 |    316      1     48     19
+  full_float    e2e gross     42445    507   1062    118 |    994    583    247      0 |    135     82   2978      3 |    316      1     48     19   missed [85, 12, 22, 4]   FP detections predicted [75, 19, 64, 0]
+  lite_float    annotation    42495   1557    140     26 |    480   1298     58      0 |     52    194   2971      2 |    338      2     48      0
+  lite_float    e2e matched   42342   1604    161     25 |    484   1286     54      0 |     80    191   2924      3 |    336      1     47      0
+  lite_float    e2e gross     42342   1604    161     25 |    484   1286     54      0 |     80    191   2924      3 |    336      1     47      0   missed [85, 12, 22, 4]   FP detections predicted [43, 41, 74, 0]
+  lite_integer  annotation    42347   1708    139     24 |    473   1311     52      0 |     53    193   2971      2 |    335      2     51      0
+  lite_integer  e2e matched   42192   1758    160     22 |    477   1299     48      0 |     82    189   2924      3 |    333      1     50      0
+  lite_integer  e2e gross     42192   1758    160     22 |    477   1299     48      0 |     82    189   2924      3 |    333      1     50      0   missed [85, 12, 22, 4]   FP detections predicted [43, 41, 74, 0]
+
+saved -> E:\PROJECTS\1DCNN\results\FINAL_DS2_2026-10-15_52fd96fa

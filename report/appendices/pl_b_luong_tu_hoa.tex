@@ -1,0 +1,9 @@
+\chapter{Tham số lượng tử hoá và bố cục bộ nhớ}\label{pl:luongtu}
+
+\begin{goiy}
+  \begin{itemize}
+    \item Số mũ kích hoạt vào/ra từng tầng, số mũ trọng số theo kênh, lượng dịch requantize (\texttt{lite\_int8.npz}, \texttt{quantize.json}).
+    \item Bố cục bộ nhớ: \texttt{w\_base}, \texttt{b\_base} từng layer trong bank weight/bias RAM; kích thước IFMAP (4096), weight (16384), bias (256).
+    \item Quy ước \texttt{row\_combine} cho FC1 (vị trí GAP và RR trong IFMAP).
+  \end{itemize}
+\end{goiy}
