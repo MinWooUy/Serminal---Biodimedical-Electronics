@@ -42,3 +42,6 @@
 % \cmt{Ten}{noi dung}          -> chu xanh, binh luan/hoi dap giua cac thanh vien
 \newcommand{\todo}[1]{\ifshowhints\textcolor{red}{\textbf{[TODO: #1]}}\fi}
 \newcommand{\cmt}[2]{\ifshowhints\textcolor{blue}{\textit{[#1: #2]}}\fi}
+
+% --- Cho phep xuong dong sau dau gach duoi trong \texttt{ten\_module\_dai} (khong doi trong cong thuc) ---
+\DeclareRobustCommand{\_}{\ifmmode\text{\textunderscore}\else\textunderscore\penalty0\hskip0pt\relax\fi}

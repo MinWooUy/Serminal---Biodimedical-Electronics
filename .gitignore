@@ -4,6 +4,7 @@ docs/issue
 docs/drawio
 docs/log
 docs/Problem/
+docs/model/
 
 results/img
 
@@ -29,3 +30,6 @@ rtl/cnn1d/modelsim.ini
 rtl/cnn1d/transcript
 rtl/cnn1d/sim/out/
 sim_ecg.exe
+
+report/figures/*.py
+report/figures/*.md
