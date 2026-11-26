@@ -1,11 +1,66 @@
 % Muc 7.2  --  phu trach: xem report/PHANCONG.md
+% nguon: docs/final_ds2_results.md (DS2 chay mot lan, 15/10/2026); docs/system_overview.md muc 2 va 4
 \section{Độ chính xác của mô hình}\label{sec:dochinhxac}
-\begin{goiy}
-  \begin{itemize}
-    \item Phát hiện R: Se $99.753\,\%$, $+P$ $99.682\,\%$ trên DS2 (TP 49\,589, FN 123, FP 158).
-    \item Phân loại trên DS2 (chạy một lần): macro-F1 của Full float, Lite float, Lite int8 (annotation) và Lite int8 end-to-end (Bảng~\ref{tab:ds2}); SVEB, VEB (Se, $+P$).
-    \item Bàn luận: vì sao Lite vượt Full trên DS2 (SVEB Se $\approx71\,\%$ so với $\approx32\,\%$); lượng tử hoá gần như không làm giảm; lớp S yếu (SVEB $+P\approx41\,\%$).
-    \item Cross-validation trên DS1 (OOF macro-F1 $\approx0.509$) và giới hạn của nó.
-  \end{itemize}
-\end{goiy}
-\bangcho{macro-F1, SVEB và VEB (Se, +P) của Full float · Lite float · Lite int8 · Lite int8 e2e (docs/final\_ds2\_results.md)}{Kết quả phân loại trên DS2.}{tab:ds2}
+\subsection{Phát hiện đỉnh R}
+Trên $22$ bản ghi của DS2, bộ phát hiện đỉnh R đạt độ nhạy (Se) $99{,}753\,\%$ và độ chính xác dương (+P) $99{,}682\,\%$ với dung sai $\pm150$~ms (đúng $49\,589$ nhịp, sót $123$, báo thừa $158$).
+Với dung sai $\pm75$~ms hai giá trị là $99{,}692\,\%$ và $99{,}622\,\%$.
+
+\subsection{Phân loại nhịp trên DS2}
+Bảng~\ref{tab:ds2} so sánh ba cách tính của mô hình.
+\emph{Full float} là mạng đầy đủ tính bằng số thực; \emph{Lite float} là mạng rút gọn tính bằng số thực; \emph{Lite int8} là đường xử lý số nguyên hoàn toàn, cũng chính là golden mà phần cứng phải khớp.
+Ở chế độ \emph{theo chú thích}, vị trí nhịp lấy từ chú thích của bộ dữ liệu.
+Ở chế độ \emph{đầu--cuối}, vị trí do bộ phát hiện đưa ra, tính riêng các nhịp khớp được với chú thích (\emph{khớp}) hoặc tính cả nhịp sót và báo thừa (\emph{toàn bộ}).
+
+\begin{table}[htbp]\centering
+\caption{Kết quả phân loại trên DS2. SVEB là nhịp ngoại tâm thu trên thất, VEB là nhịp ngoại tâm thu thất.}\label{tab:ds2}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+ & & \multicolumn{2}{c}{macro-F1} & \multicolumn{2}{c}{SVEB (\%)} & \multicolumn{2}{c}{VEB (\%)} \\ \cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){7-8}
+Mô hình & Chế độ & 4 lớp & N/S/V & Se & +P & Se & +P \\ \midrule
+Full float & theo chú thích & 0{,}555 & 0{,}716 & 31{,}9 & 50{,}3 & 93{,}8 & 69{,}7 \\
+Lite float & theo chú thích & 0{,}606 & 0{,}808 & 70{,}7 & 42{,}5 & 92{,}3 & 93{,}8 \\
+Lite int8  & theo chú thích & 0{,}603 & 0{,}804 & 71{,}4 & 40{,}8 & 92{,}3 & 94{,}0 \\
+Lite int8  & đầu--cuối, khớp & 0{,}599 & 0{,}799 & 71{,}2 & 40{,}0 & 91{,}4 & 93{,}4 \\
+Lite int8  & đầu--cuối, toàn bộ & 0{,}594 & 0{,}792 & 70{,}8 & 39{,}5 & 90{,}8 & 91{,}2 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Khi tính +P của VEB, nhịp F bị đoán thành V không bị coi là báo thừa, theo khuyến nghị EC57~\cite{aami2012ec57}. Nguồn: \texttt{docs/final\_ds2\_results.md}.
+\end{table}
+
+\begin{table}[htbp]\centering
+\caption{Ma trận nhầm lẫn của Lite int8 trên DS2, chế độ theo chú thích (hàng là nhãn đúng, cột là nhãn dự đoán).}\label{tab:nhamlan}
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Đúng / đoán & N & S & V & F & Số nhịp & Se (\%) \\ \midrule
+N & 42\,347 & 1\,708 & 139 & 24 & 44\,218 & 95{,}8 \\
+S & 473 & 1\,311 & 52 & 0 & 1\,836 & 71{,}4 \\
+V & 53 & 193 & 2\,971 & 2 & 3\,219 & 92{,}3 \\
+F & 335 & 2 & 51 & 0 & 388 & 0{,}0 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bàn luận}
+\textbf{Ảnh hưởng của lượng tử hoá.}
+Trên DS2, chuyển từ Lite float sang Lite int8 làm macro-F1 bốn lớp giảm từ $0{,}606$ xuống $0{,}603$, tức khoảng $0{,}003$.
+Trên đánh giá chéo của DS1 (dự đoán ngoài fold, Out-Of-Fold, OOF), đường số nguyên đạt $0{,}5096$ so với $0{,}5089$ của bản số thực, chênh $0{,}0007$.
+Mức chênh trên DS1 nhỏ hơn nhiều ngưỡng cho phép $0{,}02$ đặt ra trước cho bước này; cả hai số đều cho thấy lượng tử hoá int8 gần như không làm giảm chất lượng.
+
+\textbf{Lite so với Full.}
+Lite float cho kết quả cao hơn Full float trên DS2, rõ nhất ở độ nhạy SVEB ($70{,}7\,\%$ so với $31{,}9\,\%$) và độ chính xác dương VEB ($93{,}8\,\%$ so với $69{,}7\,\%$).
+Tuy vậy hai mô hình cuối khác nhau không chỉ ở kích thước mà cả ở cấu hình huấn luyện (Lite dùng thêm dữ liệu của cơ sở dữ liệu loạn nhịp trên thất, SVDB, khi huấn luyện), nên kết quả này \emph{không} cho phép kết luận rằng mạng nhỏ hơn thì tốt hơn.
+
+\textbf{Các lớp yếu.}
+Lite int8 không nhận đúng nhịp F nào trong $388$ nhịp, trong đó $335$ nhịp bị gán N.
+Đây là lý do macro-F1 bốn lớp ($0{,}603$) thấp hơn nhiều so với macro-F1 trên ba lớp N, S, V ($0{,}804$).
+Lớp S có độ chính xác dương chỉ khoảng $41\,\%$, và phần lớn báo S sai đến từ nhịp N ($1\,708$ nhịp).
+Nói cách khác, cứ năm cảnh báo SVEB thì khoảng ba cảnh báo sai.
+
+\textbf{Ảnh hưởng của khâu phát hiện.}
+Thay vị trí nhịp theo chú thích bằng vị trí do bộ phát hiện đưa ra làm macro-F1 giảm khoảng $0{,}009$ khi tính cả nhịp sót và báo thừa.
+
+\textbf{Giới hạn của đánh giá chéo.}
+Macro-F1 OOF trên DS1 ($0{,}509\pm0{,}008$ với ba hạt giống) thấp hơn nhiều so với kết quả trên DS2.
+Độ khó giữa các bản ghi chênh nhau lớn, nên một con số duy nhất không mô tả hết khả năng tổng quát hoá.

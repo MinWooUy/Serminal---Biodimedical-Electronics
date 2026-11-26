@@ -1,10 +1,113 @@
 % Muc 6.8  --  phu trach: xem report/PHANCONG.md
-\section{Tối ưu băng thông nạp dữ liệu (nếu đưa vào báo cáo)}\label{sec:bandwidth}
-\begin{goiy}
-  \begin{itemize}
-    \item Chẩn đoán (trước khi sửa): hiệu suất PE $\approx1.6\,\%$ (1.61 M MAC / 49 PE $\approx32.9$ k chu kỳ lý tưởng so với $2.06\times10^6$ đo được).
-    \item Đã sửa và đo trên board: loader 1 B/chu kỳ và pool dùng 6 hàng. Tổng $2\,058\,467 \to 367\,091$ chu kỳ ($41.17\to7.34$~ms), hiệu suất PE $1.6\,\%\to\approx9\,\%$; conv0--3 đo $363\,732$ chu kỳ, trùng từng chu kỳ với mô phỏng RTL.
-    \item Chưa làm: đọc rộng $W$ byte mỗi chu kỳ và nạp chồng tính (ước lượng của tài liệu L04: $\approx2.5$~ms rồi $\approx1.1$~ms cho conv0--3; \emph{chỉ là ước lượng bằng mô hình, chưa đo}).
-    \item Khi tính toán chỉ còn $\approx7$~ms, đường truyền ($\approx0.1$~s/nhịp) mới là phần chính: xem Mục~\ref{sec:hieunang}.
-  \end{itemize}
-\end{goiy}
+\section{Hiệu suất PE và tối ưu băng thông nạp dữ liệu}\label{sec:bandwidth}
+Mục này trình bày quá trình xác định và khắc phục nút thắt hiệu năng của bộ tăng tốc: từ một thiết kế đúng nhưng chậm (hiệu suất PE $1{,}6\,\%$) đến thiết kế hiện tại nhanh hơn $5{,}6$ lần (hiệu suất $\approx9\,\%$), và vì sao phần còn lại vẫn chưa cao.
+Các số \emph{đo} được lấy từ giá trị \texttt{cycles} của lệnh \texttt{RUN} trên board; các số \emph{dự báo} đến từ một mô hình giải tích và được ghi rõ.
+
+\subsection{Chỉ số: hiệu suất PE}
+Hiệu suất PE được định nghĩa là tỉ lệ giữa số MAC mà thuật toán cần và số MAC mà mảng có thể thực hiện trong cùng thời gian:
+\begin{equation}\label{eq:eta}
+  \eta=\frac{\text{MAC}}{\text{chu kỳ}\times R\times C},\qquad
+  \text{MAC}=1\,609\,344\ \text{mỗi nhịp},\quad R\times C=49.
+\end{equation}
+Mảng $7\times7$ thực hiện tối đa $49$ MAC mỗi chu kỳ, nên mức lý tưởng là $1\,609\,344/49\approx32{,}8$ nghìn chu kỳ mỗi nhịp, tức $0{,}66$~ms.
+(Số MAC tính theo thuật toán; FC1 dùng ba hàng PE nên phần cứng thực hiện nhiều hơn, xem Mục~\ref{sec:anhxa}.)
+
+\subsection{Chẩn đoán}
+Thiết kế ban đầu chạy đúng (khớp golden từng bit) nhưng cần $2\,058\,467$ chu kỳ, tức $41{,}17$~ms, cho một nhịp: gấp $63$ lần mức lý tưởng, hiệu suất $\eta=1{,}6\,\%$.
+Số chu kỳ mỗi ô lớn bất thường: ví dụ conv3 mất $4\,283$ chu kỳ mỗi ô trong khi phần tính chỉ cần $K+R+C=192+7+7=206$.
+Đọc mã RTL cho thấy bốn nguyên nhân:
+\begin{enumerate}
+  \item \textbf{Loader tốn $3$ chu kỳ mỗi byte.} Mỗi phần tử đi qua ba trạng thái tuần tự \texttt{S\_REQ} $\to$ \texttt{S\_WAIT} $\to$ \texttt{S\_WRITE} (phát lệnh đọc, chờ dữ liệu, ghi vào FIFO) và không có pipeline.
+  \item \textbf{Nạp tuần tự theo làn.} Mỗi loader chỉ có một cổng SRAM $8$ bit và nạp lần lượt từng làn, nên nạp một ô mất $\max(R_u,C_u)\cdot K$ byte (Mục~\ref{sec:stage}).
+  \item \textbf{Nạp xong mới tính.} \texttt{S\_LOAD\_WAIT} chờ cả hai loader xong rồi mới bắt đầu tính, nên thời gian nạp và tính cộng với nhau (Mục~\ref{sec:ctrl}).
+  \item \textbf{Layer có pool chỉ dùng $2$ hàng PE.} conv0--conv2 chỉ dùng $2$ trong $7$ hàng, làm số ô tăng gấp ba lần.
+\end{enumerate}
+Mô hình thời gian một ô khi đó là
+\begin{equation}\label{eq:otile-cu}
+  \tau\approx3\cdot\max(R_u,C_u)\cdot K+(K+R_u+C_u),
+\end{equation}
+và cho $2\,135\,180$ chu kỳ cho conv0--conv3, lệch $+4\,\%$ so với $2\,050\,576$ chu kỳ đo được ngày 17/11 (tổng conv0--conv3 của số đo trước khi sửa).
+Mô hình đủ chính xác để kết luận nút thắt là \emph{nạp dữ liệu}, không phải tính toán: nạp chiếm khoảng $3\cdot7\cdot K$ chu kỳ còn tính chỉ khoảng $K+14$.
+
+\subsection{Hai sửa đổi}
+\sloppy
+\begin{enumerate}
+  \item \textbf{Loader pipeline $1$ byte/chu kỳ} (\texttt{conv1d\_ifmap\_loader}, \texttt{conv1d\_weight\_loader}): lệnh đọc SRAM phát ở mỗi chu kỳ và byte về ở chu kỳ sau được ghi thẳng vào FIFO; khi FIFO đầy, byte được giữ ở thanh ghi đệm và loader ngừng phát. Thời gian nạp một ô giảm từ $3\cdot\max(R_u,C_u)\cdot K$ còn $\max(R_u,C_u)\cdot K$.
+  \item \textbf{Layer có pool dùng số hàng chẵn lớn nhất ($6$)}: \texttt{rows\_per\_tile = pool ? ARRAY\_ROWS \& \textasciitilde1 : ARRAY\_ROWS} trong \texttt{conv1d\_layer\_top}. Số ô của conv0, conv1, conv2 giảm từ $540$, $450$, $450$ xuống $180$, $150$, $150$. Bit~5 của \texttt{INFO} báo bitstream có tính năng này.
+\end{enumerate}
+\fussy
+Mô hình ước lượng hai bước cho $\approx785$ nghìn (bước 1) và $\approx336$ nghìn (bước 2) chu kỳ cho conv0--conv3; sau khi sửa cả hai, mô phỏng RTL ($363\,732$ chu kỳ) và số đo trên board ($363\,732$ chu kỳ) \emph{trùng từng chu kỳ}.
+Hai sửa đổi được đưa vào bitstream cùng lúc, nên số đo chỉ cho kết quả chung; đóng góp riêng của từng bước chỉ là ước lượng của mô hình (khoảng ba phần tư thuộc loader và một phần tư thuộc pool).
+
+\subsection{Kết quả đo trên board}
+Bảng~\ref{tab:truocsau} so sánh từng layer trước và sau khi sửa (cùng nhịp đầu vào, cùng golden, đều khớp từng bit).
+Đối chiếu với mô hình dùng công thức $\delta$ theo từng ô (phần sau của mục này), kể cả các ô cuối nhỏ hơn: conv3 ($K=192$, $70$ ô) cho $299\,940$ chu kỳ trước khi sửa và $113\,316$ sau khi sửa, so với đo $299\,805$ và $113\,321$ (lệch $+0{,}05\,\%$ và $-0{,}004\,\%$).
+
+\begin{table}[htbp]\centering
+\caption{Chu kỳ, số ô và hiệu suất PE từng layer trước (18/11/2026) và sau (24/11/2026) khi sửa loader, mảng $7\times7$, 50~MHz. $\eta$ tính theo MAC của thuật toán (công thức~\eqref{eq:eta}).}\label{tab:truocsau}
+\footnotesize\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Layer & Số ô & Chu kỳ trước & Chu kỳ sau & Chu kỳ/ô & $\eta$ (\%) & Nhanh hơn \\ \midrule
+conv0 & $540\to180$ & 90\,429  & 21\,429  & $167{,}5\to119{,}0$   & $0{,}91\to3{,}84$ & 4,2$\times$ \\
+conv1 & $450\to150$ & 750\,939 & 104\,379 & $1\,668{,}8\to695{,}9$ & $1{,}25\to9{,}01$ & 7,2$\times$ \\
+conv2 & $450\to150$ & 909\,403 & 124\,603 & $2\,020{,}9\to830{,}7$ & $1{,}24\to9{,}06$ & 7,3$\times$ \\
+conv3 & $70\to70$   & 299\,805 & 113\,321 & $4\,282{,}9\to1\,618{,}9$ & $3{,}76\to9{,}96$ & 2,6$\times$ \\
+fc1   & $5\to5$     & 7\,415   & 3\,137   & $1\,483{,}0\to627{,}4$ & $0{,}60\to1{,}42$ & 2,4$\times$ \\
+fc2   & $1\to1$     & 476      & 222      & $476{,}0\to222{,}0$    & $0{,}55\to1{,}18$ & 2,1$\times$ \\ \midrule
+Tổng  & $1\,516\to556$ & 2\,058\,467 & 367\,091 &  & $1{,}60\to8{,}95$ & 5,6$\times$ \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Nguồn: nhật ký chạy board ngày 18/11/2026 (\texttt{multi\_all\_20261118-165801.log}) và 24/11/2026 (\texttt{docs/baseline\_v1.md}).
+\end{table}
+
+Tính toán một nhịp giảm từ $41{,}17$~ms xuống $7{,}34$~ms; thông lượng tăng từ $0{,}078$ lên $0{,}44$~GOPS trên đỉnh $4{,}9$~GOPS.
+conv0--conv2 hưởng lợi nhiều nhất ($4{,}2$--$7{,}3\times$) vì được cả hai sửa đổi; conv3 không có pool nên chỉ hưởng lợi từ loader ($2{,}6\times$: nạp nhanh gấp $3$ lần nhưng phần tính và $\delta$ gần như không đổi); FC chỉ hưởng lợi từ loader.
+
+\subsection{Vì sao hiệu suất vẫn chỉ $\approx9\,\%$}
+Khi nạp tuần tự $1$ byte/chu kỳ, một ô tốn khoảng $K\cdot M+K+R+C+\delta$ chu kỳ với $M=\max(R,C)$, trong khi chỉ làm $R_uC_uK$ MAC.
+Với $K$ lớn so với $R+C+\delta$ thu được xấp xỉ
+\begin{equation}\label{eq:eta-approx}
+  \eta\approx\frac{\mathrm{occ}}{M+1},
+\end{equation}
+trong đó $\mathrm{occ}$ là mức lấp đầy trung bình của mảng.
+Với $7\times7$, $M=7$ và $\mathrm{occ}\approx0{,}79$ (trung bình theo thời gian: conv0 $0{,}65$, conv1 và conv2 $0{,}78$, conv3 $0{,}84$) cho $\eta\approx9{,}9\,\%$, gần với $8{,}95\,\%$ đo được.
+Hai nguồn mất hiệu suất còn lại vì vậy rõ ràng:
+\begin{itemize}
+  \item hệ số $1/(M+1)=1/8$: nạp tốn gấp $M$ lần thời gian tính vì nạp tuần tự theo làn và không chồng với tính;
+  \item mức lấp đầy $\mathrm{occ}\approx0{,}79$: $6/7$ hàng ở các layer pool, và $\mathrm{Cout}=16,32,64$ không chia hết cho $7$.
+\end{itemize}
+Phần $\delta$ của mỗi ô không phải hằng số.
+Ghi mốc thời gian từng ô trong mô phỏng RTL (Mục~\ref{sec:stage}) cho $\delta=27+2C_u+N_{\text{out}}$, với $C_u$ là số cột dùng và $N_{\text{out}}$ là số byte bộ ghi ghi cho ô ($R_uC_u$ khi không pool, $R_uC_u/2$ khi có pool).
+Với ô $6\times7$ của conv0, $\delta=62$ ($N_{\text{out}}=21$); với ô $6\times2$, $\delta=37$ ($N_{\text{out}}=6$).
+Áp công thức này lên mọi ô của conv0--conv3 thì tổng chu kỳ chỉ thấp hơn số đo board đúng bằng phần ghi vùng đệm của layer cộng $5$ chu kỳ đóng layer ($69$, $69$, $133$ và $5$ chu kỳ cho conv0 đến conv3).
+Hai layer FC chưa được ghi mốc nên mô hình giữ cho chúng hằng số $\delta=55$ khớp từ số đo board; riêng FC1 mô hình thấp hơn đo $9{,}5\,\%$ ($2\,838$ so với $3\,137$ chu kỳ).
+
+\subsection{Hướng cải tiến (chưa thực hiện, chỉ là dự báo)}
+Mô hình cho phép dự báo các cải tiến tiếp theo mà không cần tổng hợp lại.
+Bảng~\ref{tab:duBao} là \emph{dự báo từ mô hình}, hiệu chỉnh trên đúng cấu hình $7\times7$ hiện tại ($366\,514$ chu kỳ mô hình so với $367\,091$ đo, lệch $0{,}16\,\%$); chưa có RTL hay số đo cho các dòng sau dòng đầu và cho cột $6\times8$. Các dự báo giả định $\delta=20+R+2C_u+N_{\text{out}}$ với $R$ là số hàng của mảng (hậu xử lý $R+1$ chu kỳ mới được quan sát ở $R=7$), và giữ nguyên $\delta$ khi đổi bộ nạp; thiết kế đọc rộng hay nạp chồng tính có thể đổi độ trễ loader hoặc cho các pha chồng lên nhau.
+
+\begin{table}[htbp]\centering
+\caption{Dự báo số chu kỳ mỗi nhịp theo bộ nạp và hình dạng mảng (mô hình, \emph{chưa đo}).}\label{tab:duBao}
+\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Bộ nạp & $7\times7$ & $6\times8$ \\ \midrule
+hiện tại ($1$ byte/chu kỳ, nạp rồi tính) & 366\,514 & 346\,404 \\
+đọc rộng $\times4$ & 153\,082 & 139\,428 \\
+đọc rộng $\times4$ và nạp chồng tính & 105\,864 & 99\,520 \\
+đọc rộng $\times8$ và nạp chồng tính & 81\,538 & 70\,116 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Nguồn: mô hình \texttt{scripts/tile\_cycle\_model.py}, hiệu chỉnh trên số đo của mảng $7\times7$.
+\end{table}
+
+\begin{itemize}
+  \item \textbf{Đọc rộng $W$ byte mỗi chu kỳ.} Vì dữ liệu channel-last nên $K$ byte của một làn nằm liền nhau và có thể đọc $W$ byte cùng lúc; thời gian nạp giảm $W$ lần ($\tau$ trong công thức~\eqref{eq:otile} có $\lceil K/W\rceil$ thay cho $K$). Cần sửa bộ nhớ, AGU, hai loader và FIFO từng làn; conv0 ($K=7$) không căn lề nên giữ $1$ byte.
+  \item \textbf{Nạp chồng tính.} Nạp dữ liệu ô sau trong lúc ô trước đang tính; chỉ có ích khi nạp đã ngắn lại cỡ thời gian tính, nên phải làm sau bước đọc rộng. Cần tách FSM của ô và để bộ điều khiển layer chạy trước một ô.
+  \item \textbf{Mảng $6\times8$ thay $7\times7$.} $\mathrm{Cout}=16,32,64$ chia hết cho $8$ và $T=360,180,90$ chia hết cho $6$ nên $\mathrm{occ}\approx0{,}98$, trong khi số PE ít hơn một. Mảng lệch nhiều như $3\times10$ chậm gấp $2{,}4$ lần vì nạp tỉ lệ với $K\cdot\max(R,C)$.
+\end{itemize}
+Mô hình chạy bằng \texttt{scripts/tile\_cycle\_model.py}.
+Sau khi tính toán chỉ còn $7{,}34$~ms, thời gian mỗi nhịp mà người dùng thấy bị chi phối bởi đường truyền UART ($\approx0{,}1$~s với chế độ nạp mô hình một lần), được phân tích ở Mục~\ref{sec:hieunang}.
