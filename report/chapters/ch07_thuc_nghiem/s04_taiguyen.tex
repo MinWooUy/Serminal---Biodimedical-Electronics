@@ -1,10 +1,64 @@
 % Muc 7.4  --  phu trach: xem report/PHANCONG.md
+% nguon: docs/quartus/cnn1d.fit.summary, cnn1d.sta.summary (21/11/2026); rtl/cnn1d/output_files/cnn1d.fit.rpt;
+%        ban 3x3: anh chup results/img/compile_fpga_3x3_sa (28/10/2026)
 \section{Tài nguyên và thời gian}\label{sec:taiguyen}
-\begin{goiy}
-  \begin{itemize}
-    \item Quartus: 41\,353/49\,760 LE ($83\,\%$), 15\,697 thanh ghi, 452\,390/1\,677\,312 bit bộ nhớ ($27\,\%$), 8/288 nhân 9 bit, 4 chân (Bảng~\ref{tab:taiguyen}).
-    \item Timing @50~MHz: setup slack $+0.082$~ns (slow 1200~mV 85\,$^\circ$C); hold, recovery, removal đều dương.
-    \item Giải thích mức dùng LE cao: nhân Wallace dựng bằng LE, không dùng DSP; so sánh bản $3\times3$ và $7\times7$.
-  \end{itemize}
-\end{goiy}
-\bangcho{tài nguyên và timing của bản $7\times7$ (và $3\times3$ để so sánh)}{Tài nguyên và timing trên MAX~10 10M50.}{tab:taiguyen}
+\subsection{Tài nguyên tổng}
+Bảng~\ref{tab:taiguyen} cho tài nguyên và thời gian mạch của bản $7\times7$ đang dùng.
+Cột thứ hai là một bản $3\times3$ cũ hơn, chỉ để tham khảo quy mô: hai bản khác nhau cả về chức năng và cỡ bộ nhớ, nên chênh lệch giữa chúng \emph{không} phải chỉ do kích thước mảng.
+
+\begin{table}[htbp]\centering
+\caption{Tài nguyên và thời gian mạch trên MAX~10 10M50 (báo cáo Quartus).}\label{tab:taiguyen}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ & $7\times7$ (21/11/2026) & $3\times3$ bản cũ (28/10/2026) \\ \midrule
+Phần tử logic (LE) & 41\,353 / 49\,760 (83\,\%) & 29\,244 (59\,\%) \\
+Thanh ghi & 15\,697 & 11\,575 \\
+Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) & 81\,920 (5\,\%) \\
+Khối M9K & 63 / 182 & -- \\
+Nhân nhúng 9 bit & 8 / 288 (3\,\%) & 6 / 288 (2\,\%) \\
+Chân I/O & 4 / 360 & 4 / 360 \\ \midrule
+Tần số tối đa (85\,$^\circ$C) & 50{,}21~MHz & 51{,}08~MHz \\
+Độ dư setup, mô hình chậm 85\,$^\circ$C & $+0{,}082$~ns & $+0{,}423$~ns \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Phân bố theo khối}
+Bảng~\ref{tab:taiguyenkhoi} tách tài nguyên của bản $7\times7$ theo khối.
+Mảng PE chiếm khoảng $39\,\%$ tổng số LE; cả khối ô tính (\texttt{conv1d\_tile\_top}, gồm mảng PE, bộ quản lý tổng riêng, hậu xử lý, loader, FIFO và bộ nhớ) chiếm khoảng $66\,\%$.
+
+\begin{table}[htbp]\centering
+\caption{Tài nguyên theo khối chính (Fitter, bản $7\times7$). Khối thụt vào nằm trong khối phía trên.}\label{tab:taiguyenkhoi}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Khối & LE & Thanh ghi & M9K \\ \midrule
+Toàn thiết kế & 41\,353 & 15\,697 & 63 \\
+\quad \texttt{conv1d\_layer\_top} & 33\,649 & 11\,177 & 63 \\
+\quad\quad \texttt{conv1d\_tile\_top} & 27\,313 & 8\,557 & 59 \\
+\quad\quad\quad \texttt{pe\_array} ($49$ PE) & 16\,197 & 5\,054 & 0 \\
+\quad\quad\quad \texttt{partial\_sum\_manager} & 5\,012 & 1\,586 & 0 \\
+\quad\quad\quad \texttt{conv1d\_post\_process} & 4\,268 & 460 & 0 \\
+\quad\quad\quad loader và feeder ifmap & 944 & 673 & 12 \\
+\quad\quad\quad loader và feeder trọng số & 896 & 632 & 7 \\
+\quad\quad\quad bộ nhớ ifmap và trọng số & 51 & 8 & 40 \\
+\quad\quad \texttt{fmap\_writer} & 1\,048 & 442 & 0 \\
+\quad \texttt{layer\_cmd\_controller} & 4\,506 & 2\,260 & 0 \\
+\quad \texttt{uart\_crc\_top} & 3\,225 & 2\,260 & 0 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Số của khối con không cộng đúng bằng khối cha vì Quartus đếm chung một số LE giữa các khối và bảng chỉ liệt kê khối chính.
+\end{table}
+
+\textbf{Vì sao dùng nhiều LE.}
+Phép nhân trong mỗi PE được dựng bằng bộ nhân cây Wallace từ LE, không dùng khối nhân nhúng (Mục~\ref{sec:pe}), nên chỉ $8$ trên $288$ khối nhân được dùng.
+Chuyển phép nhân sang khối nhân nhúng có thể giải phóng LE, nhưng chưa được thử nên không có số đo.
+
+\textbf{Bộ nhớ.}
+Trong $63$ khối M9K, hai bank trọng số dùng $32$, hai bank ifmap dùng $8$, các FIFO của hai feeder dùng $19$, bộ nhớ bias và hệ số dịch dùng $4$.
+
+\subsection{Thời gian mạch}
+Thiết kế đạt yêu cầu $50$~MHz ở mọi mô hình thời gian: tổng độ trễ âm (TNS) bằng $0$, độ dư setup nhỏ nhất $+0{,}082$~ns (mô hình chậm $1\,200$~mV, $85\,^\circ$C), độ dư hold nhỏ nhất $+0{,}088$~ns (mô hình nhanh $0\,^\circ$C); recovery và removal đều dương.
+Ở $0\,^\circ$C tần số tối đa là $54{,}6$~MHz.
+Độ dư setup rất mỏng, nên mọi thay đổi thêm logic vào đường dữ liệu đều phải biên dịch lại và kiểm tra thời gian.
