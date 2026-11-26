@@ -5,16 +5,22 @@
 
 Model (rows = output positions, columns = output channels, one tile = R_u x C_u outputs):
     tiles   N   = ceil(T / R_eff) * ceil(Cout / C),  R_eff = R & ~1 for a pooling layer, 3 for fc1 (row_combine)
-    cycles  tau = load + compute + DELTA
+    cycles  tau = load + compute + delta
             load    = ceil(K / W) * max(R_u, C_u)        W = bytes read per cycle (1 today)
             compute = K + R_u + C_u
-            serial loader: tau = load + compute + DELTA;  overlapped loader: tau = max(load, compute) + DELTA
+            delta   = 20 + R + 2 * C_u + N_out           convolution layers (R = array rows)
+                      N_out = bytes the writer stores for the tile: R_u * C_u, or R_u/2 * C_u with pooling
+                      DELTA_FC                           fc1 and fc2
+            serial loader: tau = load + compute + delta;  overlapped loader: tau = max(load, compute) + delta
     PE utilisation = MAC / (cycles * R * C);  loader-limited closed form: occupancy / (max(R, C) + 1)
 
-DELTA (fixed cycles per tile: post-process, writer, bank swap) is fitted on the 7 x 7 numbers measured on the board on
-24/11/2026 (367 091 cycles per beat); the model gives 363 738 (-0.9 %).  Other array shapes and the wide / overlapped
-loaders are PROJECTIONS: nothing here has been synthesised or run on the board.  LE per PE (557) comes from the Quartus
-report of the 7 x 7 design and is only a rough budget check.
+delta was decomposed from per-tile time stamps of the RTL simulation of the 7 x 7 design (tb_tile_timing, conv0):
+loader latency 6, core launch 1, bias preload C_u + 5, compute 3, drain C_u + 1, post-process R + 1, write N_out + 1,
+commit and next tile 2.  With it the model gives 366 514 cycles per beat against 367 091 measured on the board on
+24/11/2026 (-0.16 %); per-layer padding writes are not modelled.  The FC layers were not time-stamped and keep the
+constant fitted to the board.  Other array shapes (post-process = R + 1 was only observed at R = 7) and the wide /
+overlapped loaders are PROJECTIONS: nothing here has been synthesised or run on the board.  LE per PE (557) comes from
+the Quartus report of the 7 x 7 design and is only a rough budget check.
 """
 import argparse
 import math
@@ -27,7 +33,7 @@ if str(ROOT) not in sys.path:
 
 from host import ecg_layer_host_pc as eh  # noqa: E402
 
-DELTA = 55                       # fixed cycles per tile, fitted on the board
+DELTA_FC = 55                    # cycles per tile of fc1 / fc2 beyond load and compute, fitted on the board
 LE_REST, LE_PER_PE = 14040, 557  # Quartus 21/11: everything but the PE array, and logic elements per PE
 LE_TOTAL = 49_760
 MEASURED = {"conv0": 21_429, "conv1": 104_379, "conv2": 124_603, "conv3": 113_321, "fc1": 3_137, "fc2": 222}   # board 24/11
@@ -44,6 +50,14 @@ def layers():
         out.append({"name": sp["name"], "T": sp["out_len"], "C": sp["cout"], "K": layer.k_len, "pool": bool(sp["pool"]),
                     "rc": bool(sp["flags"] & 4)})
     return out
+
+
+def tile_delta(L, R, ru, cu):
+    """Cycles of one tile beyond load and compute."""
+    if L["name"].startswith("fc"):
+        return DELTA_FC
+    n_out = (ru // 2 if L["pool"] else ru) * cu
+    return 20 + R + 2 * cu + n_out
 
 
 def layer_cycles(L, R, C, wide=1, overlap=False):
@@ -65,7 +79,7 @@ def layer_cycles(L, R, C, wide=1, overlap=False):
             c_left -= cu
             load = math.ceil(L["K"] / wide) * max(ru, cu)
             comp = L["K"] + ru + cu
-            total += (max(load, comp) if overlap else load + comp) + DELTA
+            total += (max(load, comp) if overlap else load + comp) + tile_delta(L, R, ru, cu)
     return total
 
 
