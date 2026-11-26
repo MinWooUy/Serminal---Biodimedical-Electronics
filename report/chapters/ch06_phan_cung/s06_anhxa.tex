@@ -44,6 +44,7 @@ Nguồn: \texttt{docs/baseline\_v1.md}, \texttt{host/ecg\_layer\_host\_pc.py} (\
 \end{table}
 
 Đầu ra của mỗi layer là đầu vào của layer kế tiếp, nằm sẵn trong bank ifmap (Mục~\ref{sec:mem}); layer tự thêm $\texttt{pad\_next}$ vị trí đệm số không ở mỗi đầu để layer sau không phải xử lý biên.
+Riêng đầu vào của conv0 do host đệm sẵn: cửa sổ $360$ mẫu được thêm $3$ mẫu bằng không ở mỗi đầu, thành $366$ byte.
 Sau conv0 đầu ra là $184\times16$ ($180$ vị trí sau pool cộng $2\cdot2$ vị trí đệm), sau conv1 là $92\times32$, sau conv2 là $47\times64$.
 
 \subsection{Layer có pool}
