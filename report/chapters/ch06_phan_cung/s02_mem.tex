@@ -17,7 +17,7 @@ Nhờ vậy việc nạp dữ liệu mới (từ UART hoặc từ đầu ra củ
 
 Thiết kế có hai bộ đệm ping-pong, đều tạo trong \texttt{conv1d\_tile\_top}:
 \begin{itemize}
-  \item \emph{ifmap} (\texttt{u\_ifmap\_mem}): $2\times4\,096$ byte. Host ghi vào bank ghi của layer đầu và \texttt{SWAP}; mỗi layer đọc bank đọc và ghi đầu ra vào bank ghi, và cuối layer (không phải GAP) tự \texttt{SWAP}, nên đầu ra của layer này thành đầu vào của layer sau mà không rời chip.
+  \item \emph{ifmap} (\texttt{u\_ifmap\_mem}): $2\times4\,096$ byte. Host ghi vào bank ghi của layer đầu và \texttt{SWAP}; mỗi layer đọc bank đọc và ghi đầu ra vào bank ghi, và cuối layer (không phải GAP) tự \texttt{SWAP}, nên đầu ra của layer này thành đầu vào của layer sau mà không rời chip. Riêng layer đọc kết quả GAP (FC1, cờ \texttt{gap\_in}) còn tự \texttt{SWAP} thêm một lần trước khi tính, sau khi đóng gói các giá trị GAP vào bank ghi; bốn đặc trưng RR do host ghi vào bank ghi trước đó nhờ vậy cũng chuyển sang bank đọc.
   \item \emph{trọng số} (\texttt{u\_wgt\_mem}): $2\times16\,384$ byte. Host ghi vào bank ghi rồi \texttt{SWAP}; layer đọc trọng số ở bank đọc tại $\texttt{w\_base}+c\cdot K+k$. Cơ chế này không tự đổi bank sau mỗi layer.
 \end{itemize}
 
@@ -32,7 +32,7 @@ Thiết kế có hai bộ đệm ping-pong, đều tạo trong \texttt{conv1d\_t
 
 \subsection{Ngân sách bộ nhớ}
 Bảng~\ref{tab:bonho} cộng dung lượng các bộ nhớ lớn từ các tham số thiết kế.
-Tổng $451\,584$ bit khớp với $452\,390$ bit mà báo cáo Quartus (21/11/2026) ghi cho cả thiết kế, chênh $806$ bit ($0{,}2\,\%$) thuộc các bộ nhớ nhỏ khác; đây là phép đối chiếu tính toán, không phải phép đo riêng từng bộ nhớ.
+Tổng $451\,584$ bit so với $452\,390$ bit mà báo cáo Quartus (21/11/2026) ghi cho cả thiết kế chênh $806$ bit ($0{,}2\,\%$). Bảng tóm tắt RAM của Fitter cho thấy phần chênh gồm $294$ bit đường trễ của feeder ifmap được Quartus đặt vào RAM và $512$ bit của một bản sao RAM hệ số dịch do công cụ tạo thêm.
 
 \begin{table}[htbp]\centering
 \caption{Ngân sách bộ nhớ trên chip tính từ tham số thiết kế.}\label{tab:bonho}
@@ -75,5 +75,5 @@ fc2 & 1 & 14\,464 & 128 & 208 \\ \bottomrule
 \end{table}
 
 Bank~0 dùng $8\,816$ byte và bank~1 dùng $14\,592$ byte, đều trong giới hạn $16\,384$.
-Hệ số dịch không thường trú được vì bộ nhớ này chỉ có $\texttt{COUT\_MAX}$ mục theo kênh nên mỗi layer vẫn ghi lại (khoảng $314$ byte mỗi nhịp).
+Hệ số dịch không thường trú được vì bộ nhớ này chỉ có $\texttt{COUT\_MAX}$ mục theo kênh nên mỗi layer vẫn ghi lại: mỗi nhịp là bảy lệnh \texttt{WRITE\_SHIFT}, tổng $314$ byte trên đường truyền kể cả phần đầu khung ($244$ byte dữ liệu).
 Kết quả đo của hai chế độ nạp được trình bày ở Chương~\ref{ch:thucnghiem}.
