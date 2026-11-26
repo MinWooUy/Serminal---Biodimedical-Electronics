@@ -23,8 +23,8 @@
 \renewcommand\footnotesize{\@setfontsize\footnotesize{10.5}{12.5}}
 \makeatother
 
-% ---------- Kho giay, le (theo mau: tren 3, duoi 2.5, trai 3, phai 2 cm) ----------
-\usepackage[a4paper,top=3cm,bottom=2.5cm,left=3cm,right=2cm]{geometry}
+% ---------- Kho giay, le (theo Huong dan khoa Dien tu - Vien thong: tren/duoi/phai 2 cm, trai 2.5 cm) ----------
+\usepackage[a4paper,top=2cm,bottom=2cm,left=2.5cm,right=2cm]{geometry}
 \usepackage{setspace}
 \onehalfspacing                   % gian dong 1.5
 \setlength{\parindent}{1cm}
@@ -33,6 +33,7 @@
 % ---------- Toan, bang, hinh ----------
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
+\usepackage{rotating}   % sidewaysfigure: hinh so do rong xoay ngang trang
 \graphicspath{{figures/}}
 \usepackage{booktabs,array,multirow,longtable,tabularx}
 \usepackage{xcolor}
@@ -69,13 +70,13 @@
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-% ---------- Dau trang / cuoi trang: so trang giua duoi ----------
+% ---------- Dau trang / cuoi trang: so trang ben phai cuoi trang (Huong dan khoa Dien tu - Vien thong) ----------
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyfoot[C]{\thepage}
+\fancyfoot[R]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
-\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0pt}}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[R]{\thepage}\renewcommand{\headrulewidth}{0pt}}
 
 % ---------- Tham chieu, trich dan ----------
 \usepackage[hidelinks,unicode]{hyperref}

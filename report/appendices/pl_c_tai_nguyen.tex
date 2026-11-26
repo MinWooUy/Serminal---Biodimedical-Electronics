@@ -1,8 +1,75 @@
+% nguon: docs/quartus/cnn1d.sta.summary, cnn1d.fit.summary (21/11/2026); rtl/cnn1d/SDC1.sdc, cnn1d.qsf
 \chapter{Báo cáo tài nguyên và timing chi tiết}\label{pl:taiguyen}
+Phụ lục này bổ sung cho Mục~\ref{sec:taiguyen} các số liệu đầy đủ của lần biên dịch ngày 21/11/2026 (Quartus Prime Lite 18.1.0, chip 10M50DAF484C7G).
 
-\begin{goiy}
-  \begin{itemize}
-    \item Trích Flow Summary, Fitter, Timing Analyzer (\texttt{rtl/cnn1d/output\_files/*.summary}); ảnh chụp trong \texttt{results/img/compile\_fpga\_*}.
-    \item So sánh bản $3\times3$ và $7\times7$; tài nguyên theo module nếu có.
-  \end{itemize}
-\end{goiy}
+\section*{Tóm tắt Fitter}
+\begin{table}[H]\centering
+\caption{Tóm tắt Fitter.}\label{tab:pl-fit}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Tài nguyên & Sử dụng \\ \midrule
+Phần tử logic & 41\,353 / 49\,760 (83\,\%) \\
+\quad hàm tổ hợp & 39\,289 / 49\,760 (79\,\%) \\
+\quad thanh ghi logic riêng & 15\,697 / 49\,760 (32\,\%) \\
+Chân I/O & 4 / 360 (1\,\%) \\
+Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) \\
+Nhân nhúng 9 bit & 8 / 288 (3\,\%) \\
+PLL & 0 / 4 \\
+UFM, ADC & 0 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Timing Analyzer}
+Ràng buộc duy nhất là một xung nhịp $20$~ns trên chân \texttt{MAX10\_CLK1\_50} kèm \texttt{derive\_clock\_uncertainty} (tệp \texttt{rtl/cnn1d/SDC1.sdc}).
+Đường vào ra UART không có ràng buộc thời gian riêng.
+
+\begin{table}[H]\centering
+\caption{Độ dư thời gian nhỏ nhất (ns) của xung \texttt{clk50} theo từng mô hình; TNS bằng $0$ ở mọi mục.}\label{tab:pl-sta}
+\small\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Phép kiểm & Chậm, 85\,$^\circ$C & Chậm, 0\,$^\circ$C & Nhanh, 0\,$^\circ$C \\ \midrule
+Setup & $+0{,}082$ & $+1{,}684$ & $+11{,}322$ \\
+Hold & $+0{,}246$ & $+0{,}246$ & $+0{,}088$ \\
+Recovery & $+17{,}517$ & $+17{,}687$ & $+18{,}888$ \\
+Removal & $+1{,}205$ & $+1{,}095$ & $+0{,}540$ \\
+Độ rộng xung tối thiểu & $+9{,}447$ & $+9{,}476$ & $+9{,}399$ \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Mô hình đều ở điện áp lõi $1\,200$~mV.
+\end{table}
+
+\section*{Bộ nhớ nhúng}
+\begin{table}[H]\centering
+\caption{Phân bố $63$ khối M9K.}\label{tab:pl-m9k}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Bộ nhớ & Bit & M9K \\ \midrule
+Trọng số, hai bank $16\,384\times8$ & 262\,144 & 32 \\
+Ifmap, hai bank $4\,096\times8$ & 65\,536 & 8 \\
+FIFO feeder ifmap & 57\,638 & 12 \\
+FIFO feeder trọng số & 57\,344 & 7 \\
+Bias và hệ số dịch & 9\,728 & 4 \\ \midrule
+Tổng & 452\,390 & 63 \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Gán chân}
+\begin{table}[H]\centering
+\caption{Chân dùng trên DE10-Lite.}\label{tab:pl-chan}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Tín hiệu & Chân & Vai trò \\ \midrule
+\texttt{MAX10\_CLK1\_50} & PIN\_P11 & xung nhịp $50$~MHz \\
+\texttt{KEY0} & PIN\_B8 & đặt lại \\
+\texttt{uart\_rx} & PIN\_AB5 & dữ liệu từ host \\
+\texttt{uart\_tx} & PIN\_AB6 & dữ liệu về host \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\sloppy
+Báo cáo tóm tắt được lưu trong \texttt{docs/quartus/} (\texttt{cnn1d.fit.summary}, \texttt{cnn1d.sta.summary}, \texttt{cnn1d.pow.summary}).

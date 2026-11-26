@@ -1,14 +1,71 @@
 % Muc 7.5  --  phu trach: xem report/PHANCONG.md
+% nguon: docs/baseline_v1.md muc 2; report/DINHVI.md C6--C12; docs/quartus/cnn1d.pow.summary
 \section{Hiệu năng}\label{sec:hieunang}
-\begin{goiy}
-  \begin{itemize}
-    \item Tính toán (đo trên board, giá trị \texttt{cycles} của \texttt{RUN}): $367\,091$ chu kỳ $=7.34$~ms/nhịp @50~MHz (conv0 $21\,429$, conv1 $104\,379$, conv2 $124\,603$, conv3 $113\,321$, FC1 $3\,137$, FC2 $222$). Trước khi sửa loader: $2\,058\,467$ chu kỳ $=41.17$~ms (Hình~\ref{fig:chukyl}).
-    \item Hiệu suất PE tăng từ $1.6\,\%$ lên $\approx9\,\%$ ($1\,613\,696$ MAC $/(367\,091\times49)$). Nguyên nhân cũ: loader 3 chu kỳ/byte, nạp rồi mới tính, pool dùng 2/7 hàng. Conv0--3 đo được $363\,732$ chu kỳ, trùng từng chu kỳ với mô phỏng RTL; hai sửa đổi (loader pipeline, pool 6 hàng) được áp cùng lúc nên chưa tách được đóng góp từng cái bằng số đo.
-    \item Đường truyền: gửi lại trọng số cho từng layer mất $\approx1.0$~s/nhịp ($232$ gói, $27\,228$~B gửi); nạp mô hình một lần (\texttt{w\_base}/\texttt{b\_base}) còn $27$ gói, $954$~B và $\approx0.10$~s/nhịp ở 1.5~Mbaud (đo trên 1\,306 nhịp); lần nạp ban đầu $194$ gói, $0.88$~s. Mỗi gói khứ hồi $\approx3.5$~ms, nên điểm nghẽn còn lại là độ trễ UART chứ không phải tính toán ($7.34$~ms chỉ còn $\approx7\,\%$).
-    \item So với chu kỳ tim ($\approx0.8$~s): cả tính toán lẫn đường truyền đều nằm trong một chu kỳ tim.
-    \item Công suất (\emph{ước lượng}, Quartus Power Analyzer, 24/11/2026, 50~MHz): tổng $332.17$~mW, gồm động $232.38$~mW, tĩnh $91.03$~mW, I/O $8.76$~mW. \textbf{Độ tin cậy thấp}: toàn bộ tín hiệu dùng ước lượng không vector với tốc độ chuyển mạch mặc định $12.5\,\%$, không có file mô phỏng. Phần tĩnh chủ yếu ($\approx76$~mW) đến từ nguồn VCCA và VCCD\_PLL, cố định của chip. Nguồn: \texttt{docs/quartus/cnn1d.pow.summary}.
-    \item Năng lượng và hiệu suất năng lượng (tính trên thời gian tính toán $7.34$~ms, cách các công trình khác thường dùng): $\approx2.44$~mJ/nhịp (riêng phần động $\approx1.71$~mJ) và $\approx1.3$~GOPS/W (phần động $\approx1.9$). Thiết kế không có clock gating nên công suất gần như không đổi giữa các nhịp; tính trên chu kỳ $0.1$~s mỗi nhịp thì năng lượng lớn hơn nhiều, cần nêu rõ định nghĩa. Mốc tham khảo: \cite{liu2023fully} báo cáo $67.74$~mW và $63.48$~GOPS/W ở 50~MHz (Cyclone~V); ta cao hơn khoảng 5 lần về công suất vì dùng chung một mảng PE dựng bằng 41\,353 LE, không dùng để kết luận hơn kém.
-    \item \textbf{Cách nói về tốc độ (bám định vị):} chỉ nói ``nhanh hơn CPU'' nếu đã đo; không so độ trễ trực tiếp với thiết kế ánh xạ đầy đủ (mỗi lớp một khối) vì ta chọn dùng chung mảng PE để được cấu hình bằng lệnh; ghi rõ độ trễ là ``tính toán'' hay ``gồm UART''.
-  \end{itemize}
-\end{goiy}
-\hinhcho{0.25}{biểu đồ chu kỳ theo layer: trước khi sửa loader ($2\,058\,467$) và sau ($367\,091$), cả hai đo trên board}{Phân bố chu kỳ theo layer trước và sau khi sửa loader.}{fig:chukyl}
+\subsection{Thời gian tính toán}
+Một nhịp cần $367\,091$ chu kỳ, tức $7{,}34$~ms ở $50$~MHz, không gồm UART (đo trên board, hai lần chạy cho kết quả giống hệt).
+Trước khi sửa loader con số này là $2\,058\,467$ chu kỳ ($41{,}17$~ms).
+Hình~\ref{fig:chukyl} cho phân bố theo layer; ba layer conv1--conv3 chiếm phần lớn thời gian.
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=0.92\textwidth]{ch07_thuc_nghiem/chukyl}
+  \caption{Số chu kỳ từng layer trước và sau khi sửa loader, đo trên board.}\label{fig:chukyl}
+\end{figure}
+
+Thông lượng tương ứng là $0{,}44$~GOPS trên mức đỉnh $4{,}9$~GOPS, tức hiệu suất mảng PE khoảng $9\,\%$ (trước khi sửa: $1{,}6\,\%$), tính với $1\,609\,344$ phép nhân--cộng của thuật toán mỗi nhịp.
+Nguyên nhân của hiệu suất thấp và hai sửa đổi đã làm được phân tích ở Mục~\ref{sec:bandwidth}; số chu kỳ từng layer và số ô nằm ở Bảng~\ref{tab:truocsau}.
+Hai sửa đổi được đưa vào cùng một bitstream nên chưa tách được đóng góp của từng sửa đổi bằng số đo.
+
+\subsection{Đường truyền UART}
+Thời gian người dùng thấy cho mỗi nhịp phụ thuộc chủ yếu vào đường truyền (Bảng~\ref{tab:uartnhip}).
+Khi host gửi lại trọng số cho từng layer, mỗi nhịp mất khoảng $1$~s.
+Khi toàn bộ mô hình được nạp sẵn một lần vào bộ nhớ trọng số và bộ nhớ bias, mỗi nhịp chỉ còn gửi dữ liệu vào và các lệnh cấu hình, mất khoảng $0{,}10$~s.
+Đây là một chế độ cấu hình của host (cờ \texttt{--resident}, dùng \texttt{w\_base}/\texttt{b\_base}), không mặc định bật.
+
+\begin{table}[htbp]\centering
+\caption{Đường truyền mỗi nhịp ở $1{,}5$~Mbaud (đo ở host, ngày 24/11/2026).}\label{tab:uartnhip}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Chế độ & Gói & Byte gửi & Thời gian \\ \midrule
+gửi lại trọng số từng layer & 232 & 27\,228 & $\approx1{,}0$~s/nhịp \\
+nạp mô hình một lần: mỗi nhịp & 27 & 954 & $\approx0{,}10$~s/nhịp \\
+nạp mô hình một lần: lần nạp đầu & 194 & 26\,195 & $0{,}88$~s \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Số gói và byte đo trên $6$ nhịp; thời gian $0{,}10$~s mỗi nhịp đo trên cả $1\,306$ nhịp golden.
+\end{table}
+
+Riêng việc đẩy $954$ byte qua đường $1{,}5$~Mbaud 8N1 chỉ tốn cỡ $6$~ms.
+Phần còn lại là độ trễ khứ hồi của từng gói (khoảng $3{,}5$~ms), vì giao thức theo kiểu gửi một lệnh rồi chờ trả lời và có nhiều gói nhỏ.
+Điểm nghẽn hiện tại vì vậy là độ trễ UART: $7{,}34$~ms tính toán chỉ chiếm cỡ $7\,\%$ của $0{,}1$~s.
+Thời gian đường truyền cũng thay đổi theo chương trình host: khi chạy kèm cửa sổ hiển thị trực tiếp trên cả bản ghi 208, giá trị trung bình là $0{,}20$~s mỗi nhịp.
+% nguon: results/2026-11-24_a5fb3f12_board_compare/log.txt
+
+\textbf{So với nhịp tim.}
+Với chu kỳ tim cỡ $0{,}6$--$1$~s, chế độ nạp một lần (cả tính toán lẫn đường truyền) xử lý kịp trong một chu kỳ tim; chế độ gửi lại trọng số ($\approx1$~s) thì không bảo đảm.
+Độ trễ từ đỉnh R đến nhãn còn gồm thời gian chờ đỉnh R kế tiếp và chờ đủ cửa sổ mẫu; đo trên $8$ đoạn golden, mức lớn nhất là $1{,}1$--$2{,}4$~s tuỳ đoạn, và thành phần này chưa được phân rã.
+
+\subsection{Công suất và năng lượng}
+Công suất trong Bảng~\ref{tab:congsuat} là \emph{ước lượng} của Quartus Power Analyzer, độ tin cậy \textbf{thấp}: không có tệp hoạt động từ mô phỏng, công cụ giả định tốc độ chuyển mạch mặc định $12{,}5\,\%$.
+
+\begin{table}[htbp]\centering
+\caption{Công suất ước lượng ở $50$~MHz (24/11/2026).}\label{tab:congsuat}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Thành phần & Công suất (mW) \\ \midrule
+Động (lõi) & 232{,}38 \\
+Tĩnh (lõi) & 91{,}03 \\
+Vào--ra (I/O) & 8{,}76 \\ \midrule
+Tổng & 332{,}17 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize Nguồn: \texttt{docs/quartus/cnn1d.pow.summary}.
+\end{table}
+
+Nếu tính trên thời gian tính toán $7{,}34$~ms, năng lượng ước lượng là $2{,}44$~mJ mỗi nhịp (riêng phần động $1{,}71$~mJ), tương ứng khoảng $1{,}3$~GOPS/W (phần động $1{,}9$).
+Định nghĩa này phải đi kèm con số: thiết kế không có cơ chế tắt xung nhịp (clock gating), công suất gần như không đổi giữa các nhịp, nên nếu tính trên cả chu kỳ $0{,}1$~s của một nhịp thì năng lượng là cỡ $33$~mJ.
+Để tham khảo, \cite{liu2023fully} báo cáo $67{,}74$~mW và $63{,}48$~GOPS/W ở $50$~MHz trên Cyclone~V.
+Công suất ước lượng của thiết kế này cao hơn khoảng năm lần; hai kết quả khác chip, khác cách đo và khác kiến trúc nên không dùng để kết luận hơn kém.
