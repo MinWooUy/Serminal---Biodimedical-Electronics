@@ -13,17 +13,17 @@ Cách phân chia này cho phép chạy mô hình bất kỳ thoả các giới h
 \subsection{Phân cấp module}
 Phân cấp từ đỉnh xuống, mỗi cấp một thư mục RTL:
 \begin{itemize}
-  \item \texttt{de10\_lite\_top}: nối chân board. Đặt các tham số thiết kế (Bảng~\ref{tab:thamso}) và đảo nút \texttt{KEY0} thành tín hiệu reset tích cực mức cao.
+  \item \texttt{de10\_lite\_top}: nối chân board. Đặt kích thước mảng, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp và baud (Bảng~\ref{tab:thamso}; các tham số còn lại dùng giá trị mặc định của module), và đảo nút \texttt{KEY0} thành tín hiệu reset tích cực mức cao.
   \item \texttt{ecg\_accel\_top}: gộp đường UART và lõi layer.
   \begin{itemize}
     \item \texttt{uart\_crc\_top} (\texttt{comm/}): thu nhận khung \texttt{A5 5A $|$ CMD $|$ SEQ $|$ LEN $|$ PAYLOAD $|$ CRC16}, kiểm tra dư thừa vòng (Cyclic Redundancy Check, CRC), phát khung trả lời.
     \item \texttt{layer\_core} (\texttt{top/}): giải mã lệnh và chạy layer.
     \begin{itemize}
       \item \texttt{layer\_cmd\_controller}: máy trạng thái hữu hạn (Finite State Machine, FSM) giải mã lệnh, ghi bộ nhớ, chốt cấu hình layer, đếm chu kỳ của \texttt{RUN}, trả \texttt{ACK/NACK/RESULT}.
-      \item \texttt{conv1d\_layer\_top} (\texttt{conv1d/}): tự chạy trọn một layer.
+      \item \texttt{conv1d\_layer\_top} (\texttt{conv1d/}): tự chạy trọn một layer; chứa FSM của layer, các bộ nhớ bias, hệ số dịch và GAP, và khối xử lý sau mảng PE của hai layer FC.
       \begin{itemize}
         \item \texttt{conv1d\_layer\_controller}: vòng lặp các ô của layer.
-        \item \texttt{conv1d\_tile\_top}: một ô (tile), gồm hai \texttt{tensor\_pingpong\_buffer} (ifmap và trọng số), hai cụm nạp (\texttt{conv1d\_*\_feeder\_top}, mỗi cụm gồm bộ nạp (loader), khối sinh địa chỉ (Address Generation Unit, AGU) và bộ cấp dữ liệu (feeder)), \texttt{cnn\_compute\_core} (\texttt{core/}) chứa \texttt{cnn\_control\_fsm}, \texttt{pe\_array} (\texttt{pe/}) và khối quản lý tổng riêng (Partial Sum Manager, PSM) \texttt{partial\_sum\_manager} (\texttt{psm/}), và \texttt{conv1d\_post\_process} (\texttt{post/}) lượng tử hoá một ô (bật bằng tham số \texttt{POST\_ENABLE}).
+        \item \texttt{conv1d\_tile\_top}: một ô (tile), gồm hai \texttt{tensor\_pingpong\_buffer} (ifmap và trọng số), hai cụm nạp (\texttt{conv1d\_*\_feeder\_top}, mỗi cụm gồm một bộ nạp (loader), bên trong có khối sinh địa chỉ (Address Generation Unit, AGU), và một bộ cấp dữ liệu (feeder)), \texttt{cnn\_compute\_core} (\texttt{core/}) chứa \texttt{cnn\_control\_fsm}, \texttt{pe\_array} (\texttt{pe/}) và khối quản lý tổng riêng (Partial Sum Manager, PSM) \texttt{partial\_sum\_manager} (\texttt{psm/}), và \texttt{conv1d\_post\_process} (\texttt{post/}) lượng tử hoá một ô (bật bằng tham số \texttt{POST\_ENABLE}).
         \item \texttt{fmap\_writer} (\texttt{post/}): ghi kết quả (kèm MaxPool và GAP) vào bank ghi của ifmap.
       \end{itemize}
     \end{itemize}
