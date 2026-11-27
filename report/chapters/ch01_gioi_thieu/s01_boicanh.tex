@@ -1,10 +1,10 @@
-% Muc 1.1  --  phu trach: xem report/PHANCONG.md
+% =====================================================================
+% MỤC 1.1: BỐI CẢNH VÀ LÝ DO CHỌN ĐỀ TÀI
+% =====================================================================
 \section{Bối cảnh và lý do chọn đề tài}\label{sec:boicanh}
-\begin{goiy}
-  \begin{itemize}
-    \item Loạn nhịp tim và nhu cầu theo dõi ECG liên tục, phát hiện sớm (số liệu dịch tễ: chỉ trích dẫn nguồn đã đọc, ví dụ báo cáo của WHO hoặc hiệp hội tim mạch).
-    \item Xu hướng đưa suy luận ra thiết bị biên: độ trễ thấp, riêng tư, tiết kiệm băng thông và năng lượng.
-    \item Vì sao FPGA và số học số nguyên: song song hoá, kiểm chứng được từng bit, tạo tiền đề cho ASIC.
-    \item Liên hệ môn Điện tử y sinh: chuỗi từ tín hiệu sinh học đến vi mạch phân tích.
-  \end{itemize}
-\end{goiy}
+
+Theo dõi ECG liên tục và phân loại loạn nhịp theo thời gian thực trên thiết bị biên giúp phát hiện sớm biến cố tim mạch, giảm trễ cảnh báo và hạn chế phụ thuộc vào máy chủ từ xa \cite{liu2025fpga1dcnn, liu2023fully}. Dù cơ sở dữ liệu MIT-BIH Arrhythmia \cite{moody2001impact}, chuẩn đánh giá ANSI/AAMI EC57 \cite{aami2012ec57} và cách kết hợp đặc trưng hình thái với khoảng nhịp \cite{dechazal2004automatic} đã đặt nền tảng cho phân loại tự động, sự mất cân bằng lớp lớn và biến thiên giữa các bệnh nhân vẫn gây khó khăn cho mô hình gọn nhẹ khi triển khai thực tế \cite{li2026lightweight, lin2017focal}.
+
+Mạng nơ-ron tích chập 1D (1D-CNN) trích xuất hiệu quả đặc trưng từ tín hiệu ECG \cite{kiranyaz2016realtime}, nhưng các kiến trúc lớn thường vượt ngân sách bộ nhớ, độ trễ và năng lượng của thiết bị biên \cite{liu2025fpga1dcnn, li2026lightweight}. Theo tổng quan hệ thống trên chip (SoC) của Hariri và cộng sự \cite{hariri2026hardware}, bộ tăng tốc phần cứng cho tín hiệu tim mạch bao trùm từ tiền xử lý, trích chọn đặc trưng đến hỗ trợ quyết định; trong đó FPGA phù hợp để khai thác song song, tái cấu hình và kiểm chứng nguyên mẫu trước khi phát triển lên phần cứng chuyên dụng hơn.
+
+Kết hợp phát hiện QRS thời gian thực \cite{pantompkins1985realtime}, mô hình 1D-CNN rút gọn \cite{liu2025fpga1dcnn, li2026lightweight} và suy luận thuần số nguyên \cite{jacob2018quantization} trên FPGA cho phép giảm tài nguyên tính toán, kiểm soát chặt chẽ độ rộng bit và đối chiếu kết quả từng bit giữa phần mềm tham chiếu và phần cứng. Đề tài xây dựng chuỗi xử lý từ mẫu ECG số hoá đến bộ tăng tốc 1D-CNN số nguyên trên FPGA để phân loại nhịp tim trong khuôn khổ môn Điện tử y sinh.

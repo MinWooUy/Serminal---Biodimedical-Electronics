@@ -1,9 +1,13 @@
 % Muc 3.5  --  phu trach: xem report/PHANCONG.md
 \section{Chiến lược kiểm chứng}\label{sec:kiemchung}
-\begin{goiy}
-  \begin{itemize}
-    \item Chuỗi so sánh: PyTorch float $\to$ Python int8 (golden) $\to$ mô phỏng RTL $\to$ board.
-    \item Các cổng (gate): cổng lượng tử, cổng pipeline số nguyên, cổng bit-exact (digest/CRC-32).
-    \item Tiêu chí đạt/không đạt nêu trước khi trình bày kết quả (Chương~\ref{ch:thucnghiem}).
-  \end{itemize}
-\end{goiy}
+
+Để bảo đảm độ tin cậy ở từng tầng chuyển đổi từ thuật toán sang phần cứng thực tế, hệ thống áp dụng chuỗi kiểm chứng nối tiếp: mô hình PyTorch float $\rightarrow$ mô hình số nguyên Python \texttt{int8} (golden) $\rightarrow$ mô phỏng RTL $\rightarrow$ thực thi trên board FPGA qua UART.
+
+Quy trình kiểm chứng được tổ chức qua các cổng kiểm soát (gate) rõ ràng trước khi đánh giá tổng thể:
+\begin{itemize}
+	\item \textbf{Cổng lượng tử hoá:} Đối chiếu macro-F1 giữa mô hình float và pipeline số nguyên \texttt{int8} trên kiểm định chéo DS1 để xác nhận sai số lượng tử nằm trong ngưỡng cho phép.
+	\item \textbf{Cổng pipeline số nguyên:} Sinh bộ golden vectors đầy đủ cả đầu vào, các đặc trưng RR, đầu ra từng tầng trung gian và kết quả cuối cùng từ pipeline số nguyên chuẩn.
+	\item \textbf{Cổng khớp từng bit (bit-exact):} So sánh từng giá trị đầu ra (logit, nhãn và mã kiểm tra CRC-32 của từng đoạn) giữa mô phỏng RTL / board FPGA với bộ golden.
+\end{itemize}
+
+Các tiêu chí đạt/không đạt được cố định trước khi tổng hợp kết quả thực nghiệm ở Chương~\ref{ch:thucnghiem} nhằm tránh điều chỉnh chủ quan theo số liệu đo.

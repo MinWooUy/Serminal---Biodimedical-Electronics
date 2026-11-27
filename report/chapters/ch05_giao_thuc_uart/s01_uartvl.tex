@@ -1,20 +1,11 @@
 % Muc 5.1  --  phu trach: Dung (xem report/PHANCONG.md)
-% nguon: rtl/cnn1d/de10_lite_top.v, rtl/cnn1d/top/ecg_accel_top.v, rtl/cnn1d/comm/uart/uart_rx.v, uart_tx.v, docs/baseline_v1.md
+% nguon: rtl/cnn1d/de10_lite_top.v, rtl/cnn1d/top/ecg_accel_top.v, rtl/cnn1d/comm/uart/uart_rx.v, uart_tx.v
 \section{Tầng vật lý UART}\label{sec:uartvl}
-Host giao tiếp với board DE10-Lite qua bộ thu phát không đồng bộ vạn năng (Universal Asynchronous Receiver/Transmitter, UART) mức logic $3{,}3$~V nhờ mạch chuyển đổi USB--UART dùng chip CH340, không qua mức điện áp RS-232.
-Trên FPGA (\texttt{de10\_lite\_top}), giao diện chỉ dùng hai chân dữ liệu \texttt{uart\_rx} (\texttt{PIN\_AB5}), \texttt{uart\_tx} (\texttt{PIN\_AB6}) và đường đất chung, không có tín hiệu điều khiển luồng phần cứng (\texttt{RTS}/\texttt{CTS}).
-Mỗi byte được truyền theo định dạng \emph{8N1} gồm $1$~bit bắt đầu (start, mức~$0$), $8$~bit dữ liệu theo thứ tự bit thấp trước và $1$~bit kết thúc (stop, mức~$1$), ứng với $10$~bit trên đường dây cho một byte dữ liệu.
+Host kết nối với board DE10-Lite qua bộ thu phát không đồng bộ vạn năng (Universal Asynchronous Receiver/Transmitter, UART) mức logic $3{,}3$~V thông qua cầu chuyển đổi USB--UART CH340.
+Giao diện trên FPGA (\texttt{de10\_lite\_top}) gồm chân thu \texttt{uart\_rx} (\texttt{PIN\_AB5}), chân phát \texttt{uart\_tx} (\texttt{PIN\_AB6}) và đất chung, truyền theo định dạng \emph{8N1} ($1$~bit start mức~$0$, $8$~bit dữ liệu từ bit thấp trước, $1$~bit stop mức~$1$) không dùng điều khiển luồng phần cứng.
+Mạch vận hành với xung nhịp hệ thống \texttt{CLK\_FREQ} $=50$~MHz và tốc độ truyền \texttt{BAUD\_RATE} $=1\,500\,000$~baud (hỗ trợ cấu hình ở $921\,600$~baud và $1\,500\,000$~baud), chia chu kỳ bit theo $\texttt{DIV}=\lfloor\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}\rfloor$ với điều kiện thiết kế $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}\ge8$.
 
-Cả bộ thu và bộ phát chạy trên xung nhịp hệ thống \texttt{CLK\_FREQ} $=50$~MHz và chia chu kỳ bit theo phần nguyên $\texttt{DIV}=\lfloor\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}\rfloor$.
-Khối đỉnh \texttt{ecg\_accel\_top} kiểm tra điều kiện $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}\ge8$ khi mô phỏng để bảo đảm điểm lấy mẫu giữa bit có độ phân giải tối thiểu $\pm4$ chu kỳ xung nhịp.
-Hệ thống đã được kiểm chứng thực tế trên board ở hai tốc độ truyền:
-\begin{itemize}
-  \item \textbf{$921\,600$~baud} (bitstream ngày 18/11/2026): $\texttt{DIV}=54$ chu kỳ/bit, tốc độ thực tế $50\,000\,000/54\approx{}$ $925\,926$~baud (sai lệch $+0{,}47\,\%$).
-  \item \textbf{$1\,500\,000$~baud} ($1{,}5$~Mbaud, bitstream chốt ngày 21/11/2026): $\texttt{DIV}=33$ chu kỳ/bit, tốc độ thực tế $50\,000\,000/33\approx{}$ $1\,515\,152$~baud (sai lệch $+1{,}01\,\%$, thông lượng đường dây tối đa $150\,000$~byte/s).
-\end{itemize}
-Do bộ thu đồng bộ lại ở cạnh xuống của mỗi bit start, sai lệch tích luỹ sau $9{,}5$~khoảng bit tại tâm bit stop ở mức $1{,}5$~Mbaud chỉ khoảng $0{,}10$~bit, nằm an toàn trong biên dung sai $\pm0{,}5$~bit của khung 8N1.
-
-Về phần cứng mức byte, module thu \texttt{uart\_receiver} (\texttt{comm/\allowbreak uart/\allowbreak uart\_rx.v}) đưa tín hiệu \texttt{rx\_in} qua hai thanh ghi đồng bộ liên tiếp (\texttt{rx\_meta}, \texttt{rx\_sync}, gắn thuộc tính \texttt{ASYNC\_REG = "TRUE"}) để khử siêu ổn định, rồi giải mã khung bằng máy trạng thái hữu hạn (Finite State Machine, FSM) năm trạng thái: \texttt{IDLE}, \texttt{START}, \texttt{DATA}, \texttt{STOP} và \texttt{RECOVER}.
-Khi thấy cạnh xuống ở \texttt{IDLE}, mạch sang \texttt{START} và đếm $\texttt{DIV}/2-1$ chu kỳ tới giữa bit; nếu đường truyền quay về mức~$1$ sớm thì coi là xung nhiễu (start giả) và trở lại \texttt{IDLE}.
-Nếu bit start hợp lệ, mạch lấy mẫu $8$~bit dữ liệu cách nhau mỗi $\texttt{DIV}$ chu kỳ ở \texttt{DATA}, rồi kiểm tra tâm bit stop ở \texttt{STOP}: nếu bằng~$1$ thì chốt \texttt{data\_out} kèm xung \texttt{rx\_ready}; nếu bằng~$0$ thì báo xung lỗi khung \texttt{frame\_error} và sang \texttt{RECOVER} chờ đường dây trở lại mức nghỉ~$1$ trước khi nhận byte mới.
-Ở chiều ngược lại, \texttt{uart\_transmitter} (\texttt{comm/uart/uart\_tx.v}) nạp thanh ghi dịch $10$~bit \texttt{frame = \{1'b1, data\_in, 1'b0\}} khi nhận \texttt{tx\_start} lúc rảnh và dịch đủ $10\times\texttt{DIV}$ chu kỳ, bảo đảm giữ trọn độ rộng bit stop trước khi cho phép gửi byte kế tiếp.
+Module thu \texttt{uart\_receiver} (\texttt{comm/\allowbreak uart/\allowbreak uart\_rx.v}) đồng bộ tín hiệu \texttt{rx\_in} qua hai tầng thanh ghi liên tiếp (\texttt{rx\_meta}, \texttt{rx\_sync}), sau đó giải mã byte bằng máy trạng thái hữu hạn (Finite State Machine, FSM) năm trạng thái: \texttt{IDLE}, \texttt{START}, \texttt{DATA}, \texttt{STOP} và \texttt{RECOVER}.
+Khi gặp cạnh xuống ở \texttt{IDLE}, mạch sang \texttt{START} và đếm nửa chu kỳ bit ($\texttt{DIV}/2-1$) để kiểm tra tại tâm bit start: nếu đường dây về mức~$1$ sớm thì loại bỏ start giả và quay lại \texttt{IDLE}; nếu giữ mức~$0$ thì chuyển sang \texttt{DATA} lấy mẫu $8$~bit dữ liệu cách đều mỗi $\texttt{DIV}$ chu kỳ.
+Tại \texttt{STOP}, mạch lấy mẫu tâm bit stop: nếu bằng~$1$ thì xuất \texttt{data\_out} kèm xung \texttt{rx\_ready}; nếu bằng~$0$ thì phát xung \texttt{frame\_error} và đợi ở \texttt{RECOVER} cho tới khi đường dây trở về mức nghỉ~$1$.
+Ở chiều ngược lại, \texttt{uart\_transmitter} (\texttt{comm/\allowbreak uart/\allowbreak uart\_tx.v}) nhận byte mới khi cờ \texttt{tx\_ready} bật, dịch nối tiếp bit start, $8$~bit dữ liệu và giữ đủ trọn độ rộng bit stop trước khi hoàn tất khung.
