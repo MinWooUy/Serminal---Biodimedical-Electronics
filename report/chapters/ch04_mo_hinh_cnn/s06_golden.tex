@@ -1,8 +1,31 @@
-% Muc 4.6  --  phu trach: xem report/PHANCONG.md
-\section{Golden vectors}\label{sec:golden}
-\begin{goiy}
-  \begin{itemize}
-    \item Sinh golden bằng \texttt{scripts/export\_c.py} $\to$ \texttt{export/weights.h}, \texttt{export/golden/*.bin}; 8 đoạn, 1\,306 nhịp.
-    \item Vai trò: chuẩn so sánh cho RTL và board; \texttt{trace\_beat.py} để theo dõi từng tầng.
-  \end{itemize}
-\end{goiy}
+% Muc 4.6  --  phu trach: Hùng
+% nguon: export/golden_manifest.json cua repo 1DCNN (8 doan, 1 306 phat hien, nhan: 649 N, 307 S, 295 V, 51 F, 1 Q, 3 khong khop)
+\section{Bộ dữ liệu chuẩn}\label{sec:golden}
+
+Bộ dữ liệu chuẩn, gọi là golden vectors, ghi lại đầu ra của từng tầng trong pipeline số nguyên khi xử lý một số đoạn tín hiệu cố định.
+Nó đóng vai trò đáp án cho mọi cài đặt lại của pipeline: mô phỏng RTL hay bộ tăng tốc trên board đều phải cho kết quả khớp từng bit với bộ dữ liệu này.
+
+\subsection{Thành phần}
+
+Bộ dữ liệu gồm tám đoạn tín hiệu dài 120\,s, lấy từ tám bản ghi khác nhau của DS1.
+Ở mỗi bản ghi, đoạn được chọn là đoạn chứa nhiều nhịp bất thường nhất, để bộ dữ liệu bao phủ đủ bốn lớp thay vì chủ yếu là nhịp N như dữ liệu gốc.
+Trên tám đoạn, bộ phát hiện tìm được 1\,306 nhịp; trong đó 1\,302 nhịp khớp với nhãn gồm 649 nhịp N, 307 nhịp S, 295 nhịp V và 51 nhịp F, bốn nhịp còn lại là nhịp lớp Q hoặc phát hiện không khớp nhãn nào.
+Các phát hiện không khớp vẫn được giữ lại, vì phần cứng xử lý mọi nhịp mà bộ phát hiện đưa ra chứ không biết trước nhãn.
+Mỗi đoạn được xử lý từ trạng thái ban đầu bằng không, giống như hệ thống vừa khởi động.
+
+Với mỗi nhịp, bộ dữ liệu lưu:
+\begin{itemize}
+  \item đầu vào của mạng: cửa sổ $z_q$ và bốn đặc trưng $\mathrm{rr}_q$;
+  \item đầu ra của từng lớp tích chập và từng lớp gộp cực đại;
+  \item tổng của phép lấy trung bình toàn cục và đầu ra lớp FC1;
+  \item bốn logit int32 và nhãn dự đoán.
+\end{itemize}
+Ngoài ra, các tín hiệu trung gian của khối tiền xử lý theo từng mẫu cũng được lưu, cùng với toàn bộ trọng số, bias và lượng dịch để nạp cho phần cứng.
+
+\subsection{Vai trò trong kiểm chứng}
+
+Nhờ lưu đủ các tầng trung gian, khi phần cứng cho kết quả sai có thể xác định ngay lớp đầu tiên bị lệch thay vì chỉ biết nhãn cuối cùng sai.
+Điều này cho phép kiểm chứng bộ tăng tốc theo từng lớp trong quá trình phát triển, trước khi chạy trọn mạng; quy trình và kết quả kiểm chứng được trình bày ở Mục~\ref{sec:bitexact}.
+
+Cần lưu ý rằng các đoạn này thuộc DS1, tức dữ liệu mô hình đã thấy khi huấn luyện.
+Vì vậy bộ dữ liệu chuẩn chỉ dùng để kiểm chứng tính đúng của cài đặt, không dùng để đánh giá khả năng tổng quát hoá; khả năng này chỉ được đánh giá trên DS2.

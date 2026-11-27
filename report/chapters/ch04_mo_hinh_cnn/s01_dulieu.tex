@@ -1,11 +1,94 @@
-% Muc 4.1  --  phu trach: xem report/PHANCONG.md
-\section{Dữ liệu và giao thức đánh giá}\label{sec:dulieu}
-\begin{goiy}
-  \begin{itemize}
-    \item MIT-BIH: 48 bản ghi; loại 102, 104, 107, 217 (paced); chia DS1/DS2 (de Chazal); nhịp trong đoạn VF không tính.
-    \item Ánh xạ nhãn AAMI; số nhịp mỗi lớp mỗi tập (Bảng~\ref{tab:dulieu}); lớp Q bị loại.
-    \item Huấn luyện: 5-fold nhóm theo bản ghi trên DS1, inner-val 20\,\% cuối theo thời gian; DS2 khoá bằng \texttt{ECG\_ALLOW\_DS2}, chạy một lần.
-    \item Chỉ số: macro-F1; Se và $+P$ của SVEB, VEB; Se/$+P$ phát hiện R (dung sai $\pm150$~ms).
-  \end{itemize}
-\end{goiy}
-\bangcho{số bản ghi, số nhịp theo lớp N/S/V/F cho DS1 và DS2}{Thống kê tập dữ liệu và cách chia.}{tab:dulieu}
+% Muc 4.1  --  phu trach: Hùng
+% nguon: docs/system_overview.md §3.1; NHATKY.md cua repo 1DCNN (so nhip DS1); docs/final_ds2_results.md (so nhip DS2)
+\section{Dữ liệu và phương pháp đánh giá}\label{sec:dulieu}
+
+Hình~\ref{fig:ch4-khoidulieu} tóm tắt các bước chuẩn bị dữ liệu, được trình bày chi tiết trong mục này.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/khoi_dulieu}
+  \caption{Các bước chuẩn bị dữ liệu từ cơ sở dữ liệu MIT-BIH; hai tập DS1 và DS2 được chia theo bệnh nhân.}\label{fig:ch4-khoidulieu}
+\end{figure}
+
+\subsection{Cơ sở dữ liệu và các lớp nhịp}
+
+Đề tài sử dụng cơ sở dữ liệu MIT-BIH Arrhythmia~\cite{moody2001impact}, gồm 48 bản ghi điện tâm đồ hai kênh, mỗi bản ghi dài khoảng 30 phút, được số hoá ở tần số 360\,Hz.
+Mỗi nhịp tim trong cơ sở dữ liệu đã được các bác sĩ tim mạch gán nhãn, nhờ đó có thể đánh giá cả khâu phát hiện nhịp lẫn khâu phân loại nhịp.
+Đề tài chỉ sử dụng kênh MLII, là kênh có ở hầu hết các bản ghi, và loại bốn bản ghi của bệnh nhân đặt máy tạo nhịp theo khuyến nghị của chuẩn AAMI EC57~\cite{aami2012ec57}, vì nhịp do máy tạo ra có hình dạng khác hẳn nhịp tự nhiên.
+
+Theo chuẩn AAMI, các nhãn gốc được gom về bốn lớp có ý nghĩa lâm sàng khác nhau:
+\begin{itemize}
+  \item \textbf{N} -- nhịp bình thường, kể cả nhịp block nhánh, khởi phát từ nút xoang và dẫn truyền qua đường bình thường;
+  \item \textbf{S} -- nhịp ngoại tâm thu trên thất (SVEB), khởi phát sớm từ tâm nhĩ hoặc nút nhĩ--thất nên phức bộ QRS thường vẫn hẹp và gần giống nhịp N;
+  \item \textbf{V} -- nhịp ngoại tâm thu thất (VEB), khởi phát từ tâm thất nên phức bộ QRS rộng và biến dạng rõ rệt;
+  \item \textbf{F} -- nhịp hoà, khi xung động từ nút xoang và từ tâm thất cùng kích hoạt tâm thất, tạo ra hình dạng trung gian giữa N và V.
+\end{itemize}
+Lớp Q gồm các nhịp không xác định được bị loại khỏi đánh giá.
+Hình~\ref{fig:ch4-lop} minh hoạ dạng sóng điển hình của bốn lớp và phân bố số nhịp.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/lop_nhip.pdf}
+  \caption{Dạng sóng một nhịp điển hình của bốn lớp sau khi lọc và phân bố số nhịp theo lớp trên hai tập DS1, DS2.}\label{fig:ch4-lop}
+\end{figure}
+
+Hình~\ref{fig:ch4-lop} cho thấy hai khó khăn chính của bài toán.
+Thứ nhất, dữ liệu mất cân bằng nghiêm trọng: lớp N chiếm khoảng 90\,\% số nhịp, trong khi lớp S và lớp F mỗi lớp chưa đến 2\,\%.
+Thứ hai, ranh giới giữa các lớp không nằm hoàn toàn ở hình dạng: nhịp S gần giống nhịp N và chủ yếu được nhận biết qua thời điểm xuất hiện sớm, còn nhịp F nằm giữa N và V về hình dạng.
+Hai đặc điểm này quyết định cách chọn đặc trưng đầu vào ở Mục~\ref{sec:dactrung} và hàm mất mát ở Mục~\ref{sec:huanluyen}.
+
+\subsection{Đánh giá liên bệnh nhân}
+
+Bốn mươi bốn bản ghi còn lại được chia thành hai tập DS1 và DS2 theo đề xuất của de Chazal và cộng sự~\cite{dechazal2004automatic}, mỗi tập gồm 22 bản ghi của những bệnh nhân khác nhau (Bảng~\ref{tab:dulieu}).
+DS1 dùng để huấn luyện và lựa chọn cấu hình, DS2 chỉ dùng cho đánh giá cuối cùng.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Số nhịp theo lớp của hai tập dữ liệu.}\label{tab:dulieu}
+  \begin{tabular}{lcrrrrr}
+    \toprule
+    Tập & Số bản ghi & N & S & V & F & Tổng \\
+    \midrule
+    DS1 & 22 & 45\,866 & 944 & 3\,788 & 415 & 51\,013 \\
+    DS2 & 22 & 44\,218 & 1\,836 & 3\,219 & 388 & 49\,661 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Lý do chọn cách chia này là hình dạng nhịp của mỗi người mang đặc điểm riêng, phụ thuộc vị trí tim, vị trí điện cực và bệnh lý nền.
+Nếu chia ngẫu nhiên theo nhịp, các nhịp của cùng một bệnh nhân xuất hiện ở cả tập huấn luyện và tập kiểm tra, mô hình có thể nhận ra bệnh nhân thay vì nhận ra loại nhịp, và độ chính xác thu được cao hơn nhiều so với khi dùng cho người mới.
+Chia theo bệnh nhân phản ánh đúng tình huống sử dụng thực tế, đổi lại kết quả thấp hơn đáng kể so với các công bố chia theo nhịp.
+
+Trên DS1, các cấu hình được so sánh bằng kiểm định chéo năm fold, trong đó các fold cũng được chia theo bản ghi.
+Mỗi nhịp của DS1 được dự đoán đúng một lần bởi mô hình không thấy bản ghi của nó khi huấn luyện; chỉ số được tính trên toàn bộ các dự đoán này và lặp lại với ba seed để ước lượng độ dao động.
+Tập DS2 được khoá và chỉ đánh giá một lần sau khi mô hình đã đóng băng, không tham số nào được điều chỉnh theo kết quả DS2.
+
+\subsection{Chỉ số đánh giá}
+
+Hình~\ref{fig:ch4-khoidanhgia} tóm tắt bốn lần đánh giá trong đề tài.
+Ba lần đầu dùng DS1: khâu phát hiện đỉnh R (Mục~\ref{sec:tienxuly}), kiểm định chéo để chọn cấu hình (Mục~\ref{sec:huanluyen}) và sai số do lượng tử hoá (Mục~\ref{sec:luongtu}).
+Lần cuối chạy trên DS2 sau khi mô hình đã đóng băng (Mục~\ref{sec:dochinhxac}).
+Các chỉ số dùng trong cả bốn lần được định nghĩa dưới đây.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.6\textwidth]{ch04_mo_hinh_cnn/khoi_danhgia}
+  \caption{Bốn lần đánh giá và kết quả chính. Ba lần đầu dùng DS1; DS2 chỉ được đánh giá một lần, với pipeline số nguyên. Khối nét đứt là khối kế tiếp.}\label{fig:ch4-khoidanhgia}
+\end{figure}
+
+Với mỗi lớp $c$, gọi $TP_c$, $FP_c$ và $FN_c$ lần lượt là số nhịp được phân loại đúng vào lớp $c$, số nhịp bị gán nhầm vào lớp $c$ và số nhịp của lớp $c$ bị bỏ sót.
+Độ nhạy, độ chính xác dương và điểm F1 được định nghĩa như sau:
+\begin{equation}
+  \Se_c=\frac{TP_c}{TP_c+FN_c},\qquad
+  \PPV_c=\frac{TP_c}{TP_c+FP_c},\qquad
+  F1_c=\frac{2\,\Se_c\,\PPV_c}{\Se_c+\PPV_c}.
+  \label{eq:ch4-metric}
+\end{equation}
+Độ nhạy cho biết trong các nhịp thật sự thuộc lớp $c$, mô hình phát hiện được bao nhiêu phần; độ chính xác dương cho biết trong các lần mô hình báo lớp $c$, bao nhiêu lần báo đúng.
+F1 là trung bình điều hoà của hai đại lượng này; khác với trung bình cộng, trung bình điều hoà bị kéo về giá trị nhỏ hơn, nên F1 chỉ cao khi cả $\Se$ và $\PPV$ cùng cao.
+Ví dụ, một lớp có $\Se=1$ nhưng $\PPV=0{,}1$ chỉ đạt $F1\approx0{,}18$, trong khi trung bình cộng là $0{,}55$.
+Chỉ số chính của đề tài là macro-F1, tức trung bình cộng F1 của bốn lớp.
+Với dữ liệu mất cân bằng, độ chính xác tổng thể bị lớp N chi phối: một mô hình luôn trả lời N đã đạt khoảng 90\,\%.
+Macro-F1 cho mỗi lớp trọng số như nhau, nên mô hình chỉ đạt điểm cao khi nhận diện được cả các lớp hiếm.
+Theo thông lệ của chuẩn EC57, đề tài báo cáo thêm $\Se$ và $\PPV$ của hai nhóm SVEB và VEB để so sánh với các công trình khác.
+Khâu phát hiện đỉnh R được đánh giá riêng bằng $\Se$ và $\PPV$, trong đó một phát hiện được coi là đúng khi nằm đủ gần một nhịp có nhãn.

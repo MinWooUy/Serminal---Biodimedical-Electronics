@@ -1,9 +1,88 @@
-% Muc 4.4  --  phu trach: xem report/PHANCONG.md
-\section{Huấn luyện}\label{sec:huanluyen}
-\begin{goiy}
-  \begin{itemize}
-    \item Focal loss ($\gamma=2$) + trọng số lớp sqrt-inverse; AdamW (lr $10^{-3}$, wd $10^{-2}$), 3 epoch; thêm SVDB (n25) chỉ trong inner-train.
-    \item Các lựa chọn đã thử (ablation) và vì sao chọn Lite thay vì Full.
-    \item Mô hình đóng băng (SHA-256 trong \texttt{export/final\_models\_manifest.json}).
-  \end{itemize}
-\end{goiy}
+% Muc 4.4  --  phu trach: Hùng
+% nguon: NHATKY.md cua repo 1DCNN (A0-A5b, nen Full/Lite, dong bang 15/10/2026);
+%        cau hinh cuoi results/2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3/config.yaml
+\section{Huấn luyện và lựa chọn cấu hình}\label{sec:huanluyen}
+
+\subsection{Hàm mất mát}
+
+Với dữ liệu mà lớp N chiếm khoảng 90\,\%, hàm mất mát entropy chéo thông thường khiến mô hình thiên về dự đoán N, vì phần lớn tổng mất mát đến từ lớp này.
+Để bù lại, mô hình được huấn luyện với hàm focal loss~\cite{lin2017focal} có trọng số lớp:
+\begin{equation}
+  \mathcal{L}=\frac{\sum_{n}w_{y_n}\,(1-p_{n})^{\gamma}\,\big(-\log p_{n}\big)}{\sum_{n}w_{y_n}},\qquad
+  w_c\propto\frac{1}{\sqrt{N_c}},
+  \label{eq:ch4-focal}
+\end{equation}
+trong đó $p_n$ là xác suất mô hình gán cho lớp đúng $y_n$ của nhịp thứ $n$, $N_c$ là số nhịp của lớp $c$ và $\gamma=2$.
+Công thức được xây dựng từ hàm entropy chéo $-\log p_n$, vốn nhỏ khi mô hình tự tin vào lớp đúng và lớn khi mô hình gán xác suất thấp cho lớp đúng.
+Hai thành phần được thêm vào giải quyết hai khía cạnh khác nhau của sự mất cân bằng.
+
+Trọng số $w_c$ tăng vai trò của các lớp hiếm.
+Nếu dùng trọng số nghịch đảo trực tiếp $w_c\propto1/N_c$, một nhịp F trong DS1 nặng gấp $45\,866/415\approx110$ lần một nhịp N, và mô hình gán nhầm hàng nghìn nhịp N thành F để tránh bỏ sót nhịp F.
+Lấy căn bậc hai làm giảm mức chênh này xuống $\sqrt{110}\approx10{,}5$ lần, đủ để lớp hiếm không bị bỏ qua mà không bị khuếch đại quá mức.
+
+Thừa số $(1-p_n)^{\gamma}$ do Lin và cộng sự~\cite{lin2017focal} đề xuất, giảm ảnh hưởng của các nhịp đã được phân loại chắc chắn.
+Với $\gamma=2$, một nhịp có $p_n=0{,}9$ chỉ còn đóng góp $0{,}01$ lần so với entropy chéo, trong khi một nhịp khó có $p_n=0{,}5$ vẫn giữ $0{,}25$ lần.
+Do phần lớn nhịp dễ là nhịp N điển hình, thừa số này giúp mạng nhỏ dồn khả năng học vào các nhịp khó nằm gần ranh giới giữa các lớp.
+Cuối cùng, phép chia cho $\sum_n w_{y_n}$ giữ độ lớn của hàm mất mát không phụ thuộc vào tỉ lệ các lớp trong từng lô dữ liệu.
+
+Mô hình được tối ưu bằng AdamW~\cite{loshchilov2019decoupled} với tốc độ học $10^{-3}$ và hệ số suy giảm trọng số $10^{-2}$, kèm dropout sau các khối tích chập và trước lớp cuối để hạn chế học thuộc đặc điểm của từng bệnh nhân.
+
+\subsection{Dữ liệu bổ sung}
+
+DS1 chỉ có 944 nhịp S, tập trung ở một số ít bệnh nhân, nên mô hình khó học được sự đa dạng của lớp này.
+Đề tài bổ sung vào tập huấn luyện các nhịp S, V, F và một phần tư số nhịp N từ cơ sở dữ liệu MIT-BIH Supraventricular Arrhythmia (SVDB)~\cite{greenwald1990improved}, vốn được xây dựng riêng cho loạn nhịp trên thất.
+Tín hiệu SVDB được đưa về cùng tần số lấy mẫu và đi qua đúng khối tiền xử lý và trích xuất đặc trưng của Mục~\ref{sec:tienxuly} và Mục~\ref{sec:dactrung}.
+Dữ liệu bổ sung chỉ dùng để huấn luyện; mọi phép đánh giá vẫn chỉ thực hiện trên MIT-BIH, nên kết quả vẫn so sánh được với các công trình khác.
+
+\subsection{Quy trình lựa chọn cấu hình}
+
+Các lựa chọn về hàm mất mát, số epoch, tăng cường dữ liệu, đặc trưng RR và dữ liệu bổ sung được thử lần lượt bằng kiểm định chéo trên DS1, mỗi lần thay đổi một yếu tố so với cấu hình tốt nhất hiện có.
+Để tránh chọn nhầm một cải thiện ngẫu nhiên, quy tắc chấp nhận được đặt trước khi chạy: một thay đổi chỉ được nhận khi macro-F1 tăng ở cả ba seed và mức tăng trung bình đạt ít nhất 0{,}01.
+Hình~\ref{fig:ch4-chon} và Bảng~\ref{tab:ch4-ablation} tổng hợp các bước với CNN Lite.
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/chon_cauhinh.pdf}
+  \caption{Macro-F1 kiểm định chéo trên DS1 qua các bước lựa chọn cấu hình CNN Lite; thanh lỗi là độ lệch chuẩn qua ba seed, viền đen là cấu hình cuối cùng.}\label{fig:ch4-chon}
+
+  \vspace{1.5em}
+  \captionof{table}{Kết quả kiểm định chéo trên DS1 của các cấu hình CNN Lite đã thử; mỗi dòng so với cấu hình được nhận gần nhất phía trên.}\label{tab:ch4-ablation}
+  \small\setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}llccccrl@{}}
+    \toprule
+     & & & \multicolumn{2}{c}{SVEB} & \multicolumn{2}{c}{VEB} & \\
+    \cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    Bước & Thay đổi & macro-F1 & Se & $+P$ & Se & \multicolumn{1}{c}{$+P$} & Kết luận \\
+    \midrule
+    A0  & entropy chéo có trọng số, dừng sớm & 0{,}438 & 0{,}16 & 0{,}14 & 0{,}85 & 0{,}58 & nền \\
+    A1  & cố định 5 epoch            & 0{,}455 & 0{,}17 & 0{,}19 & 0{,}84 & 0{,}65 & nhận \\
+    A2  & focal loss, 12 epoch       & 0{,}491 & 0{,}26 & 0{,}38 & 0{,}83 & 0{,}67 & nhận \\
+    A3  & tăng cường dữ liệu         & 0{,}483 & 0{,}26 & 0{,}39 & 0{,}86 & 0{,}63 & loại \\
+    A4  & thêm 2 đặc trưng RR        & 0{,}481 & 0{,}26 & 0{,}45 & 0{,}83 & 0{,}58 & loại \\
+    A5  & thêm SVDB, 3 epoch         & 0{,}509 & 0{,}43 & 0{,}28 & 0{,}88 & 0{,}67 & nhận \\
+    A5b & thêm 18 bản ghi SVDB khác  & 0{,}512 & 0{,}36 & 0{,}27 & 0{,}87 & 0{,}74 & loại \\
+    \bottomrule
+  \end{tabular}
+\end{figure}
+
+Kết quả từng bước cho thấy những điểm sau:
+\begin{itemize}
+  \item \textbf{Số epoch.} Dừng sớm theo hàm mất mát trên dữ liệu kiểm tra nội bộ cho kết quả kém ổn định giữa các seed; cố định số epoch cho kết quả tốt hơn và dễ tái lập hơn.
+  \item \textbf{Focal loss} là thay đổi có tác động lớn nhất, nâng macro-F1 thêm 0{,}036 và tăng gấp đôi độ chính xác dương SVEB.
+  Với CNN Full, focal loss không giúp ích, cho thấy lợi ích của nó gắn với dung lượng nhỏ của CNN Lite.
+  \item \textbf{Tăng cường dữ liệu} và \textbf{hai đặc trưng RR mở rộng} không cải thiện ổn định theo seed.
+  Thông tin của hai đặc trưng RR mới phần lớn đã nằm trong bốn đặc trưng sẵn có.
+  \item \textbf{Dữ liệu SVDB} nâng macro-F1 thêm 0{,}018 và giảm độ lệch chuẩn giữa các seed hơn hai lần.
+  Độ nhạy SVEB tăng từ 0{,}26 lên 0{,}43 và số nhịp N bị nhầm thành F giảm từ khoảng 3\,700 xuống khoảng 500, đổi lại độ chính xác dương SVEB giảm từ 0{,}38 xuống 0{,}28 do mô hình báo S nhiều hơn.
+  Bổ sung thêm bản ghi SVDB khác chỉ tăng 0{,}003 nên không đạt ngưỡng chấp nhận.
+\end{itemize}
+
+\subsection{Mô hình cuối cùng}
+
+CNN Full được chọn theo cùng quy trình, đạt macro-F1 tốt nhất 0{,}507 với entropy chéo có trọng số sau 8 epoch; với mạng này, cả focal loss, tăng cường dữ liệu và dữ liệu SVDB đều không qua được quy tắc chấp nhận.
+CNN Lite được chọn để triển khai vì đạt macro-F1 tương đương, 0{,}509 so với 0{,}507, trong khi có ít tham số hơn khoảng 28 lần và độ lệch chuẩn giữa các seed nhỏ hơn ba lần.
+Cấu hình cuối của CNN Lite gồm focal loss, trọng số căn bậc hai nghịch đảo và dữ liệu SVDB, huấn luyện trong 3 epoch.
+
+Cần lưu ý rằng cấu hình được chọn dựa trên chính kết quả kiểm định chéo, nên các giá trị trong Bảng~\ref{tab:ch4-ablation} có phần lạc quan; đánh giá khách quan được thực hiện trên DS2 ở Mục~\ref{sec:dochinhxac}.
+Mô hình cuối được huấn luyện lại trên toàn bộ DS1 cùng dữ liệu SVDB rồi đóng băng ngày 15/10/2026.
+Từ thời điểm này, mọi bước phía sau, từ lượng tử hoá đến phần cứng, đều dùng đúng một bộ trọng số này.
