@@ -1,12 +1,17 @@
-% Muc 1.3  --  phu trach: xem report/PHANCONG.md
+% =====================================================================
+% MỤC 1.3: MỤC TIÊU VÀ CÂU HỎI NGHIÊN CỨU
+% =====================================================================
 \section{Mục tiêu và câu hỏi nghiên cứu}\label{sec:mucTieu}
-\paragraph{Định vị của đề tài.} Đề tài hướng tới \dinhvi.
 
-\begin{goiy}
-  \begin{itemize}
-    \item \textbf{Câu hỏi nghiên cứu:} có thể chạy trọn một CNN 1D int8 phân loại nhịp trên FPGA nhỏ (MAX~10 10M50) mà kết quả khớp từng bit với mô hình số nguyên phần mềm, \emph{trên giao thức đánh giá liên bệnh nhân}, hay không?
-    \item \textbf{Mục tiêu đo được:} (i) macro-F1 và SVEB/VEB (Se, $+P$) trên DS2; (ii) bit-exact trên các đoạn golden; (iii) đạt 50~MHz và vừa tài nguyên chip; (iv) độ trễ từ đỉnh R đến nhãn được phân rã.
-    \item Mục tiêu phụ: giao thức Host--FPGA tin cậy; công cụ quan sát trực tiếp trên board.
-    \item \textbf{Cách nói:} đề tài \emph{không} khẳng định nhanh hơn hay tiết kiệm công suất hơn các công trình khác; giá trị nằm ở tính kiểm chứng (xem \texttt{report/DINHVI.md}).
-  \end{itemize}
-\end{goiy}
+Đề tài xây dựng chuỗi tham chiếu số nguyên khớp từng bit cho phân loại nhịp ECG liên bệnh nhân theo chuẩn AAMI từ mẫu tín hiệu số hoá đến nhãn dự đoán, thông qua bộ tăng tốc tích chập 1D dạng \texttt{int8} trên FPGA Altera/Intel MAX 10 và quy trình kiểm chứng đầu cuối \cite{moody2001impact, dechazal2004automatic, aami2012ec57, jacob2018quantization, liu2025fpga1dcnn}.
+
+\textbf{Câu hỏi nghiên cứu:} Có thể thực thi trọn vẹn mạng 1D-CNN dạng \texttt{int8} cho phân loại nhịp ECG trên FPGA Altera/Intel MAX 10 với kết quả khớp từng bit với mô hình số nguyên tham chiếu trên phần mềm dưới giao thức đánh giá liên bệnh nhân hay không \cite{dechazal2004automatic, jacob2018quantization, liu2025fpga1dcnn}? Các mục tiêu định lượng cần đạt gồm:
+
+\begin{itemize}
+	\item \textbf{Hiệu năng liên bệnh nhân trên tập kiểm thử:} Đạt \emph{macro-F1} $0{,}6029$ theo phân đoạn \emph{annotation}, $0{,}5991$ theo \emph{e2e matched} và $0{,}5940$ theo \emph{e2e gross} trên 22 bản ghi tập kiểm thử, với bộ dò QRS đạt độ nhạy $99{,}753\%$ và giá trị dự báo dương $99{,}682\%$ trong ngưỡng $\pm 150\text{ ms}$ cùng độ nhạy và giá trị dự báo dương cho nhịp ngoại tâm thu trên thất và nhịp ngoại tâm thu thất theo chuẩn EC57 \cite{aami2012ec57, dechazal2004automatic, li2026lightweight}.
+	\item \textbf{Tính khớp từng bit và toàn vẹn khung truyền:} Đạt $0$ lỗi tính toán và $0$ lỗi truyền dẫn trên luồng sạch qua 8 đoạn \emph{golden} ($1\,306$ nhịp), khớp mã tóm tắt và dữ liệu các khung truyền thông, đồng thời đạt $0$ lần nhận nhầm khung khi kiểm thử nhiễu khung hỏng \cite{jacob2018quantization}.
+	\item \textbf{Ràng buộc xung nhịp, băng thông và tài nguyên:} Vận hành ở xung nhịp $50\text{ MHz}$ và UART $8\text{N1}$ mặc định $115\,200\text{ baud}$ (tải dữ liệu $\approx 2{,}75\text{ kB/s}$, chiếm $\approx 24\%$ băng thông), giữ mô hình \texttt{int8} gọn nhẹ nằm trong tài nguyên của FPGA Altera/Intel MAX 10 \cite{hariri2026hardware, liu2025fpga1dcnn}.
+	\item \textbf{Độ trễ đầu cuối và chu kỳ suy luận:} Đo và phân rã độ trễ từ thời điểm xuất hiện đỉnh R tinh chỉnh đến thời điểm phát nhãn cùng số chu kỳ suy luận của bộ tăng tốc.
+\end{itemize}
+
+Mục tiêu phụ là hoàn thiện khung UART kiểm tra lỗi cùng công cụ đối chiếu trực tiếp với chuỗi \emph{golden}. Đề tài không hướng tới vượt trội về tốc độ hay công suất so với các kiến trúc chuyên biệt khác \cite{hariri2026hardware, liu2023fully}, mà tập trung vào tính khớp \emph{bit-exact}, minh bạch thông số và khả năng tái lập.
