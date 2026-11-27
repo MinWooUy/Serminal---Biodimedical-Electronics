@@ -1,46 +1,26 @@
 % Muc 5.5  --  phu trach: Dung (xem report/PHANCONG.md)
-% nguon: host/board_classifier.py, host/ecg_layer_host_pc.py, docs/baseline_v1.md, report/DINHVI.md C6, C12
+% nguon: host/board_classifier.py, host/ecg_layer_host_pc.py, docs/baseline_v1.md
 \section{Trình tự thực thi một nhịp}\label{sec:trinhtu}
-Hình~\ref{fig:trinhtu} khái quát ba giai đoạn tương tác giữa host và FPGA để phân loại một nhịp tim: host nạp dữ liệu và phát lệnh xuống FPGA, điều phối vòng lặp xử lý tuần tự qua từng layer ngay trên bộ nhớ trên chip mà không đọc lại dữ liệu trung gian, và cuối cùng chỉ đọc kết quả phân loại của lớp đầu ra về máy tính.
+Hình~\ref{fig:trinhtu} biểu diễn quy trình ba giai đoạn giữa host và FPGA để phân loại một nhịp tim: gửi lệnh nạp dữ liệu xuống FPGA, điều phối thực thi tuần tự qua từng layer ngay trên bộ nhớ trên chip mà không đọc lại bản đồ đặc trưng trung gian, và đọc kết quả phân loại ở lớp cuối về host.
 
 \begin{figure}[htbp]\centering
   \includegraphics[width=0.66\textwidth]{ch05_giao_thuc_uart/trinh_tu.png}
-  \caption{Luồng tương tác ba giai đoạn giữa host và FPGA khi thực thi mạng theo từng layer.}\label{fig:trinhtu}
+  \caption{Trình tự lệnh giữa host và FPGA để phân loại một nhịp.}\label{fig:trinhtu}
 \end{figure}
 
-\subsection{Chế độ nạp mô hình một lần (\texttt{--resident})}
-Tổng trọng số của sáu lớp trong mô hình CNN Lite là $23\,408$~byte, lớn hơn một bank trọng số ($16\,384$~byte) nhưng vừa trong hai bank ($32\,768$~byte).
-Nhờ hai trường \texttt{w\_base} và \texttt{b\_base} trong lệnh \texttt{CONFIG} $16$~byte (được bitstream báo hỗ trợ qua bit~$4$ của trường \texttt{features} trong \texttt{INFO}), host có thể nạp toàn bộ tham số mô hình \emph{một lần duy nhất} trước nhịp đầu tiên (bảng phân bổ địa chỉ chi tiết xem Bảng~\ref{tab:thuongtru}, Mục~\ref{sec:mem}):
+\textbf{Hai chế độ cấp tham số mô hình.}
+Ở chế độ mặc định, host gửi trọng số và bias theo từng layer trước khi chạy ($232$~gói, $27\,228$~B mỗi nhịp).
+Khi bật chế độ nạp một lần (cờ \texttt{--resident}), host dùng trường địa chỉ gốc \texttt{w\_base} và \texttt{b\_base} trong lệnh \texttt{CONFIG} $16$~byte để nạp trước toàn bộ tham số của mô hình CNN Lite lên chip trong một lần khởi tạo ($194$~gói, $26\,195$~B; chi tiết địa chỉ ở Bảng~\ref{tab:thuongtru}, Mục~\ref{sec:mem}):
 \begin{itemize}
-  \item \textbf{Bank trọng số~0 ($8\,816$~byte):} giữ \texttt{conv0} ($112$~B), \texttt{conv1} ($2\,560$~B) và \texttt{conv2} ($6\,144$~B); được nạp qua $70$~gói \texttt{WRITE\_W} rồi chuyển sang phía bank đọc bằng một lệnh \texttt{SWAP(w=1)}.
-  \item \textbf{Bank trọng số~1 ($14\,592$~byte):} giữ \texttt{conv3} ($12\,288$~B), \texttt{FC1} ($2\,176$~B) và \texttt{FC2} ($128$~B); được nạp tiếp qua $116$~gói \texttt{WRITE\_W} vào bank ghi còn lại và nằm chờ tại đó.
-  \item \textbf{RAM bias ($212$~giá trị \texttt{int32}, $848$~byte):} chứa liên tiếp toàn bộ bias của sáu lớp qua $7$~gói \texttt{WRITE\_BIAS}. Riêng hệ số dịch vẫn phải gửi theo từng layer bằng \texttt{WRITE\_SHIFT} vì bộ nhớ shift chỉ có $64$~mục đánh chỉ số trực tiếp theo kênh.
+  \item \textbf{Bank trọng số~0 ($8\,816$~B):} nạp trọng số của \texttt{conv0}, \texttt{conv1} và \texttt{conv2} bằng \texttt{WRITE\_W}, sau đó gọi \texttt{SWAP(w=1)} để đưa sang phía bank đọc.
+  \item \textbf{Bank trọng số~1 ($14\,592$~B):} nạp trọng số của \texttt{conv3}, \texttt{FC1} và \texttt{FC2} vào bank ghi còn lại.
+  \item \textbf{RAM bias ($212$~giá trị \texttt{int32}):} nạp nối tiếp toàn bộ bias của sáu lớp bằng \texttt{WRITE\_BIAS}; hệ số dịch được nạp theo từng layer bằng \texttt{WRITE\_SHIFT}.
 \end{itemize}
-Cần lưu ý đây là một chế độ cấu hình của phần mềm host (bật bằng cờ \texttt{--resident}); ở cấu hình mặc định, \texttt{BoardClassifier} vẫn gửi lại trọng số và bias cho từng layer.
-Nếu board bị nhấn nút reset cứng trong lúc đang chạy, tham số trong RAM bị xoá mà host không tự phát hiện ngay nếu không phát sinh lỗi gói; ngược lại, sau bất kỳ lỗi giao thức nào, \texttt{recover()} đều tự động nạp lại mô hình ở nhịp kế tiếp.
 
-\subsection{Trình tự lệnh của một nhịp và chi phí đường truyền}
-Ở chế độ \texttt{--resident}, ba giai đoạn trên Hình~\ref{fig:trinhtu} ánh xạ thành đúng $27$~gói lệnh cho mỗi nhịp:
+\textbf{Trình tự lệnh của một nhịp.}
+Sau bước khởi tạo \texttt{--resident}, mỗi nhịp tim được thực thi bằng $27$~gói lệnh ($954$~B gửi đi):
 \begin{enumerate}
-  \item \textbf{Nạp nhịp đầu vào ($4$~gói):} cửa sổ $360$~mẫu đã chuẩn hoá \texttt{z\_q} được đệm sẵn $3$~mẫu~$0$ ở mỗi đầu thành $366$~byte, chia làm $3$~gói \texttt{WRITE\_X} ($126+126+114$~byte) và chốt sang bank đọc bằng $1$~gói \texttt{SWAP(x=1)}.
-  \item \textbf{Chạy sáu layer nối tiếp ($21$~gói):} mỗi layer gồm bộ ba lệnh \texttt{WRITE\_SHIFT}, \texttt{CONFIG} ($16$~byte) và \texttt{RUN} (nhận \texttt{RESULT} trả về \texttt{[status, cycles]}). Xen giữa chuỗi có $1$~lệnh \texttt{SWAP(w=1)} trước \texttt{conv3} để đổi sang đọc bank trọng số~1; ở \texttt{FC1} có thêm $1$~gói \texttt{WRITE\_X} ghi $4$~byte đặc trưng RR tại địa chỉ~$200$ và $1$~gói \texttt{WRITE\_SHIFT} thứ hai ghi độ dịch trước $S_G$ từ địa chỉ~$64$; ở \texttt{FC2} bật cờ \texttt{out\_int32} kèm \texttt{argmax}. Toàn bộ bản đồ đặc trưng trung gian được giữ trên chip.
-  \item \textbf{Khôi phục bank và đọc nhãn ($2$~gói):} phát $1$~lệnh \texttt{SWAP(w=1)} sau \texttt{FC2} để trả bank đọc trọng số về lại bank~0 cho nhịp sau, rồi gọi $1$~lệnh \texttt{READ\_FMAP(offset=0, len=17)} đọc về bốn logit $32$~bit ($16$~byte) và $1$~byte nhãn dự đoán N/S/V/F.
+  \item \textbf{Nạp cửa sổ đầu vào:} gửi $360$~mẫu nhịp kèm $6$~mẫu đệm không ($366$~B, chia $3$~gói \texttt{WRITE\_X}) vào địa chỉ~$0$, rồi gọi \texttt{SWAP(x=1)} chuyển sang bank đọc của ifmap.
+  \item \textbf{Chạy sáu layer (\texttt{conv0} $\to$ \texttt{conv1} $\to$ \texttt{conv2} $\to$ \texttt{conv3} $\to$ \texttt{FC1} $\to$ \texttt{FC2}):} ở mỗi layer, host gửi \texttt{WRITE\_SHIFT}, \texttt{CONFIG} và \texttt{RUN} (nhận \texttt{RESULT} trả về \texttt{[status, cycles]}). Trước \texttt{conv3} và sau \texttt{FC2}, host gọi \texttt{SWAP(w=1)} để chuyển đổi bank đọc trọng số giữa hai nhóm; tại \texttt{FC1}, host ghi thêm $4$~B đặc trưng RR ở địa chỉ~$200$ bằng \texttt{WRITE\_X} và gửi gói \texttt{WRITE\_SHIFT} thứ hai cho độ dịch trước $S_G$; tại \texttt{FC2}, lệnh \texttt{CONFIG} bật cờ \texttt{out\_int32} và \texttt{argmax}.
+  \item \textbf{Đọc kết quả:} gửi một lệnh \texttt{READ\_FMAP(offset=0, len=17)} thu về bốn logit $32$~bit ($16$~B) và $1$~byte nhãn dự đoán.
 \end{enumerate}
-
-\begin{table}[htbp]\centering
-\caption{Chi phí đường truyền ở $1{,}5$~Mbaud giữa hai chế độ điều phối (đo trên board ngày 24/11/2026).}\label{tab:ch5-goinhip}
-\small\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Giai đoạn / chế độ chạy & Số gói & Byte gửi (TX) & Thời gian đo ở host \\ \midrule
-Nạp ban đầu một lần (\texttt{--resident}) & 194 & 26\,195 & $0{,}88$~s \\
-Mỗi nhịp ở chế độ \texttt{--resident} & 27 & 954 & $\approx0{,}10$~s/nhịp \\
-Mỗi nhịp ở chế độ mặc định (gửi lại trọng số) & 232 & 27\,228 & $\approx1{,}0$~s/nhịp \\ \bottomrule
-\end{tabular}
-
-\smallskip
-\footnotesize Nguồn: \texttt{docs/baseline\_v1.md} (mục 2, dòng 6) và \texttt{results/hardware\_logs/check\_all\_resident\_20261124.txt}.
-\end{table}
-
-Bảng~\ref{tab:ch5-goinhip} cho thấy chế độ nạp một lần giảm lượng byte gửi mỗi nhịp từ $27\,228$~byte xuống $954$~byte (kèm $303$~byte nhận về ở chiều lên) và rút thời gian đường truyền từ khoảng $1{,}0$~s xuống khoảng $0{,}10$~s mỗi nhịp.
-Trong khoảng $0{,}10$~s đó, tổng thời gian tính toán của sáu layer trên FPGA chỉ chiếm $7{,}34$~ms ($367\,091$ chu kỳ ở $50$~MHz, không gồm UART) và thời gian truyền bit thuần tuý trên dây $1{,}5$~Mbaud chỉ cỡ $6$--$8$~ms; phần lớn thời gian còn lại nằm ở độ trễ khứ hồi USB--UART ($\approx3{,}5$~ms mỗi gói) của $27$~lượt giao dịch dừng--chờ, được phân tích chi tiết ở Mục~\ref{sec:hieunang}.
