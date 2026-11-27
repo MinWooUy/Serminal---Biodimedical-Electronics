@@ -1,10 +1,30 @@
-% Muc 5.2  --  phu trach: xem report/PHANCONG.md
+% Muc 5.2  --  phu trach: Dung (xem report/PHANCONG.md)
+% nguon: rtl/cnn1d/comm/crc/crc16_ccitt_next.v, comm/protocol/packet_rx.v, packet_tx.v, docs/quartus/cnn1d.fit.summary
 \section{Khung gói và CRC-16}\label{sec:khungoi}
-\begin{goiy}
-  \begin{itemize}
-    \item Khung: \texttt{A5 5A | CMD | SEQ | LEN\_LO | LEN\_HI | PAYLOAD | CRC\_LO | CRC\_HI}; CRC bao từ CMD đến hết payload (Hình~\ref{fig:khungoi}).
-    \item CRC-16/CCITT (đa thức 0x1021, khởi tạo 0xFFFF): \texttt{crc16\_ccitt\_next.v}; payload chỉ được công bố sau khi CRC đúng; timeout \texttt{packet\_rx}.
-    \item Độ dài payload tối đa (\texttt{MAX\_PAYLOAD}) và ảnh hưởng đến băng thông.
-  \end{itemize}
-\end{goiy}
-\hinhcho{0.18}{khung gói: A5 5A | CMD | SEQ | LEN(2) | PAYLOAD | CRC16(2)}{Cấu trúc khung gói UART.}{fig:khungoi}
+Mọi gói tin trao đổi trên cả hai chiều Host $\leftrightarrow$ FPGA đều tuân theo cùng một cấu trúc nhị phân như thể hiện trên Hình~\ref{fig:khungoi}.
+Các trường nhiều byte (độ dài tải, mã kiểm lỗi và các số nguyên trong tải) đều truyền theo thứ tự byte thấp trước (little-endian).
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=0.96\textwidth]{ch05_giao_thuc_uart/frame.png}
+  \caption{Cấu trúc khung gói UART hai chiều giữa host và bộ tăng tốc.}\label{fig:khungoi}
+\end{figure}
+
+Mỗi khung gồm $8$~byte bao gói cố định và phần tải dữ liệu độ dài thay đổi:
+\begin{itemize}
+  \item \textbf{\texttt{SOF} (\texttt{0xA5}, \texttt{0x5A} --- $2$~byte):} cặp byte đồng bộ đánh dấu đầu khung. Nhờ trường độ dài tường minh đi kèm, các byte \texttt{0xA5} hoặc \texttt{0x5A} nằm bên trong vùng dữ liệu vẫn được truyền nguyên trạng mà không cần chèn byte thoát.
+  \item \textbf{\texttt{CMD} ($1$~byte) và \texttt{SEQ} ($1$~byte):} \texttt{CMD} chỉ định mã lệnh ở chiều xuống (\texttt{0x08}--\texttt{0x15}) hoặc loại phản hồi ở chiều lên (\texttt{0x80} \texttt{ACK}, \texttt{0x81} \texttt{NACK}, \texttt{0x82} \texttt{RESULT}). \texttt{SEQ} là số thứ tự gói ($0\ldots255$) do host tăng dần và được FPGA sao chép nguyên vào gói trả lời để đối chiếu cặp yêu cầu--phản hồi.
+  \item \textbf{\texttt{LENGTH DATA} (\texttt{LEN\_LO}, \texttt{LEN\_HI} --- $2$~byte):} số nguyên không dấu $16$~bit biểu diễn số byte của tải dữ liệu ($0\le\texttt{LEN}\le\texttt{MAX\_PAYLOAD}$).
+  \item \textbf{\texttt{DATA\_PAYLOAD} (\texttt{LEN}~byte):} chứa tham số cấu hình hoặc mảng dữ liệu của lệnh gửi đi, hoặc kết quả đọc về; trường này vắng mặt khi $\texttt{LEN}=0$.
+  \item \textbf{\texttt{CRC} (\texttt{CRC\_LO}, \texttt{CRC\_HI} --- $2$~byte):} mã kiểm tra dư thừa vòng (Cyclic Redundancy Check, CRC) tính liên tục từ byte \texttt{CMD} qua \texttt{SEQ}, \texttt{LEN\_LO}, \texttt{LEN\_HI} đến hết byte cuối của \texttt{DATA\_PAYLOAD} (không tính hai byte \texttt{SOF} và chính hai byte \texttt{CRC}).
+\end{itemize}
+
+Thiết kế dùng chuẩn CRC-16/CCITT-FALSE với đa thức $0\text{x}1021$ ($x^{16}+x^{12}+x^5+1$), giá trị khởi tạo \texttt{0xFFFF}, không lật bit vào/ra và không đảo bit cuối (chuỗi kiểm chuẩn \texttt{"123456789"} cho \texttt{0x29B1}).
+Mạch tổ hợp \texttt{crc16\_ccitt\_next} (\texttt{comm/crc/crc16\_ccitt\_next.v}) cập nhật trọn một byte trong một chu kỳ xung nhịp, cho phép bộ thu \texttt{packet\_rx} và bộ phát \texttt{packet\_tx} tính CRC cuốn chiếu ngay khi từng byte đi qua.
+
+Trong \texttt{packet\_rx} (\texttt{comm/\allowbreak protocol/\allowbreak packet\_rx.v}), toàn bộ các byte tải được giữ tạm trong thanh ghi đệm \texttt{payload}; xung \texttt{packet\_valid} chỉ được phát sau khi kiểm khớp hai byte CRC cuối khung.
+Nếu $\texttt{LEN}>\texttt{MAX\_PAYLOAD}$ hoặc CRC sai, \texttt{packet\_rx} chỉ phát xung \texttt{packet\_error} để bộ điều khiển trả tín hiệu từ chối (Negative Acknowledge, NACK) mã~$1$, tuyệt đối không cho dữ liệu hỏng ghi vào bộ nhớ truy cập ngẫu nhiên tĩnh (Static Random-Access Memory, SRAM), đổi bank hay kích chạy layer.
+Trường hợp gói bị ngắt quãng quá $\texttt{RX\_TIMEOUT\_CLKS}=\texttt{CLK\_FREQ}/10=5\,000\,000$ chu kỳ ($100$~ms ở $50$~MHz) hoặc gặp \texttt{frame\_error} từ tầng vật lý, \texttt{packet\_rx} tự huỷ khung dở và quay về trạng thái săn \texttt{0xA5} mà không trả lời.
+
+Trên bitstream của board, tham số \texttt{MAX\_PAYLOAD} được đặt bằng $128$~byte (thay vì mức tối đa $256$~byte của module).
+Giá trị này vừa đủ để trả trọn bộ nhớ trung bình toàn cục (Global Average Pooling, GAP) $64$~kênh ($2\cdot\texttt{COUT\_MAX}=128$~byte) trong một khung, đồng thời tiết kiệm thanh ghi đệm khung trong \texttt{uart\_crc\_top} ($3\,225$ phần tử logic, $2\,260$ thanh ghi theo báo cáo Quartus ở Mục~\ref{sec:taiguyen}).
+Với $2$~byte đầu tải dành cho địa chỉ nền ở các lệnh ghi mảng, mỗi gói đầy mang $126$~byte dữ liệu trên tổng khung $136$~byte (hiệu suất khung $92{,}6\,\%$); phần chi phí đường truyền thực tế không nằm ở $8$~byte bao gói mà ở số lần chờ khứ hồi khi phải chia một tensor lớn thành nhiều gói nhỏ (Mục~\ref{sec:trinhtu}).

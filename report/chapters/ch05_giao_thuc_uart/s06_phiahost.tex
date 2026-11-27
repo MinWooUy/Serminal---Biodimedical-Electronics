@@ -1,8 +1,19 @@
-% Muc 5.6  --  phu trach: xem report/PHANCONG.md
+% Muc 5.6  --  phu trach: Dung (xem report/PHANCONG.md)
+% nguon: python/link/serial_link.py, proto_layer.py, layer_host.py, layersim/, host/, scripts/board_*.py, docs/uart_protocol.md
 \section{Phía host}\label{sec:phiahost}
-\begin{goiy}
-  \begin{itemize}
-    \item \texttt{LayerHost}/\texttt{SerialTransport} (Python): đóng gói, CRC, đợi phản hồi; \texttt{board\_classifier.py}.
-    \item Mô hình phần mềm của FPGA (\texttt{python/link/layersim}) để thử khi chưa có board; công cụ \texttt{board\_monitor}, \texttt{board\_compare}, \texttt{board\_eval}.
-  \end{itemize}
-\end{goiy}
+Phần mềm phía host được tổ chức thành ba lớp tách biệt để cùng một bộ mã điều khiển chạy được cả trên phần cứng thật lẫn trên mô hình giả lập:
+\sloppy
+\begin{itemize}
+  \item \textbf{Kênh truyền và đóng gói (\texttt{python/\allowbreak link/\allowbreak serial\_link.py}, \texttt{proto\_layer.py}, \texttt{layer\_host.py}):} \texttt{SerialTransport} giao tiếp cổng COM qua \texttt{pyserial} ở định dạng 8N1 không chặn, hỗ trợ kiểm tra nối tắt chân \texttt{TX--RX} (\texttt{loopback()}) trước khi ghép mạch; lớp bọc \texttt{RawLog} ghi lại toàn bộ dòng byte hai chiều kèm mốc thời gian vào tệp \texttt{.raw.log}. Trên tầng đó, \texttt{LayerHost} đóng khung, tính và kiểm CRC-16, đối chiếu \texttt{SEQ}, truy vấn \texttt{INFO} để lấy \texttt{MAX\_PAYLOAD} và tự động chia các tensor lớn thành từng gói $\le126$~byte dữ liệu (\texttt{WRITE\_X}, \texttt{WRITE\_W}, \texttt{WRITE\_SHIFT}) hoặc tối đa $31$~phần tử \texttt{int32} (\texttt{WRITE\_BIAS}).
+  \item \textbf{Điều phối mạng (\texttt{host/\allowbreak ecg\_layer\_host\_pc.py}, \texttt{board\_classifier.py}):} đọc tham số đóng băng từ \texttt{export/weights.h} và sắp lại trọng số tích chập sang thứ tự phần cứng \texttt{[Cout]\allowbreak[Kw]\allowbreak[Cin]}. Script \texttt{ecg\_layer\_host\_pc.py} chạy chẩn đoán một nhịp bất kỳ, đọc lại đầu ra từng layer bằng \texttt{READ\_FMAP}/\texttt{READ\_GAP} để so từng byte với golden; còn \texttt{BoardClassifier} dùng cho chế độ chạy liên tục (chỉ đọc $17$~byte cuối của FC2, kiểm tra chéo byte \texttt{argmax} với bốn logit nhận về, quản lý cờ \texttt{--resident} và hàm phục hồi \texttt{recover()}).
+  \item \textbf{Mô hình giả lập FPGA mức byte (\texttt{python/\allowbreak link/\allowbreak layersim}):} \texttt{LayerFpgaSim} tái tạo đúng hành vi của \texttt{packet\_rx} và \texttt{layer\_cmd\_controller} (đồng bộ \texttt{A5 5A}, trả \texttt{NACK} mã~$1\ldots4$, tự huỷ khung dở sau $100$~ms và làm rơi byte đến khi đang bận ngoài \texttt{IDLE}) trên đồng hồ ảo \texttt{LayerLink} kèm bộ tiêm lỗi đường truyền \texttt{LineFaults}, cho phép kiểm thử toàn bộ ngăn xếp phần mềm và kịch bản phục hồi lỗi khi chưa có board.
+\end{itemize}
+\fussy
+
+Bốn công cụ dòng lệnh trong \texttt{scripts/} dùng chung giao diện này (chọn \texttt{--sim} hoặc \texttt{--serial}):
+\begin{enumerate}
+  \item \texttt{layer\_board\_test.py}: kiểm tra nhanh kết nối phần cứng bằng lệnh \texttt{info} và bài kiểm khói \texttt{smoke} một phép tích chập $1\times1$ độ dài~$3$.
+  \item \texttt{board\_monitor.py}: chạy tiền xử lý số nguyên (\texttt{IntegerPipelineStream}) trên host và đẩy từng nhịp sang một luồng nền gọi FPGA để cửa sổ hiển thị sóng không bị khựng bởi độ trễ đường truyền. Khi chạy với \texttt{--check all}, công cụ đóng gói kết quả của FPGA vào luồng khung giám sát mức ứng dụng (\texttt{SAMPLES}/\allowbreak\texttt{BEAT}/\allowbreak\texttt{STATS} trong \texttt{python/\allowbreak viz/\allowbreak uart.py}) và đối chiếu mã kiểm CRC-32 tích luỹ (\texttt{beat\_digest}) với golden theo tiêu chuẩn Cổng kiểm chứng~4 (GATE~4): đạt khớp từng bit trên cả $8$~đoạn, $1\,306/1\,306$~nhịp (thuộc tập DS1, dùng để xác nhận phần cứng khớp phần mềm ở Mục~\ref{sec:bitexact}).
+  \item \texttt{board\_compare.py}: hiển thị song song ba hàng nhãn dưới đường sóng ECG trực tiếp gồm nhãn chuyên gia MIT-BIH, mô hình Lite số thực và nhãn từ FPGA, kèm thống kê đối chứng khớp từng bit với bản \texttt{int8} phần mềm.
+  \item \texttt{board\_eval.py}: phân loại toàn bộ một bản ghi MIT-BIH trên board, tự động phục hồi và gửi lại từ đầu các nhịp lỗi đường truyền theo tham số \texttt{--retries}, đồng thời xuất báo cáo tổng hợp (\texttt{metrics.json}, \texttt{beats.csv}).
+\end{enumerate}
