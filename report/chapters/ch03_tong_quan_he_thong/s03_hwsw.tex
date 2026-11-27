@@ -1,9 +1,11 @@
 % Muc 3.3  --  phu trach: xem report/PHANCONG.md
 \section{Phân chia phần cứng/phần mềm}\label{sec:hwsw}
-\begin{goiy}
-  \begin{itemize}
-    \item PC host (Python): tiền xử lý số nguyên, cắt cửa sổ 360 mẫu, z-score, RR; nạp trọng số; gửi lệnh; nhận nhãn.
-    \item FPGA: 6 layer CNN (conv0--conv3, FC1, FC2) + argmax; dữ liệu trung gian ở lại trên chip.
-    \item Lý do chia như vậy; hướng chuyển tiền xử lý vào phần cứng (Chương~\ref{ch:ketluan}).
-  \end{itemize}
-\end{goiy}
+
+Việc phân chia chức năng giữa PC host (Python) và FPGA được thiết kế nhằm tận dụng sự linh hoạt của phần mềm cho tiền xử lý tín hiệu/điều phối thực nghiệm, đồng thời tập trung tài nguyên FPGA cho các phép nhân--cộng song song của mạng nơ-ron.
+
+\begin{itemize}
+	\item \textbf{Phía PC host (Python):} Đảm nhiệm tiền xử lý số nguyên từ dữ liệu ECG, cắt cửa sổ $360$ mẫu, tính chuẩn hoá $z$-score và đặc trưng khoảng RR, nạp trọng số/tham số, gửi khung lệnh qua UART và nhận nhãn/kết quả trả về.
+	\item \textbf{Phía FPGA (MAX~10):} Thực thi trọn vẹn $6$ lớp của mô hình (\texttt{conv0}--\texttt{conv3}, FC1, FC2) và khối \texttt{argmax}, giữ toàn bộ bản đồ đặc trưng trung gian trên bộ nhớ nội chip thay vì đẩy qua lại ngoài board cho từng lớp.
+\end{itemize}
+
+Lựa chọn phân chia này giúp rút ngắn chu kỳ lặp khi phát triển pipeline tín hiệu và kiểm chứng trên board, đồng thời giữ kiến trúc bộ tăng tốc gọn nhẹ để tập trung kiểm chứng tính đúng đắn từng bit của chuỗi tính toán mạng. Các bước đưa tiền xử lý lên phần cứng hoặc tích hợp sâu hơn được xác định là hướng mở rộng ở Chương~\ref{ch:ketluan}.
