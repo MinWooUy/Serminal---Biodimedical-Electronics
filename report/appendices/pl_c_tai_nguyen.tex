@@ -1,5 +1,5 @@
 % nguon: docs/quartus/cnn1d.sta.summary, cnn1d.fit.summary (21/11/2026); rtl/cnn1d/SDC1.sdc, cnn1d.qsf
-\chapter{Báo cáo tài nguyên và timing chi tiết}\label{pl:taiguyen}
+\chapter{Báo cáo tài nguyên và định thời chi tiết}\label{pl:taiguyen}
 Phụ lục này bổ sung cho Mục~\ref{sec:taiguyen} các số liệu đầy đủ của lần biên dịch ngày 21/11/2026 (Quartus Prime Lite 18.1.0, chip 10M50DAF484C7G).
 
 \section*{Tóm tắt Fitter}
@@ -20,12 +20,12 @@ UFM, ADC & 0 \\ \bottomrule
 \end{tabular}
 \end{table}
 
-\section*{Timing Analyzer}
-Ràng buộc duy nhất là một xung nhịp $20$~ns trên chân \texttt{MAX10\_CLK1\_50} kèm \texttt{derive\_clock\_uncertainty} (tệp \texttt{rtl/cnn1d/SDC1.sdc}).
-Đường vào ra UART không có ràng buộc thời gian riêng.
+\section*{Phân tích định thời (Timing Analyzer)}
+Ràng buộc duy nhất là một xung nhịp chu kỳ $20$~ns trên chân \texttt{MAX10\_CLK1\_50} kèm \texttt{derive\_clock\_uncertainty} (tệp \texttt{rtl/cnn1d/SDC1.sdc}).
+Các cổng vào/ra UART không có ràng buộc định thời riêng (không đặt \texttt{set\_input\_delay}, \texttt{set\_output\_delay}).
 
 \begin{table}[H]\centering
-\caption{Độ dư thời gian nhỏ nhất (ns) của xung \texttt{clk50} theo từng mô hình; TNS bằng $0$ ở mọi mục.}\label{tab:pl-sta}
+\caption{Độ dư định thời (slack) nhỏ nhất (ns) của xung \texttt{clk50} theo từng mô hình; TNS bằng $0$ ở mọi mục.}\label{tab:pl-sta}
 \small\setlength{\tabcolsep}{6pt}
 \begin{tabular}{@{}lrrr@{}}
 \toprule
@@ -61,15 +61,18 @@ Tổng & 452\,390 & 63 \\ \bottomrule
 \begin{table}[H]\centering
 \caption{Chân dùng trên DE10-Lite.}\label{tab:pl-chan}
 \small
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}llcl@{}}
 \toprule
-Tín hiệu & Chân & Vai trò \\ \midrule
-\texttt{MAX10\_CLK1\_50} & PIN\_P11 & xung nhịp $50$~MHz \\
-\texttt{KEY0} & PIN\_B8 & đặt lại \\
-\texttt{uart\_rx} & PIN\_AB5 & dữ liệu từ host \\
-\texttt{uart\_tx} & PIN\_AB6 & dữ liệu về host \\ \bottomrule
+Tín hiệu & Chân & Bank & Vai trò \\ \midrule
+\texttt{MAX10\_CLK1\_50} & PIN\_P11 & 3 & xung nhịp $50$~MHz \\
+\texttt{KEY0} & PIN\_B8 & 7 & đặt lại (reset) \\
+\texttt{uart\_rx} & PIN\_AB5 & 3 & dữ liệu từ host \\
+\texttt{uart\_tx} & PIN\_AB6 & 3 & dữ liệu về host \\ \bottomrule
 \end{tabular}
 \end{table}
+
+Tệp ràng buộc chưa đặt chuẩn I/O cho bốn chân này, nên báo cáo Fitter ghi chuẩn mặc định $2{,}5$~V cho cả bốn.
+Mạch vẫn hoạt động đúng trên board, nhưng cần đối chiếu điện áp VCCIO của bank~3 và bank~7 theo tài liệu DE10-Lite và đặt chuẩn I/O tương ứng trong tệp \texttt{.qsf}.
 
 \sloppy
 Báo cáo tóm tắt được lưu trong \texttt{docs/quartus/} (\texttt{cnn1d.fit.summary}, \texttt{cnn1d.sta.summary}, \texttt{cnn1d.pow.summary}).

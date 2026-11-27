@@ -2,7 +2,7 @@
 % nguon: docs/baseline_v1.md muc 2; report/DINHVI.md C6--C12; docs/quartus/cnn1d.pow.summary
 \section{Hiệu năng}\label{sec:hieunang}
 \subsection{Thời gian tính toán}
-Một nhịp cần $367\,091$ chu kỳ, tức $7{,}34$~ms ở $50$~MHz, không gồm UART (đo trên board, hai lần chạy cho kết quả giống hệt).
+Một nhịp cần $367\,091$ chu kỳ, tức $7{,}34$~ms ở $50$~MHz, không gồm UART (đo trên board, hai lần chạy cho kết quả trùng nhau).
 Trước khi sửa loader con số này là $2\,058\,467$ chu kỳ ($41{,}17$~ms).
 Hình~\ref{fig:chukyl} cho phân bố theo layer; ba layer conv1--conv3 chiếm phần lớn thời gian.
 
@@ -11,9 +11,9 @@ Hình~\ref{fig:chukyl} cho phân bố theo layer; ba layer conv1--conv3 chiếm 
   \caption{Số chu kỳ từng layer trước và sau khi sửa loader, đo trên board.}\label{fig:chukyl}
 \end{figure}
 
-Thông lượng tương ứng là $0{,}44$~GOPS trên mức đỉnh $4{,}9$~GOPS, tức hiệu suất mảng PE khoảng $9\,\%$ (trước khi sửa: $1{,}6\,\%$), tính với $1\,609\,344$ phép nhân--cộng của thuật toán mỗi nhịp.
+Thông lượng tương ứng là $0{,}44$~GOPS trên mức đỉnh $4{,}9$~GOPS, tức hiệu suất sử dụng PE khoảng $9\,\%$ (trước khi sửa: $1{,}6\,\%$), tính với $1\,609\,344$ phép nhân--cộng của thuật toán mỗi nhịp.
 Nguyên nhân của hiệu suất thấp và hai sửa đổi đã làm được phân tích ở Mục~\ref{sec:bandwidth}; số chu kỳ từng layer và số ô nằm ở Bảng~\ref{tab:truocsau}.
-Hai sửa đổi được đưa vào cùng một bitstream nên chưa tách được đóng góp của từng sửa đổi bằng số đo.
+Hai sửa đổi (loader và số hàng của layer pool) được đưa vào cùng một bitstream nên chưa tách được đóng góp của từng sửa đổi bằng số đo.
 
 \subsection{Đường truyền UART}
 Thời gian người dùng thấy cho mỗi nhịp phụ thuộc chủ yếu vào đường truyền (Bảng~\ref{tab:uartnhip}).
@@ -47,7 +47,7 @@ Với chu kỳ tim cỡ $0{,}6$--$1$~s, chế độ nạp một lần (cả tín
 Độ trễ từ đỉnh R đến nhãn còn gồm thời gian chờ đỉnh R kế tiếp và chờ đủ cửa sổ mẫu; đo trên $8$ đoạn golden, mức lớn nhất là $1{,}1$--$2{,}4$~s tuỳ đoạn, và thành phần này chưa được phân rã.
 
 \subsection{Công suất và năng lượng}
-Công suất trong Bảng~\ref{tab:congsuat} là \emph{ước lượng} của Quartus Power Analyzer, độ tin cậy \textbf{thấp}: không có tệp hoạt động từ mô phỏng, công cụ giả định tốc độ chuyển mạch mặc định $12{,}5\,\%$.
+Công suất trong Bảng~\ref{tab:congsuat} là \emph{ước lượng} của Quartus Power Analyzer, độ tin cậy \textbf{thấp}: không có tệp hoạt động chuyển mạch (switching activity) từ mô phỏng, nên công cụ giả định tỉ lệ đảo trạng thái (toggle rate) mặc định $12{,}5\,\%$ cho mọi tín hiệu.
 
 \begin{table}[htbp]\centering
 \caption{Công suất ước lượng ở $50$~MHz (24/11/2026).}\label{tab:congsuat}

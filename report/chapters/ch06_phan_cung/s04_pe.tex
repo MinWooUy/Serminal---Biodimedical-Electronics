@@ -27,18 +27,18 @@ Phép nhân dùng bộ nhân cây Wallace~\cite{wallace1964} $8\times8$ có dấ
 \begin{enumerate}
   \item \emph{Tích riêng Baugh--Wooley}~\cite{baughwooley1973} (\texttt{baugh\_wooley\_partial\_product}): ma trận $8\times8$ các phép AND; các tích ở hàng và cột cuối (bit dấu) được đảo để xử lý số có dấu bù hai mà không cần mở rộng dấu từng hàng.
   \item \emph{Rút gọn Wallace} (\texttt{wallace\_tree\_reducer}): cây bộ cộng đầy đủ rút ma trận tích riêng còn hai hàng (\emph{sum} và \emph{carry}).
-  \item \emph{Cộng cuối} bằng bộ cộng nhớ trước (Carry-Lookahead Adder, CLA) $16$ bit (\texttt{final\_carry\_lookahead\_adder}), rồi đảo bit cao nhất để hoàn tất hiệu chỉnh Baugh--Wooley.
+  \item \emph{Cộng cuối} bằng bộ cộng tính trước số nhớ (Carry-Lookahead Adder, CLA) $16$ bit (\texttt{final\_carry\_lookahead\_adder}), rồi đảo bit cao nhất để hoàn tất hiệu chỉnh Baugh--Wooley.
 \end{enumerate}
 Kết quả là tích $16$ bit có dấu.
 Tích này đi qua một thanh ghi pipeline (\texttt{Mul\_Add\_pipe}) cắt đường tới hạn giữa nhân và cộng, rồi được mở rộng dấu lên $32$ bit và cộng với giá trị tích luỹ bằng bộ cộng CLA $32$ bit (\texttt{CarryLookaheadAdder\_32\_bit}).
-Ở lần MAC đầu tiên của một ô (\texttt{acc\_init}), toán hạng tích luỹ không phải đầu ra hiện tại mà là giá trị preload lấy từ thanh ghi bóng, nhờ đó bias được cộng vào bộ tích luỹ mà không cần thêm một phép cộng sau khi tính; việc bơm bias vào thanh ghi bóng chạy riêng, trước khi dữ liệu vào mảng (Mục~\ref{sec:stage}).
-Toàn bộ chuỗi cho thông lượng một MAC mỗi chu kỳ với độ trễ một tầng pipeline.
+Ở lần MAC đầu tiên của một ô (\texttt{acc\_init}), toán hạng tích luỹ không phải giá trị hiện có trong bộ tích luỹ mà là giá trị nạp trước (preload) lấy từ thanh ghi bóng, nhờ đó bias được cộng vào bộ tích luỹ mà không cần thêm một phép cộng sau khi tính; việc nạp bias vào thanh ghi bóng chạy riêng, trước khi dữ liệu vào mảng (Mục~\ref{sec:stage}).
+Toàn bộ chuỗi cho thông lượng một MAC mỗi chu kỳ, với độ trễ thêm một chu kỳ do thanh ghi pipeline.
 
 \textbf{Độ rộng bộ tích luỹ.} Mỗi tích có trị tuyệt đối không quá $127\cdot127=16\,129$; với $K\le192$ trong mô hình Lite, tổng $\sum_{k}|x_kw_k|\le192\cdot16\,129\approx3{,}1\cdot10^{6}<2^{31}$ nên bộ tích luỹ $32$ bit không tràn, kể cả sau khi cộng bias.
 Điều kiện này được mô hình lượng tử hoá bảo đảm và phần cứng không có kiểm tra tràn riêng.
 
-\textbf{Tài nguyên.} Phép nhân được dựng hoàn toàn bằng phần tử logic (LE), không dùng khối nhân nhúng; khối nhân nhúng chỉ được dùng $8$ trên $288$ ở các phần khác của thiết kế.
-Đây là lý do khối \texttt{conv1d\_tile\_top} (mảng PE cùng bộ nạp và FIFO) chiếm khoảng $66\,\%$ số LE (Chương~\ref{ch:thucnghiem}); chuyển phép nhân vào khối xử lý tín hiệu số (Digital Signal Processing, DSP) là một hướng tối ưu chưa thực hiện.
+\textbf{Tài nguyên.} Phép nhân trong PE được dựng hoàn toàn bằng phần tử logic (Logic Element, LE), không dùng khối nhân nhúng; toàn thiết kế chỉ dùng $8$ trên $288$ phần tử nhân nhúng $9$ bit, ở các khối nằm ngoài mảng PE.
+Đây là lý do mảng PE chiếm khoảng $39\,\%$ và cả khối \texttt{conv1d\_tile\_top} chiếm khoảng $66\,\%$ số LE (Chương~\ref{ch:thucnghiem}); chuyển phép nhân vào khối nhân nhúng là một hướng tối ưu chưa thực hiện.
 
 \subsection{Mảng $R\times C$ và luồng dữ liệu systolic}
 \texttt{pe\_array} ghép $R\times C=7\times7$ PE (\texttt{generate} hai vòng) theo kiểu systolic~\cite{kung1982systolic} với luồng dữ liệu \emph{output-stationary}~\cite{chen2017eyeriss}: mỗi PE ở hàng $r$, cột $c$ giữ nguyên tích luỹ của phần tử đầu ra $(r,c)$ trong suốt $K$ bước.
@@ -54,7 +54,7 @@ Vì vậy PE cuối cùng, ở góc $(R-1,C-1)$, nhận cặp cuối cùng ($k=K
 \begin{equation}\label{eq:tile-ideal}
   T_{\text{tính}}\approx K+R+C.
 \end{equation}
-Mức dùng PE lý tưởng của một ô $R_u\times C_u$ so với tổng $R\cdot C$ PE gọi là \emph{mức lấp đầy}; các ô cuối của layer có thể nhỏ hơn $R\times C$ khi $T$ hay $C_{out}$ không chia hết (Mục~\ref{sec:anhxa}).
+Mức dùng PE lý tưởng của một ô $R_u\times C_u$ so với tổng $R\cdot C$ PE gọi là \emph{mức lấp đầy}; các ô cuối của layer có thể nhỏ hơn $R\times C$ khi $T$ không chia hết cho số hàng hoặc $C_{out}$ không chia hết cho số cột (Mục~\ref{sec:anhxa}).
 Với mảng $7\times7$ và $K=192$ (conv3), một ô lý tưởng tính trong khoảng $206$ chu kỳ; thực tế một ô tốn nhiều hơn rất nhiều vì phải nạp dữ liệu trước (Mục~\ref{sec:bandwidth}).
 
 \subsection{Chụp và đưa kết quả ra}

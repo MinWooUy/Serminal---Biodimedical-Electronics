@@ -1,5 +1,5 @@
 % Muc 7.6  --  phu trach: xem report/PHANCONG.md
-\section{Bàn luận và đe doạ tính hợp lệ}\label{sec:banluan}
+\section{Bàn luận và hạn chế}\label{sec:banluan}
 \subsection{Điểm đã làm được}
 Điểm mạnh của đề tài nằm ở tính kiểm chứng hơn là ở tốc độ.
 \begin{itemize}
@@ -11,9 +11,11 @@
 
 \subsection{Hạn chế}
 \begin{itemize}
-  \item Hiệu suất mảng PE chỉ khoảng $9\,\%$: mỗi ô phải nạp xong mới tính, chưa tái dùng dữ liệu giữa các ô (Mục~\ref{sec:bandwidth}).
+  \item Hiệu suất sử dụng PE chỉ khoảng $9\,\%$: mỗi ô phải nạp xong mới tính, chưa tái sử dụng dữ liệu giữa các ô (Mục~\ref{sec:bandwidth}).
   \item Đường UART mất khoảng $0{,}1$~s mỗi nhịp do nhiều gói nhỏ theo kiểu gửi rồi chờ.
-  \item Dùng $83\,\%$ LE và độ dư thời gian chỉ $+0{,}082$~ns, còn rất ít chỗ để mở rộng trên chip này.
+  \item Ở chế độ nạp mô hình một lần, nút reset của board không xoá RAM nhưng đưa con trỏ bank về $0$; host không được báo, nên nếu reset xảy ra giữa hai nhịp, các layer có thể đọc nhầm bank trọng số mà không phát sinh lỗi giao thức.
+  Nhận định này suy từ RTL và đã thử trên mô hình phần mềm, chưa thử trên board; hiện cách xử lý là khởi động lại chương trình host để nạp lại mô hình.
+  \item Dùng $83\,\%$ LE và độ dư setup chỉ $+0{,}082$~ns, còn rất ít chỗ để mở rộng trên chip này.
   \item Công suất chỉ là ước lượng của công cụ ($332$~mW, độ tin cậy thấp); chưa có số đo trên board.
   \item Tiền xử lý (lọc, phát hiện đỉnh R, chuẩn hoá) vẫn chạy trên máy host.
   \item Lớp S có độ chính xác dương khoảng $41\,\%$ và lớp F không được nhận đúng trên DS2.
@@ -27,7 +29,7 @@
   \item \textbf{So sánh Lite và Full bị trộn yếu tố} do hai mô hình khác cả dữ liệu huấn luyện (Mục~\ref{sec:dochinhxac}).
   \item \textbf{Vị trí nhịp.} Kết quả theo chú thích cao hơn kết quả đầu--cuối; số nêu ra phải ghi rõ chế độ nào.
   \item \textbf{Thời gian đo ở host} phụ thuộc máy tính, bộ chuyển USB--UART và chương trình host, nên không lặp lại chính xác trên máy khác.
-  \item \textbf{Hai sửa đổi loader áp cùng lúc,} nên mọi con số chia phần đóng góp của từng sửa đổi chỉ là dự báo từ mô hình.
+  \item \textbf{Hai sửa đổi (loader và số hàng của layer pool) áp cùng lúc,} nên mọi con số chia phần đóng góp của từng sửa đổi chỉ là ước lượng từ mô hình.
 \end{itemize}
 
 \subsection{So sánh với công trình khác}
