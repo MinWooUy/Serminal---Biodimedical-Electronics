@@ -1,9 +1,8 @@
 % Muc 2.4  --  phu trach: xem report/PHANCONG.md
 \section{Bộ tăng tốc suy luận trên phần cứng}\label{sec:accel}
-\begin{goiy}
-  \begin{itemize}
-    \item Mảng systolic \cite{kung1982systolic}, dataflow, tái sử dụng dữ liệu; ví dụ TPU \cite{jouppi2017tpu}, Eyeriss \cite{chen2017eyeriss}.
-    \item Số học: nhân Baugh--Wooley \cite{baughwooley1973} và Wallace \cite{wallace1964}, cộng carry-lookahead.
-    \item FPGA MAX~10: LE, M9K, khối nhân nhúng; ràng buộc cho thiết kế.
-  \end{itemize}
-\end{goiy}
+
+Trong các bộ tăng tốc suy luận mạng nơ-ron, kiến trúc mảng tâm thu (\emph{systolic array}) tổ chức các phần tử xử lý (PE) nối lưới có nhịp điệu để luân chuyển dữ liệu theo từng chu kỳ xung nhịp, tăng khả năng tái sử dụng trọng số và kích hoạt đồng thời giảm truy xuất bộ nhớ ngoài \cite{kung1982systolic}. Tùy chiến lược điều phối dữ liệu (\emph{dataflow})---như mô hình TPU \cite{jouppi2017tpu} tập trung nhân ma trận theo luồng khối hoặc Eyeriss \cite{chen2017eyeriss} tối ưu tái sử dụng theo hàng và kênh---hiệu quả tính toán phụ thuộc chặt chẽ vào cách giữ dữ liệu nằm lại trên chip và che giấu độ trễ nạp dữ liệu.
+
+Trên thực tế triển khai phần cứng, hiệu suất tổng thể thường bị chi phối bởi các lớp bao quanh lõi tính toán như đường cấp dữ liệu, sinh địa chỉ bộ nhớ và cơ chế điều khiển \cite{hariri2026hardware}. Nếu băng thông nạp dữ liệu hạn chế, bộ đệm không hỗ trợ đọc/ghi đồng thời hoặc thiếu cơ chế dồn ứ (\emph{backpressure}) và tái sử dụng dữ liệu giữa các \emph{tile}, phần tử xử lý dễ rơi vào trạng thái chờ làm giảm hiệu suất khai thác; tương tự, việc thiếu khối hậu xử lý hợp nhất hoặc điều khiển cấu hình linh hoạt sẽ cản trở việc nối tầng và mở rộng cho các mô hình sâu hơn \cite{liu2025fpga1dcnn, liu2023fully}.
+
+Ở tầng số học và tài nguyên FPGA, phép nhân số nguyên có dấu có thể hiện thực bằng các kỹ thuật như Baugh--Wooley \cite{baughwooley1973} kết hợp cây cộng Wallace \cite{wallace1964} hoặc khai thác khối nhân nhúng của thiết bị. Khi triển khai trên FPGA Altera/Intel MAX~10, thiết kế cần cân đối giữa phần tử logic, thanh ghi, bộ nhớ khối nhúng và khối nhân để đáp ứng tần số xung nhịp mục tiêu mà không nghẽn băng thông truyền/nhận dữ liệu \cite{hariri2026hardware, liu2025fpga1dcnn}.

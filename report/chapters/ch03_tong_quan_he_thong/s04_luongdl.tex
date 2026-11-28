@@ -1,8 +1,6 @@
 % Muc 3.4  --  phu trach: xem report/PHANCONG.md
 \section{Luồng dữ liệu của một nhịp}\label{sec:luongdl}
-\begin{goiy}
-  \begin{itemize}
-    \item Vào: $z_q$ (360 byte int8) và 4 giá trị RR int8; ra: 4 logit int32 và nhãn.
-    \item Độ trễ từ đỉnh R đến nhãn (cần R kế tiếp): đo trên 8 đoạn golden ($1.1$--$2.4$~s).
-  \end{itemize}
-\end{goiy}
+
+Đối với mỗi nhịp cần phân loại, đầu vào đưa sang bộ tăng tốc gồm cửa sổ tín hiệu đã chuẩn hoá $z_q$ kích thước $360$ byte \texttt{int8} và tập $4$ giá trị đặc trưng khoảng RR dạng \texttt{int8}. Đầu ra của bộ tăng tốc là $4$ giá trị logit dạng \texttt{int32} tương ứng với bốn lớp N, S, V, F cùng nhãn dự đoán sau bước \texttt{argmax}.
+
+Về mặt thời gian thực thi của một nhịp, quá trình xác định đầy đủ ngữ cảnh nhịp (bao gồm khoảng RR kế tiếp) và đưa ra nhãn tạo nên khoảng trễ tính từ thời điểm đỉnh R đến khi nhận được nhãn. Trên tập $8$ đoạn chuẩn (golden) gồm $1\,306$ nhịp, độ trễ từ đỉnh R đến nhãn nằm trong khoảng $1.1\text{--}2.4\text{ s}$ tùy nhịp và đoạn tín hiệu.
