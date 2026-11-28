@@ -1,9 +1,92 @@
+% Phu luc B  --  phu trach: Hùng
+% nguon: lite_int8.npz cua mo hinh dong bang (repo 1DCNN); host/ecg_layer_host.py (enable_resident)
 \chapter{Tham số lượng tử hoá và bố cục bộ nhớ}\label{pl:luongtu}
 
-\begin{goiy}
-  \begin{itemize}
-    \item Số mũ kích hoạt vào/ra từng tầng, số mũ trọng số theo kênh, lượng dịch requantize (\texttt{lite\_int8.npz}, \texttt{quantize.json}).
-    \item Bố cục bộ nhớ: \texttt{w\_base}, \texttt{b\_base} từng layer trong bank weight/bias RAM; kích thước IFMAP (4096), weight (16384), bias (256).
-    \item Quy ước \texttt{row\_combine} cho FC1 (vị trí GAP và RR trong IFMAP).
-  \end{itemize}
-\end{goiy}
+\section*{B.1 Số mũ lượng tử}
+
+Bảng~\ref{tab:plb-mu} liệt kê số mũ của mô hình CNN Lite đã đóng băng.
+Giá trị nguyên $q$ với số mũ $e$ biểu diễn $q\cdot2^{-e}$; $a_{in}$, $a_{out}$ là số mũ kích hoạt vào và ra, $k_c$ là số mũ trọng số theo kênh, $s=k_c+a_{in}-a_{out}$ là lượng dịch khi lượng tử lại theo phương trình~\eqref{eq:ch4-requant}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Số mũ lượng tử và lượng dịch của từng lớp.}\label{tab:plb-mu}
+  \begin{tabular}{lccccr}
+    \toprule
+    Lớp & $a_{in}$ & $k_c$ & $a_{out}$ & $s$ & Khoảng bias int32 \\
+    \midrule
+    Khối 1 & 4 & 5--8  & 2 & 7--10 & $-1\,004\ldots129$ \\
+    Khối 2 & 2 & 8--10 & 3 & 7--9  & $-2\,761\ldots1\,228$ \\
+    Khối 3 & 3 & 7--9  & 3 & 7--9  & $-4\,891\ldots5\,353$ \\
+    Khối 4 & 3 & 8--10 & 3 & 8--10 & $-14\,157\ldots11\,152$ \\
+    FC1 & 3 và 5--6 & -- & 4 & 6--10 & $-5\,983\ldots11\,699$ \\
+    FC2 & 4 & 7 & -- & -- & $-166\ldots568$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Đầu vào của FC1 gồm tổng của phép lấy trung bình với số mũ 3 và bốn đặc trưng RR với số mũ 6, 6, 6 và 5.
+Hai phần được tích luỹ riêng với số mũ $E_g\in\{17,18\}$ và $E_r\in\{10,\ldots,14\}$, sau đó căn về cùng số mũ bằng phép dịch phải có làm tròn trước khi cộng.
+Trên bộ tăng tốc, phép ghép hai phần này được thực hiện theo phương trình~\eqref{eq:rowcombine}.
+Lớp FC2 dùng chung số mũ trọng số 7 và giữ đầu ra ở dạng logit int32 với thang $2^{-11}$.
+
+\section*{B.2 Bố cục bộ nhớ trên bộ tăng tốc}
+
+Khi nạp mô hình một lần, toàn bộ trọng số và bias được ghi lên chip trước nhịp đầu tiên; mỗi lớp đọc tham số của mình theo địa chỉ gốc trong lệnh cấu hình.
+Trọng số được lưu trong hai bank 16\,384 byte: khối 4 chiếm riêng bank B, các lớp còn lại dùng chung bank A.
+Bias của sáu lớp nằm liên tiếp trong bộ nhớ bias 256 phần tử.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Địa chỉ trọng số và bias của từng lớp.}\label{tab:plb-mem}
+  \begin{tabular}{lcrrrr}
+    \toprule
+    Lớp & Bank & Byte trọng số & Địa chỉ trọng số & Số bias & Địa chỉ bias \\
+    \midrule
+    Khối 1 & A & 112     & 0       & 16 & 0   \\
+    Khối 2 & A & 2\,560  & 112     & 32 & 16  \\
+    Khối 3 & A & 6\,144  & 2\,672  & 64 & 48  \\
+    Khối 4 & B & 12\,288 & 0       & 64 & 112 \\
+    FC1    & A & 2\,176  & 8\,816  & 32 & 176 \\
+    FC2    & A & 128     & 10\,992 & 4  & 208 \\
+    \midrule
+    Tổng   &   & 23\,408 &         & 212 & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section*{B.3 Hằng số của khối tiền xử lý}
+
+Bảng~\ref{tab:plb-loc} liệt kê hệ số của hai khâu bậc hai trong bộ lọc 0{,}5--40\,Hz ở dạng số nguyên, bằng hệ số thực nhân $2^{20}$ rồi làm tròn; hệ số $a_0$ của cả hai khâu bằng $2^{20}$.
+Bảng~\ref{tab:plb-pt} liệt kê các hằng số của bộ phát hiện Pan--Tompkins ở 360\,Hz cùng giá trị tương ứng của bản gốc ở 200\,Hz.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Hệ số số nguyên của bộ lọc Butterworth 0{,}5--40\,Hz (thang $2^{20}$).}\label{tab:plb-loc}
+  \begin{tabular}{lrrrrr}
+    \toprule
+    Khâu & $b_0$ & $b_1$ & $b_2$ & $a_1$ & $a_2$ \\
+    \midrule
+    1 & 82\,588 & 165\,177 & 82\,588 & $-1\,118\,928$ & 402\,899 \\
+    2 & 1\,048\,576 & $-2\,097\,152$ & 1\,048\,576 & $-2\,084\,217$ & 1\,035\,722 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Hằng số của bộ phát hiện Pan--Tompkins số nguyên.}\label{tab:plb-pt}
+  \begin{tabular}{lcc}
+    \toprule
+    Đại lượng & Bản gốc (200\,Hz) & Đề tài (360\,Hz) \\
+    \midrule
+    Độ dài mỗi tổng trượt của khâu thông thấp & 6 mẫu & 11 mẫu \\
+    Độ dài trung bình trượt của khâu thông cao & 32 mẫu & 57 mẫu \\
+    Cửa sổ tích phân & 30 mẫu (150\,ms) & 54 mẫu (150\,ms) \\
+    Thời gian trơ & 200\,ms & 72 mẫu \\
+    Cửa sổ loại sóng T & 360\,ms & 130 mẫu \\
+    Thời gian học ngưỡng ban đầu & 2\,s & 720 mẫu \\
+    Giới hạn tìm lại nhịp bỏ sót & $1{,}66\,\overline{\mathrm{RR}}$ & $1{,}65625\,\overline{\mathrm{RR}}$ \\
+    Độ trễ thông dải (thông thấp + thông cao) & -- & 38 mẫu \\
+    \bottomrule
+  \end{tabular}
+\end{table}

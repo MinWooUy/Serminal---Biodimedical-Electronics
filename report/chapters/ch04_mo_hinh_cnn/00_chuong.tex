@@ -1,14 +1,16 @@
-% Chuong 4  --  phu trach: Hùng (de xuat; xem report/PHANCONG.md)
+% Chuong 4  --  phu trach: Hùng (xem report/PHANCONG.md)
 % Moi muc la mot file s*.tex trong thu muc nay, de nhieu nguoi sua song song khong dung nhau.
+% Hinh: sinh boi report/figures/src/make_ch04_serminal.py cua repo 1DCNN (doc results/, export/ cua repo do).
 \chapter{Mô hình CNN và pipeline phần mềm}\label{ch:cnn}
 
-\begin{goiy}[Mục đích chương]
-Mô tả đủ chi tiết để người khác cài đặt lại: dữ liệu, tiền xử lý số nguyên, kiến trúc, huấn luyện, lượng tử hoá, golden vectors.
-Nguồn trong repo: \texttt{docs/system\_overview.md}, \texttt{docs/cnn\_explained.md}, \texttt{python/}, \texttt{export/}. \emph{Ước lượng 10--14 trang.}
-\end{goiy}
+Chương này trình bày phần mô hình của hệ thống: dữ liệu và cách đánh giá, khối tiền xử lý tín hiệu, trích xuất đặc trưng, kiến trúc mạng CNN Lite, quá trình huấn luyện và lựa chọn cấu hình, lượng tử hoá int8 và bộ dữ liệu chuẩn dùng để kiểm chứng phần cứng.
+Với mỗi khối, chương nêu lựa chọn thiết kế, lý do của lựa chọn đó và kết quả kiểm chứng tương ứng.
+Đầu ra của chương là một pipeline đã đóng băng, chỉ dùng phép toán số nguyên, làm chuẩn tham chiếu cho bộ tăng tốc ở Chương~\ref{ch:phancung}.
+Kết quả đánh giá cuối cùng trên tập kiểm tra được trình bày riêng ở Mục~\ref{sec:dochinhxac}.
 
 \input{chapters/ch04_mo_hinh_cnn/s01_dulieu}
 \input{chapters/ch04_mo_hinh_cnn/s02_tienxuly}
+\input{chapters/ch04_mo_hinh_cnn/s02b_dactrung}
 \input{chapters/ch04_mo_hinh_cnn/s03_cnnlite}
 \input{chapters/ch04_mo_hinh_cnn/s04_huanluyen}
 \input{chapters/ch04_mo_hinh_cnn/s05_luongtu}

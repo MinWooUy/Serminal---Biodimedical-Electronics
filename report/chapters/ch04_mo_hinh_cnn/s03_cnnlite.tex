@@ -1,16 +1,73 @@
-% Muc 4.3  --  phu trach: xem report/PHANCONG.md
+% Muc 4.3  --  phu trach: Hùng
+% nguon: docs/cnn_explained.md §1; NHATKY.md cua repo 1DCNN (Full 668 228 tham so)
 \section{Kiến trúc CNN Lite}\label{sec:cnnlite}
-\begin{goiy}
-  \begin{itemize}
-    \item Bốn block Conv(k=7,5,3,3) + BN + ReLU + MaxPool, GAP, FC1 $68\to32$, FC2 $32\to4$ (Bảng~\ref{tab:cnnlite}).
-    \item Số liệu: 23\,408 B trọng số int8 + 212 bias int32; 1\,609\,344 MAC/nhịp; trường nhìn $\approx128$~ms.
-    \item Minh hoạ một nhịp qua các tầng (Hình~\ref{fig:trace}).
-  \end{itemize}
-\end{goiy}
-\bangcho{từng lớp: vào$\to$ra, kernel, số tham số, MAC/nhịp (xem docs/cnn\_explained.md §1)}{Kiến trúc CNN Lite và chi phí tính toán mỗi lớp.}{tab:cnnlite}
+
+Mô hình triển khai là một mạng nơ-ron tích chập một chiều~\cite{kiranyaz2016realtime}, gọi là CNN Lite, nhận hai đầu vào $z_q$ và $\mathrm{rr}_q$ của khối trích xuất đặc trưng; Hình~\ref{fig:ch4-kientruc} trình bày các khối của mạng.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/khoi_cnn}
+  \caption{Các khối của mạng CNN Lite; kích thước ghi trong mỗi khối là số kênh $\times$ chiều dài đầu ra. Khối nét đứt là khối kế tiếp.}\label{fig:ch4-kientruc}
+\end{figure}
+
+\subsection{Cấu trúc mạng}
+
+Phần trích đặc trưng gồm bốn khối, mỗi khối gồm một lớp tích chập một chiều, chuẩn hoá theo lô và hàm kích hoạt ReLU; ba khối đầu có thêm lớp gộp cực đại kích thước hai.
+Số kênh tăng dần 16, 32, 64, 64 trong khi kích thước nhân giảm dần 7, 5, 3, 3.
+Sau khối thứ tư, phép lấy trung bình toàn cục (GAP) rút gọn mỗi kênh về một giá trị, tạo thành vector 64 phần tử mô tả hình dạng nhịp.
+Vector này được ghép với bốn đặc trưng RR rồi đưa qua hai lớp kết nối đầy đủ FC1 và FC2 để cho ra bốn giá trị logit; lớp có logit lớn nhất là nhãn dự đoán.
+
+\subsection{Lý do lựa chọn kiến trúc}
+
+Mỗi thành phần của mạng được chọn để phù hợp với đặc điểm của tín hiệu ECG và với ràng buộc phần cứng:
+\begin{itemize}
+  \item \textbf{Tích chập một chiều.} Các đặc điểm phân biệt nhịp như độ rộng QRS, độ dốc sườn hay hình dạng sóng T đều là mẫu hình cục bộ theo thời gian.
+  Một bộ lọc tích chập dùng chung trọng số trên mọi vị trí nên nhận ra cùng một mẫu hình dù nó lệch vài mẫu, với số tham số nhỏ hơn nhiều so với lớp kết nối đầy đủ.
+  \item \textbf{Nhân lớn ở đầu, nhỏ dần về sau.} Nhân 7 ở khối đầu bắt được sườn QRS trên tín hiệu gốc; sau mỗi lần gộp, một mẫu ở khối sau đại diện cho đoạn tín hiệu dài hơn nên nhân 3 là đủ.
+  Trường nhìn của một vị trí ở khối thứ tư là 46 mẫu, khoảng 128\,ms, xấp xỉ độ rộng một phức bộ QRS.
+  \item \textbf{Gộp cực đại.} Giảm một nửa chiều dài sau mỗi khối, giảm khối lượng tính toán của các khối sau và giữ lại phản hồi mạnh nhất trong mỗi cặp mẫu.
+  \item \textbf{Lấy trung bình toàn cục.} Thay cho việc làm phẳng 64$\times$45 giá trị, GAP chỉ giữ 64 giá trị nên lớp FC1 nhỏ hơn khoảng 45 lần và mạng ít bị phụ thuộc vào vị trí chính xác của đặc trưng trong cửa sổ.
+  \item \textbf{Ghép đặc trưng RR ở lớp kết nối đầy đủ.} Đặc trưng RR mô tả nhịp điệu, khác bản chất với tín hiệu hình dạng, nên được ghép sau phần tích chập để FC1 kết hợp trực tiếp hai nguồn thông tin.
+\end{itemize}
+
+\subsection{Kích thước và khối lượng tính toán}
+
+Bảng~\ref{tab:cnnlite} tổng hợp số tham số và số phép nhân--cộng của từng lớp.
+Bốn lớp tích chập chiếm 99{,}9\,\% khối lượng tính toán, trong đó ba khối sau mỗi khối cần khoảng nửa triệu phép nhân--cộng.
+Đây là lý do bộ tăng tốc ở Chương~\ref{ch:phancung} tập trung vào phép tích chập, còn hai lớp kết nối đầy đủ chỉ đóng góp không đáng kể.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Số tham số và số phép nhân--cộng của CNN Lite cho một nhịp.}\label{tab:cnnlite}
+  \begin{tabular}{lccrr}
+    \toprule
+    Lớp & Kích thước nhân & Đầu ra & Tham số & Nhân--cộng \\
+    \midrule
+    Khối 1 & 7 & $16\times180$ & 144 & 40\,320 \\
+    Khối 2 & 5 & $32\times90$  & 2\,624 & 460\,800 \\
+    Khối 3 & 3 & $64\times45$  & 6\,272 & 552\,960 \\
+    Khối 4 & 3 & $64\times45$  & 12\,416 & 552\,960 \\
+    FC1    & -- & 32 & 2\,208 & 2\,176 \\
+    FC2    & -- & 4  & 132 & 128 \\
+    \midrule
+    Tổng   &    &    & 23\,796 & 1\,609\,344 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Để có mốc so sánh, đề tài huấn luyện thêm một mạng lớn hơn, CNN Full, có cùng cấu trúc nhưng số kênh 64, 128, 256, 512 và 668\,228 tham số.
+Với khoảng 24 nghìn tham số, CNN Lite sau lượng tử hoá chỉ cần khoảng 24\,KB bộ nhớ, đủ để lưu toàn bộ trong bộ nhớ trên chip của FPGA MAX~10; CNN Full lớn hơn khoảng 28 lần và không đáp ứng được ràng buộc này.
+Mục~\ref{sec:huanluyen} cho thấy hai mạng đạt độ chính xác tương đương trên kiểm định chéo DS1.
+
+\subsection{Hoạt động của mạng trên một nhịp}
+
+Hình~\ref{fig:trace} minh hoạ một nhịp N đi qua mạng số nguyên.
+Ở cả bốn khối, các kích hoạt mạnh tập trung trong vài chục mili giây quanh đỉnh R, cho thấy mạng chủ yếu dựa vào hình dạng phức bộ QRS.
+Các khối sâu hơn có thêm kích hoạt yếu ở vùng sóng T, phù hợp với vai trò của sóng T trong việc phân biệt nhịp V.
+Ở đầu ra, logit của lớp N lớn hơn hẳn ba lớp còn lại nên nhịp được phân loại đúng.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/trace_rec101_beat0.png}
-  \caption{Một nhịp N (rec101) qua pipeline số nguyên: cửa sổ vào, feature map 4 block và logit.}\label{fig:trace}
+  \caption{Một nhịp N của bản ghi 101 qua mạng số nguyên: cửa sổ đầu vào, bản đồ đặc trưng của bốn khối và bốn logit.}\label{fig:trace}
 \end{figure}
