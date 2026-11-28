@@ -18,6 +18,7 @@ results/hardware_logs/*.csv
 *.bak
 *.qpf
 *.qsf
+*.qws
 
 model/
 

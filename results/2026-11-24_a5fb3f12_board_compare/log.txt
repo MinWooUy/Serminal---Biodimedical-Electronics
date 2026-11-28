@@ -1,0 +1,51 @@
+record 208, samples 0..650000 (1806 s), segmentation detector -- DS1: IN-SAMPLE (final model trained on all DS1)
+PC pre-processing of the whole record ...
+2946 beats to classify; Lite float done on the PC
+FPGA INFO: 7x7 PE, 50 MHz, 1500000 baud, features 0x3F
+
+--- hardware (mean over 2946 beats) ---
+PE array 7x7 @ 50 MHz, UART 1.5 Mbaud, weights resident
+compute 7.34 ms/beat (367,091 cycles), link 0.197 s/beat, 27 packets, 954 B sent, 303 B received
+1,609,344 MAC/beat -> 0.438 GOPS of 4.9 peak, PE efficiency 8.9 %
+rate 136 beats/s compute, 5.1 beats/s with UART; UART 6.4 kB/s = 4.3 % of the 150 kB/s line
+latency R to label 0.82 s = wait for window/next R 0.62 + FPGA 0.20; mean RR 0.61 s -> margin x3.1
+per layer: conv0 21,429 (3.8 %), conv1 104,379 (9.0 %), conv2 124,603 (9.1 %), conv3 113,321 (10.0 %), fc1 3,137 (1.4 %), fc2 222 (1.2 %)
+model 23,408 B int8 in 32,768 B weight SRAM, 212 biases
+Quartus (21/11/2026): 41,353 LE (83 %), PE array 27,313 LE, 452 kbit (27 %), 63 M9K, 8 mult, Fmax 50.21 MHz, setup slack 0.082 ns
+power 332.17 mW (estimate, Quartus report, confidence Low) -> 2.44 mJ/beat over the compute time
+
+detector: 2946 beats, FPGA answered 2946, failed 0, FPGA == int8 software 2946/2946, FPGA != float 43
+
+--- Lite float vs MIT annotation ---
+macro-F1 0.6662   macro-F1 (N/S/V) 0.6383   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9838 +P 0.9739
+cls       P       R      F1      n
+  N  0.9277  0.9695  0.9482   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9501  0.9838  0.9667    987
+  F  0.9390  0.6243  0.7500    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1527     18     26      4
+       2      0      0      0
+       5      0    971     11
+     112      2     25    231
+
+--- FPGA vs MIT annotation ---
+macro-F1 0.6743   macro-F1 (N/S/V) 0.6391   SVEB Se 0.0000 +P 0.0000   VEB Se 0.9747 +P 0.9727
+cls       P       R      F1      n
+  N  0.9367  0.9670  0.9516   1575
+  S  0.0000  0.0000  0.0000      2
+  V  0.9572  0.9747  0.9659    987
+  F  0.8979  0.6892  0.7798    370
+confusion (rows = true N/S/V/F, cols = pred):
+    1523     17     27      8
+       2      0      0      0
+       4      0    962     21
+      97      2     16    255
+
+--- FPGA (rows) vs float (cols), N/S/V/F ---
+    1628      2      0      0
+       1     20      0      0
+       2      0   1009      0
+      19      0     19    246
+detector: FP detections 10, missed annotations N/S/V/F [10, 0, 4, 3], in VF 0
+results: D:\KHTN\KHTN_nam4\Dien_tu_y_sinh\seminar\Serminal---Biodimedical-Electronics\results\2026-11-24_a5fb3f12_board_compare

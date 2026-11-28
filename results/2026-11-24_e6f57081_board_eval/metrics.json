@@ -1,0 +1,403 @@
+{
+  "config": {
+    "name": "board_eval",
+    "record": 208,
+    "segmentations": [
+      "detector",
+      "annotation"
+    ],
+    "start_s": 600.0,
+    "dur_s": 60.0,
+    "link": "COM4",
+    "baud": 1500000,
+    "retries": 1,
+    "lite": "2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3"
+  },
+  "fpga_info": {
+    "rows": 7,
+    "cols": 7,
+    "clk_hz": 50000000,
+    "baud": 1500000
+  },
+  "detector": {
+    "beats_sent": 101,
+    "beats_failed": 0,
+    "beats_reused": 0,
+    "board_eq_sw": 101,
+    "board": {
+      "macro_f1": 0.6907051282051282,
+      "macro_f1_nsv": 0.6474358974358975,
+      "ec57": {
+        "SVEB": {
+          "se": 0.0,
+          "ppv": 0.0
+        },
+        "VEB": {
+          "se": 1.0,
+          "ppv": 1.0
+        }
+      },
+      "per_class": {
+        "N": {
+          "precision": 0.8909090909090909,
+          "recall": 1.0,
+          "f1": 0.9423076923076923,
+          "support": 49
+        },
+        "S": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "V": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 29
+        },
+        "F": {
+          "precision": 1.0,
+          "recall": 0.6956521739130435,
+          "f1": 0.8205128205128205,
+          "support": 23
+        }
+      },
+      "confusion": [
+        [
+          49,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          29,
+          0
+        ],
+        [
+          6,
+          1,
+          0,
+          16
+        ]
+      ],
+      "n_pred_N_as_F": 0
+    },
+    "software_same_beats": {
+      "macro_f1": 0.6907051282051282,
+      "macro_f1_nsv": 0.6474358974358975,
+      "ec57": {
+        "SVEB": {
+          "se": 0.0,
+          "ppv": 0.0
+        },
+        "VEB": {
+          "se": 1.0,
+          "ppv": 1.0
+        }
+      },
+      "per_class": {
+        "N": {
+          "precision": 0.8909090909090909,
+          "recall": 1.0,
+          "f1": 0.9423076923076923,
+          "support": 49
+        },
+        "S": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "V": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 29
+        },
+        "F": {
+          "precision": 1.0,
+          "recall": 0.6956521739130435,
+          "f1": 0.8205128205128205,
+          "support": 23
+        }
+      },
+      "confusion": [
+        [
+          49,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          29,
+          0
+        ],
+        [
+          6,
+          1,
+          0,
+          16
+        ]
+      ],
+      "n_pred_N_as_F": 0
+    },
+    "detector": {
+      "fp_detections": 0,
+      "missed_annotations": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "in_vf": 0
+    },
+    "board_gross": {
+      "macro_f1": 0.6907051282051282,
+      "macro_f1_nsv": 0.6474358974358975,
+      "per_class": {
+        "N": {
+          "se": 1.0,
+          "ppv": 0.8909090909090909,
+          "f1": 0.9423076923076923,
+          "missed": 0,
+          "fp_detections_predicted": 0
+        },
+        "S": {
+          "se": 0.0,
+          "ppv": 0.0,
+          "f1": 0.0,
+          "missed": 0,
+          "fp_detections_predicted": 0
+        },
+        "V": {
+          "se": 1.0,
+          "ppv": 1.0,
+          "f1": 1.0,
+          "missed": 0,
+          "fp_detections_predicted": 0
+        },
+        "F": {
+          "se": 0.6956521739130435,
+          "ppv": 1.0,
+          "f1": 0.8205128205128205,
+          "missed": 0,
+          "fp_detections_predicted": 0
+        }
+      },
+      "ec57": {
+        "SVEB": {
+          "se": 0.0,
+          "ppv": 0.0
+        },
+        "VEB": {
+          "se": 1.0,
+          "ppv": 1.0
+        }
+      },
+      "confusion": [
+        [
+          49,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          29,
+          0
+        ],
+        [
+          6,
+          1,
+          0,
+          16
+        ]
+      ],
+      "missed_per_class": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "fp_detections_predicted": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "link_s_sent_beats": 97.6
+  },
+  "annotation": {
+    "beats_sent": 101,
+    "beats_failed": 0,
+    "beats_reused": 101,
+    "board_eq_sw": 101,
+    "board": {
+      "macro_f1": 0.6907051282051282,
+      "macro_f1_nsv": 0.6474358974358975,
+      "ec57": {
+        "SVEB": {
+          "se": 0.0,
+          "ppv": 0.0
+        },
+        "VEB": {
+          "se": 1.0,
+          "ppv": 1.0
+        }
+      },
+      "per_class": {
+        "N": {
+          "precision": 0.8909090909090909,
+          "recall": 1.0,
+          "f1": 0.9423076923076923,
+          "support": 49
+        },
+        "S": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "V": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 29
+        },
+        "F": {
+          "precision": 1.0,
+          "recall": 0.6956521739130435,
+          "f1": 0.8205128205128205,
+          "support": 23
+        }
+      },
+      "confusion": [
+        [
+          49,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          29,
+          0
+        ],
+        [
+          6,
+          1,
+          0,
+          16
+        ]
+      ],
+      "n_pred_N_as_F": 0
+    },
+    "software_same_beats": {
+      "macro_f1": 0.6907051282051282,
+      "macro_f1_nsv": 0.6474358974358975,
+      "ec57": {
+        "SVEB": {
+          "se": 0.0,
+          "ppv": 0.0
+        },
+        "VEB": {
+          "se": 1.0,
+          "ppv": 1.0
+        }
+      },
+      "per_class": {
+        "N": {
+          "precision": 0.8909090909090909,
+          "recall": 1.0,
+          "f1": 0.9423076923076923,
+          "support": 49
+        },
+        "S": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0
+        },
+        "V": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 29
+        },
+        "F": {
+          "precision": 1.0,
+          "recall": 0.6956521739130435,
+          "f1": 0.8205128205128205,
+          "support": 23
+        }
+      },
+      "confusion": [
+        [
+          49,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          29,
+          0
+        ],
+        [
+          6,
+          1,
+          0,
+          16
+        ]
+      ],
+      "n_pred_N_as_F": 0
+    },
+    "link_s_sent_beats": 0
+  },
+  "link": {
+    "transactions": 23433,
+    "tx_bytes": 2750036,
+    "rx_bytes": 237683,
+    "wall_s": 239.0,
+    "unique_beats_classified": 101
+  }
+}

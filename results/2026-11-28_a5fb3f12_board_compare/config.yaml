@@ -1,0 +1,10 @@
+name: board_compare
+record: 208
+seg: detector
+start_s: 0.0
+dur_s: 1805.5555555555557
+link: COM4
+baud: 1500000
+retries: 1
+lite: 2026-10-15_581b4c74_final_A5_svdb_n25_lite_e3
+mode: live
