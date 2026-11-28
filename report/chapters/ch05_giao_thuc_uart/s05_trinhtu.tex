@@ -1,26 +1,21 @@
 % Muc 5.5  --  phu trach: Dung (xem report/PHANCONG.md)
-% nguon: host/board_classifier.py, host/ecg_layer_host_pc.py, docs/baseline_v1.md
+% nguon: host/board_classifier.py, host/ecg_layer_host_pc.py
 \section{Trình tự thực thi một nhịp}\label{sec:trinhtu}
-Hình~\ref{fig:trinhtu} biểu diễn quy trình ba giai đoạn giữa host và FPGA để phân loại một nhịp tim: gửi lệnh nạp dữ liệu xuống FPGA, điều phối thực thi tuần tự qua từng layer ngay trên bộ nhớ trên chip mà không đọc lại bản đồ đặc trưng trung gian, và đọc kết quả phân loại ở lớp cuối về host.
+Để phân loại một nhịp tim, host điều phối bộ tăng tốc theo ba giai đoạn như Hình~\ref{fig:trinhtu}: nạp tín hiệu đầu vào, lặp thực thi từng layer, và đọc kết quả.
 
 \begin{figure}[htbp]\centering
-  \includegraphics[width=0.66\textwidth]{ch05_giao_thuc_uart/trinh_tu.png}
-  \caption{Trình tự lệnh giữa host và FPGA để phân loại một nhịp.}\label{fig:trinhtu}
+  \includegraphics[width=0.7\textwidth]{ch05_giao_thuc_uart/trinh_tu.png}
+  \caption{Trình tự lệnh giữa host và FPGA cho một nhịp.}\label{fig:trinhtu}
 \end{figure}
 
-\textbf{Hai chế độ cấp tham số mô hình.}
-Ở chế độ mặc định, host gửi trọng số và bias theo từng layer trước khi chạy ($232$~gói, $27\,228$~B mỗi nhịp).
-Khi bật chế độ nạp một lần (cờ \texttt{--resident}), host dùng trường địa chỉ gốc \texttt{w\_base} và \texttt{b\_base} trong lệnh \texttt{CONFIG} $16$~byte để nạp trước toàn bộ tham số của mô hình CNN Lite lên chip trong một lần khởi tạo ($194$~gói, $26\,195$~B; chi tiết địa chỉ ở Bảng~\ref{tab:thuongtru}, Mục~\ref{sec:mem}):
-\begin{itemize}
-  \item \textbf{Bank trọng số~0 ($8\,816$~B):} nạp trọng số của \texttt{conv0}, \texttt{conv1} và \texttt{conv2} bằng \texttt{WRITE\_W}, sau đó gọi \texttt{SWAP(w=1)} để đưa sang phía bank đọc.
-  \item \textbf{Bank trọng số~1 ($14\,592$~B):} nạp trọng số của \texttt{conv3}, \texttt{FC1} và \texttt{FC2} vào bank ghi còn lại.
-  \item \textbf{RAM bias ($212$~giá trị \texttt{int32}):} nạp nối tiếp toàn bộ bias của sáu lớp bằng \texttt{WRITE\_BIAS}; hệ số dịch được nạp theo từng layer bằng \texttt{WRITE\_SHIFT}.
-\end{itemize}
-
-\textbf{Trình tự lệnh của một nhịp.}
-Sau bước khởi tạo \texttt{--resident}, mỗi nhịp tim được thực thi bằng $27$~gói lệnh ($954$~B gửi đi):
 \begin{enumerate}
-  \item \textbf{Nạp cửa sổ đầu vào:} gửi $360$~mẫu nhịp kèm $6$~mẫu đệm không ($366$~B, chia $3$~gói \texttt{WRITE\_X}) vào địa chỉ~$0$, rồi gọi \texttt{SWAP(x=1)} chuyển sang bank đọc của ifmap.
-  \item \textbf{Chạy sáu layer (\texttt{conv0} $\to$ \texttt{conv1} $\to$ \texttt{conv2} $\to$ \texttt{conv3} $\to$ \texttt{FC1} $\to$ \texttt{FC2}):} ở mỗi layer, host gửi \texttt{WRITE\_SHIFT}, \texttt{CONFIG} và \texttt{RUN} (nhận \texttt{RESULT} trả về \texttt{[status, cycles]}). Trước \texttt{conv3} và sau \texttt{FC2}, host gọi \texttt{SWAP(w=1)} để chuyển đổi bank đọc trọng số giữa hai nhóm; tại \texttt{FC1}, host ghi thêm $4$~B đặc trưng RR ở địa chỉ~$200$ bằng \texttt{WRITE\_X} và gửi gói \texttt{WRITE\_SHIFT} thứ hai cho độ dịch trước $S_G$; tại \texttt{FC2}, lệnh \texttt{CONFIG} bật cờ \texttt{out\_int32} và \texttt{argmax}.
-  \item \textbf{Đọc kết quả:} gửi một lệnh \texttt{READ\_FMAP(offset=0, len=17)} thu về bốn logit $32$~bit ($16$~B) và $1$~byte nhãn dự đoán.
+  \item \textbf{Nạp tín hiệu đầu vào.} Host ghi cửa sổ tín hiệu của nhịp vào bộ nhớ ifmap bằng \texttt{WRITE\_X}, sau đó gọi \texttt{SWAP} để dữ liệu này trở thành bank đọc. Mỗi lệnh được FPGA xác nhận bằng \texttt{ACK}.
+  \item \textbf{Lặp thực thi từng layer.} Với mỗi layer trong sáu layer của mạng (\texttt{conv0}, \texttt{conv1}, \texttt{conv2}, \texttt{conv3}, \texttt{FC1}, \texttt{FC2}), host gửi \texttt{WRITE\_SHIFT}, \texttt{CONFIG} và \texttt{RUN}. FPGA tính toán trên dữ liệu nằm sẵn trong bộ nhớ trên chip rồi trả về \texttt{RESULT} chứa trạng thái; đầu ra của layer này là đầu vào của layer sau nên không phải đọc về host. Riêng \texttt{FC1} cần thêm đặc trưng RR do host ghi bằng \texttt{WRITE\_X}, và \texttt{FC2} bật cờ \texttt{out\_int32} cùng \texttt{argmax}.
+  \item \textbf{Đọc kết quả.} Host gửi \texttt{READ\_FMAP} để nhận logit và nhãn dự đoán của lớp đầu ra.
 \end{enumerate}
+
+Tham số của mô hình (trọng số, bias) có thể được cấp theo hai cách do phần mềm host lựa chọn:
+\begin{itemize}
+  \item \textbf{Gửi lại theo từng layer:} trước mỗi layer, host ghi trọng số và bias của layer đó vào bộ nhớ.
+  \item \textbf{Nạp một lần (\texttt{--resident}):} host ghi toàn bộ trọng số và bias của mạng vào hai bank trọng số và bộ nhớ bias ngay từ đầu. Mỗi layer sau đó dùng \texttt{w\_base} và \texttt{b\_base} trong \texttt{CONFIG} để trỏ đến vùng tham số của mình, và host chỉ dùng \texttt{SWAP} đổi bank trọng số đọc giữa các nhóm layer. Cách này loại bỏ việc gửi lại tham số ở mỗi nhịp.
+\end{itemize}

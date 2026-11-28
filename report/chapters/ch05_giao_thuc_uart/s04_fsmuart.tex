@@ -1,21 +1,36 @@
 % Muc 5.4  --  phu trach: Dung (xem report/PHANCONG.md)
-% nguon: rtl/cnn1d/top/layer_cmd_controller.v, comm/protocol/packet_rx.v, host/board_classifier.py, python/link/layer_host.py
+% nguon: rtl/cnn1d/top/layer_cmd_controller.v, host/board_classifier.py, python/link/layer_host.py
 \section{Máy trạng thái và xử lý lỗi}\label{sec:fsmuart}
-Khối \texttt{layer\_cmd\_controller} (\texttt{top/\allowbreak layer\_cmd\_controller.v}) điều phối giao tiếp theo cơ chế \emph{dừng--chờ} (stop-and-wait): host gửi một gói lệnh và chờ nhận trọn gói phản hồi tương ứng trước khi phát lệnh tiếp theo.
+Bộ điều khiển lệnh \texttt{layer\_cmd\_controller} hoạt động theo cơ chế \emph{dừng--chờ} (stop-and-wait): mỗi lệnh nhận đúng một phản hồi, và host chỉ gửi lệnh kế tiếp sau khi đã nhận trọn phản hồi.
 
 \begin{figure}[htbp]\centering
-  \includegraphics[width=0.86\textwidth]{ch05_giao_thuc_uart/fsm_cmd.png}
-  \caption{Sơ đồ các nhánh trạng thái của \texttt{layer\_cmd\_controller}.}\label{fig:ch5-fsm}
+  \includegraphics[width=0.9\textwidth]{ch05_giao_thuc_uart/fsm_cmd.png}
+  \caption{Máy trạng thái xử lý lệnh của bộ tăng tốc.}\label{fig:ch5-fsm}
 \end{figure}
 
-Trên Hình~\ref{fig:ch5-fsm}, tín hiệu mở bộ thu chỉ bật ở trạng thái rảnh (\texttt{o\_rx\_enable = (state == IDLE)}).
-Khi nhận gói tại \texttt{IDLE}, FSM chốt số thứ tự \texttt{SEQ}, chuyển sang nhánh thực thi tương ứng (\texttt{WRITE}, \texttt{WRITE\_BIAS}, \texttt{SWAP}, \texttt{RD\_GAP}, \texttt{RD\_FMAP\_ISSUE} $\to$ \texttt{RD\_FMAP\_WAIT}, hoặc \texttt{RUN\_START} $\to$ \texttt{RUN\_WAIT}; các lệnh \texttt{CONFIG}, \texttt{INFO} và trường hợp trả \texttt{NACK} hoàn tất ngay trong chu kỳ đầu), sau đó đi qua chuỗi phát \texttt{SEND} $\to$ \texttt{TX\_LAUNCH} $\to$ \texttt{TX\_WAIT} để xuất khung trả lời về host rồi quay lại \texttt{IDLE}.
-
-Mỗi lệnh được trả lời bằng một trong ba mã: tín hiệu xác nhận \texttt{0x80} \texttt{ACK} \texttt{[cmd, 0]}, từ chối \texttt{0x81} \texttt{NACK} \texttt{[cmd, code]} (mã~$1$: lỗi khung/CRC; mã~$2$: sai tham số hoặc địa chỉ; mã~$3$: sai trạng thái; mã~$4$: mã lệnh không hỗ trợ), hoặc kết quả \texttt{0x82} \texttt{RESULT}.
-Vì các thao tác như \texttt{SWAP} và \texttt{RUN} làm thay đổi trạng thái bank nhớ (không có tính luỹ đẳng), phía host không tự động gửi lại riêng lẻ từng lệnh khi gặp hết thời gian chờ hay \texttt{NACK}; thay vào đó, thủ tục \texttt{recover()} chờ bộ thu trên FPGA về lại trạng thái đầu, xoá bộ đệm nhận và thực hiện lại trọn vẹn từ đầu nhịp (\texttt{WRITE\_X} $+$ \texttt{SWAP}).
-
-Quyền điều khiển hai bộ đệm ping-pong (Mục~\ref{sec:mem}) được phân chia giữa host và phần cứng như sau:
+\textbf{Luồng xử lý lệnh.}
+Như trên Hình~\ref{fig:ch5-fsm}, bộ thu khung chỉ được mở khi máy trạng thái ở \texttt{IDLE}; byte đến trong lúc đang xử lý bị bỏ qua.
+Khi nhận một gói hợp lệ, máy trạng thái rẽ nhánh theo mã lệnh:
 \begin{itemize}
-  \item \textbf{Bộ nhớ ifmap:} host ghi dữ liệu đầu vào vào bank ghi và gọi \texttt{SWAP(x=1)} một lần ở đầu nhịp. Sau khi tính xong mỗi layer không bật GAP (\texttt{conv0}--\texttt{conv2}, \texttt{FC1}, \texttt{FC2}), phần cứng tự động đảo bank ifmap để đầu ra vừa ghi chuyển sang bank đọc cho bước kế tiếp; riêng ở \texttt{conv3} kết quả cộng dồn vào \texttt{gap\_mem} không đảo bank, và ở đầu \texttt{FC1} host ghi $4$~byte đặc trưng RR vào địa chỉ~$200$ của bank ghi để cờ \texttt{gap\_in} đóng gói chung với dữ liệu GAP rồi tự đảo bank trước khi tính.
-  \item \textbf{Bộ nhớ trọng số:} việc đảo bank đọc/ghi hoàn toàn do host điều khiển thông qua lệnh \texttt{SWAP(w=1)}.
+  \item \texttt{WRITE}, \texttt{WRITE\_BIAS}: ghi dữ liệu vào bộ nhớ tương ứng;
+  \item \texttt{SWAP}: đổi vai bank đọc/ghi;
+  \item \texttt{RD\_GAP}, \texttt{RD\_FMAP\_ISSUE} $\to$ \texttt{RD\_FMAP\_WAIT}: đọc bộ nhớ GAP hoặc bản đồ đặc trưng;
+  \item \texttt{RUN\_START} $\to$ \texttt{RUN\_WAIT}: phát lệnh bắt đầu layer và chờ layer hoàn tất;
+  \item \texttt{CONFIG}, \texttt{INFO} và các trường hợp \texttt{NACK}: hoàn tất ngay và chuyển sang khâu trả lời.
+\end{itemize}
+Mọi nhánh đều kết thúc bằng chuỗi \texttt{SEND} $\to$ \texttt{TX\_LAUNCH} $\to$ \texttt{TX\_WAIT} để phát khung trả lời, sau đó quay về \texttt{IDLE}.
+
+\textbf{Phản hồi và xử lý lỗi.}
+Khung trả lời thuộc một trong ba loại: \texttt{ACK} (đã thực hiện), \texttt{NACK} kèm mã lỗi, hoặc \texttt{RESULT} mang dữ liệu kết quả.
+Các mã lỗi của \texttt{NACK} gồm: mã~$1$ cho lỗi khung hoặc sai CRC; mã~$2$ cho tham số, độ dài hoặc địa chỉ không hợp lệ; mã~$3$ cho lệnh sai trạng thái; mã~$4$ cho mã lệnh không được hỗ trợ.
+Lỗi ở tầng vật lý và khung nhận dở không có trả lời; host nhận biết qua hết thời gian chờ.
+
+Host không tự động gửi lại một lệnh đơn lẻ khi gặp hết thời gian chờ hoặc \texttt{NACK}, vì các lệnh như \texttt{SWAP} và \texttt{RUN} làm thay đổi trạng thái của bộ tăng tốc.
+Thay vào đó, host thực hiện phục hồi ở mức nhịp: chờ bộ thu của FPGA tự huỷ khung dở, xoá bộ đệm nhận, rồi thực hiện lại nhịp từ đầu.
+
+\textbf{Quản lý bank ping-pong.}
+Quyền đổi bank được chia như sau:
+\begin{itemize}
+  \item \textbf{Bộ nhớ ifmap:} host nạp dữ liệu đầu vào và gọi \texttt{SWAP} ở đầu nhịp. Sau mỗi layer không dùng GAP, phần cứng tự đổi bank để đầu ra của layer này thành đầu vào của layer kế tiếp. Ở layer GAP, đầu ra được cộng dồn vào bộ nhớ GAP nên không đổi bank; layer FC1 sau đó tự đóng gói dữ liệu GAP cùng các đặc trưng RR do host ghi vào bank ghi rồi đổi bank trước khi tính.
+  \item \textbf{Bộ nhớ trọng số:} việc đổi bank do host điều khiển hoàn toàn bằng lệnh \texttt{SWAP}.
 \end{itemize}
