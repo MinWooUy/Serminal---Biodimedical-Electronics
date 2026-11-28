@@ -5,7 +5,8 @@ Mục này mô tả cấu trúc các bộ nhớ, cách chúng được đổi va
 
 \subsection{SRAM và bộ đệm ping-pong}
 \texttt{tensor\_sram} là một bộ nhớ truy cập ngẫu nhiên tĩnh (Static Random-Access Memory, SRAM) rộng $8$ bit, có một cổng ghi và một cổng đọc đồng bộ (đọc ở chu kỳ $n$, dữ liệu ở chu kỳ $n+1$ kèm cờ \texttt{rd\_valid}).
-Nó được viết theo mẫu RAM hai cổng đơn giản (\texttt{ramstyle = ``M9K, no\_rw\_check''}) để Quartus ánh xạ vào khối RAM nhúng M9K ($9$~kbit) của MAX~10; viết lại để đọc và ghi trong cùng một khối \texttt{always} là cần thiết, nếu không Quartus 18.1 coi đây là đọc bất đồng bộ và dựng RAM bằng thanh ghi và bộ chọn.
+Nó được viết theo mẫu RAM hai cổng đơn giản (simple dual-port, \texttt{ramstyle = ``M9K, no\_rw\_check''}) để Quartus ánh xạ vào khối RAM nhúng M9K ($9$~kbit) của MAX~10.
+Đọc và ghi phải nằm trong cùng một khối \texttt{always}; nếu tách ra, Quartus 18.1 suy ra (infer) đọc bất đồng bộ và dựng RAM bằng thanh ghi cùng bộ ghép kênh thay vì M9K.
 Vì hai cổng luôn truy cập hai bank khác nhau (xem dưới), đọc và ghi cùng địa chỉ không bao giờ xảy ra nên bỏ được kiểm tra xung đột.
 
 \texttt{tensor\_pingpong\_buffer} gồm hai bank \texttt{tensor\_sram} và một bit \texttt{read\_bank}:
@@ -17,8 +18,12 @@ Nhờ vậy việc nạp dữ liệu mới (từ UART hoặc từ đầu ra củ
 
 Thiết kế có hai bộ đệm ping-pong, đều tạo trong \texttt{conv1d\_tile\_top}:
 \begin{itemize}
-  \item \emph{ifmap} (\texttt{u\_ifmap\_mem}): $2\times4\,096$ byte. Host ghi vào bank ghi của layer đầu và \texttt{SWAP}; mỗi layer đọc bank đọc và ghi đầu ra vào bank ghi, và cuối layer (không phải GAP) tự \texttt{SWAP}, nên đầu ra của layer này thành đầu vào của layer sau mà không rời chip. Riêng layer đọc kết quả GAP (FC1, cờ \texttt{gap\_in}) còn tự \texttt{SWAP} thêm một lần trước khi tính, sau khi đóng gói các giá trị GAP vào bank ghi; bốn đặc trưng RR do host ghi vào bank ghi trước đó nhờ vậy cũng chuyển sang bank đọc.
-  \item \emph{trọng số} (\texttt{u\_wgt\_mem}): $2\times16\,384$ byte. Host ghi vào bank ghi rồi \texttt{SWAP}; layer đọc trọng số ở bank đọc tại $\texttt{w\_base}+c\cdot K+k$. Cơ chế này không tự đổi bank sau mỗi layer.
+  \item \emph{ifmap} (\texttt{u\_ifmap\_mem}): $2\times4\,096$ byte.
+  Host ghi vào bank ghi của layer đầu và \texttt{SWAP}; mỗi layer đọc bank đọc và ghi đầu ra vào bank ghi, và cuối layer (không phải GAP) tự \texttt{SWAP}, nên đầu ra của layer này thành đầu vào của layer sau mà không rời chip.
+  Riêng layer đọc kết quả GAP (FC1, cờ \texttt{gap\_in}) còn tự \texttt{SWAP} thêm một lần trước khi tính, sau khi đóng gói các giá trị GAP vào bank ghi; bốn đặc trưng RR do host ghi vào bank ghi trước đó nhờ vậy cũng chuyển sang bank đọc.
+  \item \emph{trọng số} (\texttt{u\_wgt\_mem}): $2\times16\,384$ byte.
+  Host ghi vào bank ghi rồi \texttt{SWAP}; layer đọc trọng số ở bank đọc tại $\texttt{w\_base}+c\cdot K+k$.
+  Bank trọng số không tự đổi sau mỗi layer; chỉ host đổi bằng \texttt{SWAP}.
 \end{itemize}
 
 \subsection{Bố cục dữ liệu}
@@ -26,13 +31,15 @@ Thiết kế có hai bộ đệm ping-pong, đều tạo trong \texttt{conv1d\_t
   \item \textbf{ifmap, kênh cuối (channel-last).} Phần tử vị trí $t$, kênh $c$ ở địa chỉ $(t+\mathrm{pad})\cdot C+c$; $\texttt{pad\_next}$ vị trí đệm số không ở hai đầu được ghi $0$ trước khi ô đầu tiên của layer chạy (trạng thái \texttt{L\_PAD}).
   \item \textbf{Trọng số, $[C_{out}][K]$.} Bộ lọc của kênh $c$ chiếm $K$ byte liên tiếp bắt đầu tại $\texttt{w\_base}+c\cdot K$, với chỉ số $k=j\cdot C_{in}+i$.
   \item \textbf{Bias.} RAM $\texttt{BIAS\_DEPTH}=256$ mục INT32; bias của kênh $c$ ở $\texttt{b\_base}+c$.
-  \item \textbf{Hệ số dịch.} Hai vùng mỗi vùng $\texttt{COUT\_MAX}=64$ mục $8$ bit có dấu: vùng đầu là độ dịch lượng tử hoá $S_O$ của từng kênh, vùng sau là độ dịch ``trước'' $S_G$ chỉ dùng cho FC1 (công thức~\eqref{eq:rowcombine}). Chúng được địa chỉ hoá theo kênh nên phải ghi lại cho từng layer.
+  \item \textbf{Hệ số dịch.} Hai vùng mỗi vùng $\texttt{COUT\_MAX}=64$ mục $8$ bit có dấu: vùng đầu là độ dịch lượng tử hoá $S_O$ của từng kênh, vùng sau là độ dịch ``trước'' $S_G$ chỉ dùng cho FC1 (công thức~\eqref{eq:rowcombine}).
+  Chúng được địa chỉ hoá theo kênh nên phải ghi lại cho từng layer.
   \item \textbf{GAP.} Một bộ nhớ $\texttt{COUT\_MAX}$ mục $16$ bit chứa tổng theo kênh của conv3, đọc bằng lệnh \texttt{READ\_GAP} hoặc đóng gói vào ifmap cho FC1 (cờ \texttt{gap\_in}).
 \end{itemize}
 
 \subsection{Ngân sách bộ nhớ}
 Bảng~\ref{tab:bonho} cộng dung lượng các bộ nhớ lớn từ các tham số thiết kế.
-Tổng $451\,584$ bit so với $452\,390$ bit mà báo cáo Quartus (21/11/2026) ghi cho cả thiết kế chênh $806$ bit ($0{,}2\,\%$). Bảng tóm tắt RAM của Fitter cho thấy phần chênh gồm $294$ bit đường trễ của feeder ifmap được Quartus đặt vào RAM và $512$ bit của một bản sao RAM hệ số dịch do công cụ tạo thêm.
+Tổng $451\,584$ bit so với $452\,390$ bit mà báo cáo Quartus (21/11/2026) ghi cho cả thiết kế chênh $806$ bit ($0{,}2\,\%$).
+Bảng tóm tắt RAM của Fitter cho thấy phần chênh gồm $294$ bit đường trễ của feeder ifmap được Quartus đặt vào RAM và $512$ bit của một bản sao RAM hệ số dịch do công cụ tạo thêm.
 
 \begin{table}[htbp]\centering
 \caption{Ngân sách bộ nhớ trên chip tính từ tham số thiết kế.}\label{tab:bonho}
@@ -75,5 +82,5 @@ fc2 & 1 & 14\,464 & 128 & 208 \\ \bottomrule
 \end{table}
 
 Bank~0 dùng $8\,816$ byte và bank~1 dùng $14\,592$ byte, đều trong giới hạn $16\,384$.
-Hệ số dịch không thường trú được vì bộ nhớ này chỉ có $\texttt{COUT\_MAX}$ mục theo kênh nên mỗi layer vẫn ghi lại: mỗi nhịp là bảy lệnh \texttt{WRITE\_SHIFT}, tổng $314$ byte trên đường truyền kể cả phần đầu khung ($244$ byte dữ liệu).
+Hệ số dịch không thường trú được vì bộ nhớ này chỉ có $\texttt{COUT\_MAX}$ mục theo kênh nên mỗi layer vẫn ghi lại: mỗi nhịp là bảy lệnh \texttt{WRITE\_SHIFT}, tổng $314$ byte trên đường truyền gồm $244$ byte hệ số dịch và $70$ byte bao gói khung cùng địa chỉ.
 Kết quả đo của hai chế độ nạp được trình bày ở Chương~\ref{ch:thucnghiem}.

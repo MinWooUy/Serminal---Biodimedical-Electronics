@@ -3,7 +3,7 @@
 %        results/2026-11-24_a5fb3f12_board_compare/log.txt
 \section{Kiểm chứng bit-exact}\label{sec:bitexact}
 \subsection{Chuỗi kiểm chứng}
-Mục tiêu của kiểm chứng là chứng tỏ kết quả tính trên FPGA giống hệt mô hình chuẩn, không phải chỉ gần đúng.
+Mục tiêu của kiểm chứng là chứng tỏ kết quả tính trên FPGA khớp từng bit với mô hình chuẩn (golden), không phải chỉ gần đúng.
 Việc này được chia thành ba bước, mỗi bước so hai khâu (Hình~\ref{fig:chuoikiemchung}).
 
 \begin{figure}[htbp]\centering
@@ -12,7 +12,9 @@ Việc này được chia thành ba bước, mỗi bước so hai khâu (Hình~\
 \end{figure}
 
 \begin{enumerate}
-  \item \textbf{Số thực và số nguyên.} Đường số nguyên (lọc, tinh chỉnh đỉnh R, cắt cửa sổ, chuẩn hoá, CNN) được so với đường số thực bằng macro-F1 trên DS1 (Mục~\ref{sec:dochinhxac}). Bước này so chất lượng \emph{quyết định}, không yêu cầu trùng từng bit. Riêng bản xử lý từng mẫu (stream) trùng từng bit với bản xử lý cả đoạn trên $8$ đoạn golden.
+  \item \textbf{Số thực và số nguyên.} Đường số nguyên (lọc, tinh chỉnh đỉnh R, cắt cửa sổ, chuẩn hoá, CNN) được so với đường số thực bằng macro-F1 trên DS1 (Mục~\ref{sec:dochinhxac}).
+  Bước này so chất lượng \emph{quyết định}, không yêu cầu trùng từng bit.
+  Riêng bản xử lý từng mẫu (stream) khớp từng bit với bản xử lý cả đoạn trên $8$ đoạn golden.
   \item \textbf{Golden và RTL mô phỏng.} Testbench nạp vector do mô hình số nguyên sinh ra và so đầu ra từng byte (Mục~\ref{sec:mophong}).
   \item \textbf{Golden và board.} Host gửi từng nhịp xuống board, nhận bốn logit và nhãn, rồi so với golden.
 \end{enumerate}

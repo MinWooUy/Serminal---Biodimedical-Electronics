@@ -25,9 +25,12 @@ Phần mềm host & Python, PyTorch; mô hình số nguyên làm chuẩn so sán
 
 \subsection{Phương pháp đo}
 \begin{itemize}
-  \item \textbf{Chu kỳ tính toán} lấy từ trường \texttt{cycles} trong trả lời của lệnh \texttt{RUN}. Bộ đếm nằm trong \texttt{layer\_cmd\_controller} và đếm số chu kỳ xung nhịp từ lúc bắt đầu đến lúc xong một layer, nên \emph{không} gồm thời gian truyền UART. Thời gian tính một nhịp là tổng của sáu lệnh \texttt{RUN} chia cho $50$~MHz.
-  \item \textbf{Thời gian đường truyền} đo ở host theo đồng hồ thực, kèm số gói và số byte. Giá trị này phụ thuộc cả host và bộ chuyển USB--UART.
-  \item \textbf{Khớp từng bit} (bit-exact) kiểm bằng cách so bốn logit và nhãn của board với golden ở từng nhịp, cùng mã kiểm dư vòng CRC-32 tích luỹ của từng đoạn (Mục~\ref{sec:bitexact}).
+  \item \textbf{Chu kỳ tính toán} lấy từ trường \texttt{cycles} trong trả lời của lệnh \texttt{RUN}.
+  Bộ đếm nằm trong \texttt{layer\_cmd\_controller} và đếm số chu kỳ xung nhịp từ lúc bắt đầu đến lúc xong một layer, nên \emph{không} gồm thời gian truyền UART.
+  Thời gian tính một nhịp là tổng chu kỳ của sáu lệnh \texttt{RUN} chia cho tần số $50$~MHz.
+  \item \textbf{Thời gian đường truyền} đo ở host theo đồng hồ thực, kèm số gói và số byte.
+  Giá trị này phụ thuộc cả host và bộ chuyển USB--UART.
+  \item \textbf{Khớp từng bit} (bit-exact) kiểm bằng cách so bốn logit và nhãn của board với golden ở từng nhịp, cùng mã CRC-32 tích luỹ của từng đoạn (Mục~\ref{sec:bitexact}).
   \item \textbf{Độ chính xác phân loại} đánh giá liên bệnh nhân: huấn luyện trên DS1, kiểm tra trên DS2 \emph{một lần duy nhất} (Chương~\ref{ch:cnn}).
-  \item \textbf{Tài nguyên và thời gian mạch} lấy từ báo cáo Fitter và Timing Analyzer của Quartus; \textbf{công suất} là ước lượng của Quartus Power Analyzer, không phải số đo.
+  \item \textbf{Tài nguyên và định thời} lấy từ báo cáo Fitter và Timing Analyzer của Quartus; \textbf{công suất} là ước lượng của Quartus Power Analyzer, không phải số đo.
 \end{itemize}

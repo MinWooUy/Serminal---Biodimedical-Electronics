@@ -1,7 +1,7 @@
 % Muc 6.1  --  phu trach: xem report/PHANCONG.md
 \section{Tổng quan kiến trúc}\label{sec:tongquanhw}
-Bộ tăng tốc (accelerator) là một thiết kế ở mức truyền thanh ghi (Register-Transfer Level, RTL), mô tả bằng ngôn ngữ Verilog và cài đặt trên mạch tích hợp lập trình được (Field-Programmable Gate Array, FPGA) họ MAX~10 (\texttt{10M50DAF484C7G}) của board DE10-Lite, với xung nhịp $50$~MHz.
-Mỗi khi nhận lệnh từ máy chủ (host) qua giao tiếp nối tiếp không đồng bộ (Universal Asynchronous Receiver/Transmitter, UART), bộ tăng tốc thực hiện trọn vẹn \emph{một lớp} (layer) tích chập một chiều hoặc kết nối đầy đủ (Fully Connected, FC): nhân--tích luỹ (Multiply-Accumulate, MAC), cộng hệ số bias, lượng tử hoá về $8$ bit, hàm kích hoạt chỉnh lưu (Rectified Linear Unit, ReLU), MaxPool hoặc trung bình toàn cục (Global Average Pooling, GAP) tuỳ cấu hình, rồi giữ kết quả trên chip làm đầu vào của lớp kế tiếp.
+Bộ tăng tốc (accelerator) là một thiết kế ở mức truyền thanh ghi (Register-Transfer Level, RTL), mô tả bằng ngôn ngữ Verilog và hiện thực trên mảng cổng lập trình được dạng trường (Field-Programmable Gate Array, FPGA) họ MAX~10 (\texttt{10M50DAF484C7G}) của board DE10-Lite, với xung nhịp $50$~MHz.
+Mỗi khi nhận lệnh từ máy chủ (host) qua bộ thu phát không đồng bộ vạn năng (Universal Asynchronous Receiver/Transmitter, UART), bộ tăng tốc thực hiện trọn vẹn \emph{một lớp} (layer) tích chập một chiều hoặc kết nối đầy đủ (Fully Connected, FC): nhân--tích luỹ (Multiply-Accumulate, MAC), cộng bias, lượng tử hoá về $8$ bit, hàm kích hoạt ReLU (Rectified Linear Unit), gộp cực đại (MaxPool) hoặc gộp trung bình toàn cục (Global Average Pooling, GAP) tuỳ cấu hình, rồi giữ kết quả trên chip làm đầu vào của lớp kế tiếp.
 Host điều khiển toàn bộ trình tự: nạp dữ liệu, cấu hình layer (\texttt{CONFIG}), chạy (\texttt{RUN}) và đọc nhãn cuối (Chương~\ref{ch:uart}).
 Cách phân chia này cho phép chạy mô hình bất kỳ thoả các giới hạn ở Bảng~\ref{tab:thamso}, và là lý do thiết kế dùng \emph{một} mảng phần tử xử lý (Processing Element, PE) chung cho cả tích chập lẫn FC.
 
@@ -13,27 +13,29 @@ Cách phân chia này cho phép chạy mô hình bất kỳ thoả các giới h
 \subsection{Phân cấp module}
 Phân cấp từ đỉnh xuống, mỗi cấp một thư mục RTL:
 \begin{itemize}
-  \item \texttt{de10\_lite\_top}: nối chân board. Đặt kích thước mảng, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp và baud (Bảng~\ref{tab:thamso}; các tham số còn lại dùng giá trị mặc định của module), và đảo nút \texttt{KEY0} thành tín hiệu reset tích cực mức cao.
+  \item \texttt{de10\_lite\_top}: nối chân board.
+  Khối này đặt kích thước mảng, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp và baud (Bảng~\ref{tab:thamso}; các tham số còn lại dùng giá trị mặc định của module), và đảo nút \texttt{KEY0} thành tín hiệu reset tích cực mức cao.
   \item \texttt{ecg\_accel\_top}: gộp đường UART và lõi layer.
   \begin{itemize}
     \item \texttt{uart\_crc\_top} (\texttt{comm/}): thu nhận khung \texttt{A5 5A $|$ CMD $|$ SEQ $|$ LEN $|$ PAYLOAD $|$ CRC16}, kiểm tra dư thừa vòng (Cyclic Redundancy Check, CRC), phát khung trả lời.
     \item \texttt{layer\_core} (\texttt{top/}): giải mã lệnh và chạy layer.
     \begin{itemize}
-      \item \texttt{layer\_cmd\_controller}: máy trạng thái hữu hạn (Finite State Machine, FSM) giải mã lệnh, ghi bộ nhớ, chốt cấu hình layer, đếm chu kỳ của \texttt{RUN}, trả \texttt{ACK/NACK/RESULT}.
+      \item \texttt{layer\_cmd\_controller}: máy trạng thái hữu hạn (Finite State Machine, FSM) giải mã lệnh, ghi bộ nhớ, chốt cấu hình layer, đếm chu kỳ của \texttt{RUN}, trả \texttt{ACK}, \texttt{NACK} hoặc \texttt{RESULT}.
       \item \texttt{conv1d\_layer\_top} (\texttt{conv1d/}): tự chạy trọn một layer; chứa FSM của layer, các bộ nhớ bias, hệ số dịch và GAP, và khối xử lý sau mảng PE của hai layer FC.
       \begin{itemize}
         \item \texttt{conv1d\_layer\_controller}: vòng lặp các ô của layer.
-        \item \texttt{conv1d\_tile\_top}: một ô (tile), gồm hai \texttt{tensor\_pingpong\_buffer} (ifmap và trọng số), hai cụm nạp (\texttt{conv1d\_*\_feeder\_top}, mỗi cụm gồm một bộ nạp (loader), bên trong có khối sinh địa chỉ (Address Generation Unit, AGU), và một bộ cấp dữ liệu (feeder)), \texttt{cnn\_compute\_core} (\texttt{core/}) chứa \texttt{cnn\_control\_fsm}, \texttt{pe\_array} (\texttt{pe/}) và khối quản lý tổng riêng (Partial Sum Manager, PSM) \texttt{partial\_sum\_manager} (\texttt{psm/}), và \texttt{conv1d\_post\_process} (\texttt{post/}) lượng tử hoá một ô (bật bằng tham số \texttt{POST\_ENABLE}).
+        \item \texttt{conv1d\_tile\_top}: xử lý một ô (tile).
+        Khối này gồm hai \texttt{tensor\_pingpong\_buffer} (ifmap và trọng số); hai cụm nạp \texttt{conv1d\_*\_feeder\_top}, mỗi cụm có một bộ nạp (loader) chứa khối sinh địa chỉ (Address Generation Unit, AGU) và một bộ cấp dữ liệu (feeder); lõi \texttt{cnn\_compute\_core} (\texttt{core/}) chứa \texttt{cnn\_control\_fsm}, \texttt{pe\_array} (các PE nằm trong \texttt{pe/}) và khối quản lý tổng riêng (Partial Sum Manager, PSM) \texttt{partial\_sum\_manager} (\texttt{psm/}); và \texttt{conv1d\_post\_process} (\texttt{post/}) lượng tử hoá kết quả của ô (bật bằng tham số \texttt{POST\_ENABLE}).
         \item \texttt{fmap\_writer} (\texttt{post/}): ghi kết quả (kèm MaxPool và GAP) vào bank ghi của ifmap.
       \end{itemize}
     \end{itemize}
   \end{itemize}
 \end{itemize}
-Các khối số học (bộ nhân Wallace, bộ cộng nhớ trước) nằm ở \texttt{arith/}.
+Các khối số học (bộ nhân cây Wallace, bộ cộng tính trước số nhớ) nằm ở \texttt{arith/}.
 
 \subsection{Tham số thiết kế}
 Bảng~\ref{tab:thamso} liệt kê các tham số của thiết kế và giá trị dùng trên board.
-Phần lớn (số hàng, số cột, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp, baud, \texttt{MAX\_PAYLOAD}) được bitstream tự khai báo qua lệnh \texttt{INFO} (Chương~\ref{ch:uart}) để phần mềm không phải đoán; riêng \texttt{BIAS\_DEPTH} không có trong \texttt{INFO}.
+Phần lớn (số hàng, số cột, độ sâu các bộ nhớ, \texttt{COUT\_MAX}, xung nhịp, baud, \texttt{MAX\_PAYLOAD}) được bitstream tự khai báo qua lệnh \texttt{INFO} (Chương~\ref{ch:uart}) để phần mềm host không phải gán cứng; riêng \texttt{BIAS\_DEPTH} không có trong \texttt{INFO}.
 
 \begin{table}[htbp]\centering
 \caption{Các tham số cấu hình của bộ tăng tốc và giá trị trên board.}\label{tab:thamso}
