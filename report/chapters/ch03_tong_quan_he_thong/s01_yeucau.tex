@@ -1,9 +1,10 @@
 % Muc 3.1  --  phu trach: xem report/PHANCONG.md
 \section{Yêu cầu và ràng buộc thiết kế}\label{sec:yeucau}
-\begin{goiy}
-  \begin{itemize}
-    \item Yêu cầu chức năng: nhãn N/S/V/F cho mỗi nhịp; khớp mô hình số nguyên từng bit.
-    \item Ràng buộc: MAX~10 10M50DAF484C7G (49\,760 LE, $\approx$1.68~Mbit RAM), clock 50~MHz, số học int8/int32, UART là cổng giao tiếp duy nhất.
-    \item Yêu cầu phi chức năng: độ trễ chấp nhận được so với chu kỳ tim ($\approx 0.8$~s), khả năng tái lập.
-  \end{itemize}
-\end{goiy}
+
+Hệ thống hướng tới phân loại từng nhịp điện tâm đồ (ECG) thành một trong bốn nhãn chuẩn AAMI (N, S, V, F) và duy trì sự tương thích kết quả ở mức từng bit (bit-exact) giữa mô hình tham chiếu số nguyên và bộ tăng tốc phần cứng.
+
+\begin{itemize}
+	\item \textbf{Yêu cầu chức năng:} Đầu ra phải là nhãn phân loại N/S/V/F cho từng nhịp ECG, với kết quả suy luận trùng khớp từng bit so với mô hình số nguyên tham chiếu trên phần mềm.
+	\item \textbf{Ràng buộc phần cứng và giao tiếp:} Thiết kế nhắm tới vi mạch FPGA Altera/Intel MAX~10 mã \texttt{10M50DAF484C7G} ($49\,760$ Logic Element, khoảng $1.68\text{ Mbit}$ bộ nhớ khối), xung nhịp hệ thống $50\text{ MHz}$, sử dụng số học số nguyên \texttt{int8}/\texttt{int32}, và giao tiếp với máy tính chủ thông qua giao diện Universal Asynchronous Receiver/Transmitter (UART) làm kênh truyền duy nhất.
+	\item \textbf{Yêu cầu phi chức năng:} Thời gian xử lý cần phù hợp với nhịp điệu sinh lý của chu kỳ tim bình thường (khoảng $0.8\text{ s}$/nhịp), đồng thời đảm bảo khả năng tái lập thí nghiệm thông qua phiên bản mã nguồn, mã băm mô hình và kịch bản kiểm chứng rõ ràng.
+\end{itemize}

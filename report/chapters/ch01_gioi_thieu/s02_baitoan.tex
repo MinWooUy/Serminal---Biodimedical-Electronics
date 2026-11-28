@@ -1,10 +1,15 @@
-% Muc 1.2  --  phu trach: xem report/PHANCONG.md
+% =====================================================================
+% MỤC 1.2: PHÁT BIỂU BÀI TOÁN
+% =====================================================================
 \section{Phát biểu bài toán}\label{sec:baitoan}
-\begin{goiy}
-  \begin{itemize}
-    \item Vào: chuỗi mẫu ADC ECG 360~Hz (kênh MLII); ra: nhãn mỗi nhịp thuộc N, S, V, F (chuẩn AAMI).
-    \item Khó khăn: biến thiên giữa bệnh nhân (đánh giá liên bệnh nhân), mất cân bằng lớp, nhiễu/đường nền, ràng buộc tài nguyên và số học số nguyên.
-    \item Các hướng đã có: mô hình float trên PC/GPU, vi điều khiển, FPGA/ASIC; hạn chế của từng hướng (đối chiếu Chương~\ref{ch:cosolt}).
-    \item \textbf{Khoảng trống (luận cứ cho định vị):} hiện thực phần cứng của học sâu cho hỗ trợ quyết định còn ít so với nghiên cứu phần mềm; ít công trình báo cáo nhất quán độ trễ từ thu nhận đến quyết định; một số công trình chấp nhận mất độ chính xác khi lên phần cứng hoặc đánh giá theo mẫu thay vì theo bệnh nhân. \emph{Chỉ khẳng định sau khi trích đúng nguồn đã đọc}: khảo sát Hariri 2026 (mục 5.2, 5.4), Liu 2025, Li 2026 (xem \texttt{report/DINHVI.md}).
-  \end{itemize}
-\end{goiy}
+
+Bài toán nhận chuỗi mẫu ECG số hoá ($360\text{ Hz}$, 11 bit, kênh MLII) từ cơ sở dữ liệu MIT-BIH Arrhythmia \cite{moody2001impact}, thực hiện tiền xử lý số nguyên và phân loại từng nhịp vào bốn nhóm chuẩn AAMI \cite{aami2012ec57, dechazal2004automatic}: nhịp bình thường, nhịp ngoại tâm thu trên thất, nhịp ngoại tâm thu thất và nhịp hoà, kèm xuất khung kết quả qua UART.
+
+Các thách thức chính của bài toán gồm:
+\begin{itemize}
+	\item \textbf{Biến thiên liên bệnh nhân:} Hình thái và biên độ sóng thay đổi rõ rệt giữa các cá thể, khiến đánh giá chia tập theo bệnh nhân phản ánh sát thực tế hơn nhưng khó hơn nhiều so với chia theo mẫu hoặc bản ghi \cite{dechazal2004automatic, li2026lightweight}.
+	\item \textbf{Mất cân bằng lớp:} Nhóm nhịp bình thường chiếm đa số so với các nhóm thiểu số; trong đó nhịp ngoại tâm thu trên thất có hình thái gần giống nhịp bình thường và thường nhận diện qua thời điểm xuất hiện sớm, còn nhịp hoà mang đặc điểm trung gian giữa nhịp bình thường và nhịp ngoại tâm thu thất \cite{dechazal2004automatic, lin2017focal, li2026lightweight}.
+	\item \textbf{Nhiễu và ràng buộc phần cứng:} Tín hiệu chịu nhiễu đường nền, nhiễu cơ/điện lưới và biến thiên biên độ, trong khi phần cứng biên có giới hạn về bộ nhớ, logic và độ trễ khi thực hiện phép toán số nguyên \cite{pantompkins1985realtime, jacob2018quantization, hariri2026hardware}.
+\end{itemize}
+
+Các hướng hiện thực gồm mô hình dấu phẩy động trên máy tính/GPU (linh hoạt huấn luyện nhưng không đo trực tiếp chi phí biên), vi điều khiển (dễ lập trình nhưng hạn chế tốc độ và song song hoá cho mạng tích chập) và bộ tăng tốc FPGA/ASIC (thông lượng và hiệu quả cao nhưng đòi hỏi thiết kế kiến trúc, lượng tử hoá và kiểm chứng phức tạp) \cite{kiranyaz2016realtime, jacob2018quantization, hariri2026hardware, liu2025fpga1dcnn}. Hiện còn ít công trình hiện thực đầy đủ chuỗi số nguyên khớp từng bit, kiểm chứng trên FPGA tài nguyên nhỏ và phân tích rõ độ trễ đầu cuối \cite{liu2025fpga1dcnn, liu2023fully}.

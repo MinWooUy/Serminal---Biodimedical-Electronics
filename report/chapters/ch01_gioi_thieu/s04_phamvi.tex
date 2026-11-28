@@ -1,9 +1,16 @@
-% Muc 1.4  --  phu trach: xem report/PHANCONG.md
+% =====================================================================
+% MỤC 1.4: ĐỐI TƯỢNG VÀ PHẠM VI NGHIÊN CỨU
+% =====================================================================
 \section{Đối tượng và phạm vi nghiên cứu}\label{sec:phamvi}
-\begin{goiy}
-  \begin{itemize}
-    \item Đối tượng: phân loại nhịp ECG từng nhịp; CNN Lite int8; accelerator Conv1D mảng PE.
-    \item Phạm vi: MIT-BIH, kênh MLII, 4 lớp AAMI; board DE10-Lite; Quartus Prime Lite 18.1.
-    \item Ngoài phạm vi (nêu rõ để tránh hiểu nhầm): huấn luyện trên chip, đa kênh/12 chuyển đạo, ASIC, chạy độc lập không cần PC (tiền xử lý hiện ở host).
-  \end{itemize}
-\end{goiy}
+
+\begin{itemize}
+	\item \textbf{Đối tượng nghiên cứu:} Chuỗi tiền xử lý số nguyên (phát hiện QRS Pan--Tompkins, lọc thông dải $0{,}5\text{--}40\text{ Hz}$ và chuẩn hoá số nguyên), mô hình \texttt{CNN Lite int8} và bộ tăng tốc tích chập 1D dùng mảng PE $7\times 7$ điều khiển bằng lệnh trên nền tảng phần cứng \cite{pantompkins1985realtime, dechazal2004automatic, jacob2018quantization, liu2025fpga1dcnn}.
+	\item \textbf{Phạm vi nghiên cứu:} Dữ liệu MIT-BIH Arrhythmia (kênh MLII, $360\text{ Hz}$, 11 bit, loại trừ 4 bản ghi máy tạo nhịp; đánh giá liên bệnh nhân theo chuẩn AAMI), kiểm chứng \emph{bit-exact} qua UART và triển khai trên kit DE10-Lite dùng FPGA Altera/Intel MAX 10 ở xung nhịp $50\text{ MHz}$ cùng các bộ nhớ đệm cấu hình tương ứng \cite{moody2001impact, aami2012ec57, li2026lightweight}.
+	\item \textbf{Ngoài phạm vi nghiên cứu:}
+	\begin{itemize}
+		\item Huấn luyện hoặc cập nhật trọng số trực tiếp trên FPGA/thiết bị biên (mô hình huấn luyện ngoại tuyến, lượng tử hoá \texttt{int8} và đóng băng trước khi xuất tham số) \cite{jacob2018quantization}.
+		\item Xử lý ECG 12 chuyển đạo lâm sàng đầy đủ hoặc tinh chỉnh mô hình/ngưỡng sau khi đánh giá trên tập kiểm thử.
+		\item Thiết kế vật lý hoàn chỉnh, kiểm thử sản xuất hoặc \emph{tape-out} ASIC, cũng như kiến trúc mảng tâm thu quy mô lớn \cite{kung1982systolic, chen2017eyeriss, hariri2026hardware}.
+		\item Vận hành hoàn toàn độc lập không cần máy tính chủ để điều phối luồng dữ liệu, sinh/đối chiếu khung UART và quan sát kết quả kiểm chứng.
+	\end{itemize}
+\end{itemize}

@@ -1,14 +1,12 @@
 % Chuong 5  --  phu trach: Dung (xem report/PHANCONG.md)
 % Moi muc la mot file s*.tex trong thu muc nay, de nhieu nguoi sua song song khong dung nhau.
-% nguon: rtl/cnn1d/comm/, rtl/cnn1d/top/layer_cmd_controller.v, python/link/, host/, docs/baseline_v1.md
+% nguon: rtl/cnn1d/comm/, rtl/cnn1d/top/layer_cmd_controller.v, python/link/, host/
 \chapter{Giao thức giao tiếp Host--Accelerator}\label{ch:uart}
 
-Chương này mô tả kênh giao tiếp nối tiếp và giao thức điều khiển giữa máy chủ (host) và bộ tăng tốc trên FPGA.
-Mục~\ref{sec:uartvl} trình bày tầng vật lý UART, bộ chia tốc độ baud và cơ chế lấy mẫu bit.
-Mục~\ref{sec:khungoi} mô tả cấu trúc khung gói hai chiều, kiểm lỗi CRC-16 và giới hạn tải tối đa.
-Mục~\ref{sec:bolenh} giải thích lý do thiết kế bộ lệnh ở mức layer cùng các cờ mở rộng cho hai lớp kết nối đầy đủ và chế độ trọng số thường trú.
-Mục~\ref{sec:fsmuart} phân tích máy trạng thái dừng--chờ, cách xử lý lỗi và quy tắc quản lý các bank nhớ ping-pong.
-Mục~\ref{sec:trinhtu} tổng hợp trình tự lệnh phân loại một nhịp tim kèm chi phí đường truyền; Mục~\ref{sec:phiahost} trình bày ngăn xếp phần mềm phía host, mô hình giả lập mức byte và các công cụ kiểm chứng trên board.
+Chương này trình bày giao thức truyền thông và điều khiển giữa máy chủ (host) và bộ tăng tốc trên FPGA.
+Mục~\ref{sec:uartvl} và Mục~\ref{sec:khungoi} mô tả tầng vật lý UART, định dạng khung gói và cơ chế kiểm lỗi CRC-16.
+Mục~\ref{sec:bolenh} và Mục~\ref{sec:fsmuart} trình bày bộ lệnh điều khiển ở mức layer, máy trạng thái dừng--chờ, xử lý lỗi và quy tắc quản lý các bank nhớ ping-pong.
+Mục~\ref{sec:trinhtu} và Mục~\ref{sec:phiahost} tổng hợp trình tự thực thi một nhịp tim và cấu trúc phần mềm phía host.
 Mã nguồn tương ứng nằm tại \texttt{rtl/cnn1d/comm/}, \texttt{rtl/cnn1d/top/layer\_cmd\_controller.v}, \texttt{python/link/} và \texttt{host/}.
 
 \input{chapters/ch05_giao_thuc_uart/s01_uartvl}

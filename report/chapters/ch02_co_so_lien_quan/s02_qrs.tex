@@ -1,9 +1,8 @@
 % Muc 2.2  --  phu trach: xem report/PHANCONG.md
 \section{Phát hiện QRS và tiền xử lý}\label{sec:qrs}
-\begin{goiy}
-  \begin{itemize}
-    \item Thuật toán Pan--Tompkins \cite{pantompkins1985realtime}: lọc thông dải, đạo hàm, bình phương, tích phân cửa sổ, ngưỡng thích nghi.
-    \item Bộ lọc Butterworth 0.5--40~Hz (nhân quả, biquad), z-score từng nhịp.
-    \item Đặc trưng khoảng RR (rr\_prev, rr\_next, rr\_avg, ratio).
-  \end{itemize}
-\end{goiy}
+
+Để cắt đúng cửa sổ từng nhịp quanh đỉnh R và bổ sung thông tin nhịp điệu, chuỗi tiền xử lý tách thành hai nhánh song song từ cùng tín hiệu đầu vào. Nhánh phát hiện áp dụng thuật toán Pan--Tompkins \cite{pantompkins1985realtime} nhằm khoanh vùng vị trí phức hợp QRS qua các bước cốt lõi: lọc thông dải nhằm hạn chế nhiễu ngoài dải QRS, lấy đạo hàm nhấn mạnh độ dốc tín hiệu, bình phương làm nổi bật các đỉnh lớn, tích phân cửa sổ trượt tạo vùng năng lượng nhịp và áp dụng ngưỡng thích nghi kết hợp khoảng trơ để xác định mốc đỉnh R thô.
+
+Song song đó, nhánh hình dạng sử dụng bộ lọc thông dải Butterworth $0{,}5\text{--}40\text{ Hz}$ cấu trúc bậc hai (\emph{biquad}) cài đặt dạng nhân quả để bảo toàn vùng tần số của sóng P--QRS--T mà không cần truy cập mẫu tương lai. Sau khi tinh chỉnh đỉnh R trên nhánh hình dạng và cắt cửa sổ quanh nhịp, chuẩn hoá \emph{z-score} theo từng cửa sổ đưa tín hiệu về thang chuẩn, giảm ảnh hưởng của sai khác biên độ hoặc điều kiện đặt điện cực giữa các bệnh nhân.
+
+Ngoài đặc trưng hình thái, các đại lượng khoảng RR cung cấp thông tin về nhịp điệu tức thời và lịch sử nhịp---đặc biệt hữu ích cho nhóm ngoại tâm thu trên thất vốn có hình thái khá gần nhịp bình thường nhưng thường xuất hiện sớm hơn \cite{dechazal2004automatic}. Các thông tin chính gồm khoảng RR trước, khoảng RR sau, giá trị trung bình của các khoảng RR quá khứ và tỉ số giữa khoảng RR trước so với giá trị trung bình.

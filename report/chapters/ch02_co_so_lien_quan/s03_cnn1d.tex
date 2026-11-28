@@ -1,9 +1,11 @@
 % Muc 2.3  --  phu trach: xem report/PHANCONG.md
 \section{Mạng nơ-ron tích chập 1D và lượng tử hoá}\label{sec:cnn1d}
-\begin{goiy}
-  \begin{itemize}
-    \item Conv1D, BatchNorm, ReLU, MaxPool, GAP, FC; công thức conv (đánh số phương trình \verb|\begin{equation}|).
-    \item CNN 1D cho ECG \cite{kiranyaz2016realtime}; focal loss cho mất cân bằng lớp \cite{lin2017focal}.
-    \item Lượng tử hoá số nguyên \cite{jacob2018quantization}: scale luỹ thừa của 2, requantize bằng dịch bit, ý nghĩa với phần cứng.
-  \end{itemize}
-\end{goiy}
+
+Mạng nơ-ron tích chập một chiều (1D-CNN) khai thác tính cục bộ theo thời gian và bất biến theo dịch chuyển trên chuỗi tín hiệu ECG \cite{kiranyaz2016realtime}. Với tín hiệu đầu vào một kênh $x[n]$ và bộ lọc độ dài $K$ có trọng số $w[m]$, phép tích chập 1D (chưa tính độ lệch) được biểu diễn bởi:
+\begin{equation}
+	y[n] = \sum_{m=0}^{K-1} w[m]\,x[n + m]
+\end{equation}
+
+Trong các mạng 1D-CNN phân loại nhịp tim, lớp tích chập thường đi kèm chuẩn hoá theo lô (BatchNorm) để ổn định quá trình huấn luyện, hàm kích hoạt ReLU tạo tính phi tuyến và lớp gộp cực đại (MaxPool) để giảm chiều dài chuỗi đồng thời mở rộng trường nhìn qua các tầng sâu \cite{kiranyaz2016realtime}. Khi suy luận, các phép biến đổi tuyến tính hoặc chuẩn hoá cố định có thể được gộp vào tham số của tầng liền kề nhằm giảm khối lượng tính toán, trước khi tổng hợp qua lớp gộp trung bình toàn cục và các lớp kết nối đầy đủ để xuất đầu ra phân lớp. Để khắc phục mất cân bằng giữa nhóm chiếm đa số và các nhóm nhịp hiếm, hàm mất mát tập trung (Focal Loss) điều chỉnh trọng số theo độ khó của từng mẫu nhằm tăng trọng tâm học cho các trường hợp khó nhận diện \cite{lin2017focal}.
+
+Khi chuyển sang phần cứng số nguyên, tham số và kích hoạt được lượng tử hoá về định dạng số nguyên cố định với bộ tích luỹ có độ rộng bit lớn hơn để tránh tràn số \cite{jacob2018quantization}. Khi thang lượng tử được chọn theo luỹ thừa của hai, bước chuyển đổi thang đo giữa các tầng có thể thực hiện bằng phép dịch bit số học kết hợp làm tròn thay cho phép nhân hoặc chia dấu phẩy động, vừa tiết kiệm tài nguyên vừa giữ sự tương đồng giữa tham chiếu phần mềm và thực thi phần cứng. Ngoài ra, khi đầu ra các lớp đã chia sẻ cùng thang đo và mục tiêu chỉ là chọn lớp có giá trị lớn nhất, việc lấy chỉ số cực đại trực tiếp giữ nguyên quyết định phân loại mà không cần tính hàm \emph{softmax}.

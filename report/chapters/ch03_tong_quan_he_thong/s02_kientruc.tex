@@ -1,9 +1,11 @@
 % Muc 3.2  --  phu trach: xem report/PHANCONG.md
 \section{Kiến trúc tổng thể}\label{sec:kientruc}
-\hinhcho{0.28}{Sơ đồ hệ thống: ADC MIT-BIH $\to$ tiền xử lý (PC) $\to$ UART $\to$ FPGA accelerator $\to$ nhãn}{Kiến trúc tổng thể của hệ thống.}{fig:hethong}
-\begin{goiy}
-  \begin{itemize}
-    \item Mô tả Hình~\ref{fig:hethong}: các khối, hướng dữ liệu, giao diện.
-    \item Hai nhánh song song từ cùng mẫu ADC: nhánh phát hiện R và nhánh hình dạng cho CNN.
-  \end{itemize}
-\end{goiy}
+
+\hinhcho{0.28}{Sơ đồ hệ thống: nguồn ECG/ADC MIT-BIH $\to$ tiền xử lý (PC) $\to$ UART $\to$ FPGA accelerator $\to$ nhãn}{Kiến trúc tổng thể của hệ thống.}{fig:hethong}
+
+Hệ thống được tổ chức theo mô hình xử lý kết hợp giữa máy tính chủ (PC host) và bộ tăng tốc trên FPGA MAX~10, trao đổi dữ liệu hai chiều qua đường truyền UART duy nhất:
+
+\begin{itemize}
+	\item \textbf{Luồng dữ liệu và giao diện:} Dữ liệu ECG từ cơ sở dữ liệu MIT-BIH (tương đương chuỗi mẫu lấy từ ADC) được đưa vào khối tiền xử lý trên PC để tạo cửa sổ tín hiệu và đặc trưng nhịp, sau đó đóng gói và truyền sang FPGA qua UART. Trên FPGA, khối giao tiếp UART nhận gói dữ liệu/tham số, cấp cho bộ tăng tốc suy luận, rồi gửi ngược kết quả phân loại (cùng thông tin kiểm tra) về PC để ghi nhận và đánh giá.
+	\item \textbf{Hai nhánh xử lý từ chuỗi mẫu đầu vào:} Từ cùng chuỗi mẫu tín hiệu đầu vào, quá trình xử lý tách thành hai nhánh bổ trợ cho nhau: \emph{nhánh phát hiện đỉnh R} phục vụ định vị nhịp và trích xuất các đặc trưng khoảng RR (ngữ cảnh nhịp), và \emph{nhánh hình dạng} phục vụ cắt cửa sổ sóng điện tâm đồ quanh nhịp cần phân loại để đưa vào mạng CNN.
+\end{itemize}

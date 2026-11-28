@@ -1,10 +1,8 @@
 % Muc 2.1  --  phu trach: xem report/PHANCONG.md
 \section{Tín hiệu ECG và phân loại nhịp}\label{sec:ecg}
-\begin{goiy}
-  \begin{itemize}
-    \item Sinh lý ngắn gọn: sóng P--QRS--T, khoảng RR; các loại nhịp N, S (SVEB), V (VEB), F.
-    \item Chuẩn AAMI EC57 \cite{aami2012ec57} và ánh xạ nhãn MIT-BIH $\to$ N/S/V/F.
-    \item Cơ sở dữ liệu MIT-BIH Arrhythmia \cite{moody2001impact}: 360~Hz, ADC 11 bit, kênh MLII, bản ghi paced bị loại.
-    \item Đánh giá liên bệnh nhân (DS1/DS2 theo de Chazal \cite{dechazal2004automatic}); vì sao khác đánh giá theo bản ghi.
-  \end{itemize}
-\end{goiy}
+
+Tín hiệu điện tâm đồ (ECG) ghi nhận hoạt động khử cực và tái cực của cơ tim qua sóng P, phức bộ QRS và sóng T, trong đó khoảng thời gian giữa hai đỉnh R liên tiếp (khoảng RR) phản ánh nhịp điệu và độ đều đặn của từng nhát bóp. Theo chuẩn ANSI/AAMI EC57 \cite{aami2012ec57} và cách phân nhóm nhịp cổ điển \cite{dechazal2004automatic}, các nhịp tim được quy về bốn nhóm chính: nhịp bình thường (\texttt{N}), ngoại tâm thu trên thất (\texttt{S}), ngoại tâm thu thất (\texttt{V}) và nhịp hoà (\texttt{F}), đồng thời loại bỏ các nhịp không phân loại hoặc thuộc đoạn rung thất.
+
+Cơ sở dữ liệu MIT-BIH Arrhythmia \cite{moody2001impact} gồm 48 bản ghi hai kênh dài 30 phút, lấy mẫu ở tần số $360\text{ Hz}$ với độ phân giải bộ chuyển đổi tương tự--số 11 bit. Hệ thống chọn kênh MLII làm kênh chính và loại trừ bốn bản ghi có bệnh nhân đặt máy tạo nhịp (các bản ghi \texttt{102}, \texttt{104}, \texttt{107} và \texttt{217}).
+
+Để đánh giá sát khả năng tổng quát hoá trên cá thể mới, dữ liệu được tách theo bệnh nhân thành hai tập độc lập gồm tập phát triển/huấn luyện và tập kiểm thử cuối cùng theo định hướng liên bệnh nhân \cite{dechazal2004automatic, li2026lightweight}. Việc không để cùng một bệnh nhân xuất hiện ở cả hai tập giúp tránh hiện tượng mô hình ghi nhớ đặc điểm cá nhân khi chia trộn theo nhịp hoặc theo bản ghi.

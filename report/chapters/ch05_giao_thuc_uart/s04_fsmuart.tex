@@ -1,37 +1,21 @@
 % Muc 5.4  --  phu trach: Dung (xem report/PHANCONG.md)
 % nguon: rtl/cnn1d/top/layer_cmd_controller.v, comm/protocol/packet_rx.v, host/board_classifier.py, python/link/layer_host.py
 \section{Máy trạng thái và xử lý lỗi}\label{sec:fsmuart}
-Bộ giải mã lệnh \texttt{layer\_cmd\_controller} (\texttt{top/\allowbreak layer\_cmd\_controller.v}, chiếm $4\,506$ phần tử logic và $2\,260$ thanh ghi) vận hành theo cơ chế \emph{dừng--chờ} (stop-and-wait): mỗi thời điểm chỉ xử lý một lệnh và không có hàng đợi gói trên chip.
+Khối \texttt{layer\_cmd\_controller} (\texttt{top/\allowbreak layer\_cmd\_controller.v}) điều phối giao tiếp theo cơ chế \emph{dừng--chờ} (stop-and-wait): host gửi một gói lệnh và chờ nhận trọn gói phản hồi tương ứng trước khi phát lệnh tiếp theo.
 
 \begin{figure}[htbp]\centering
   \includegraphics[width=0.86\textwidth]{ch05_giao_thuc_uart/fsm_cmd.png}
-  \caption{Sơ đồ các nhánh trạng thái của \texttt{layer\_cmd\_controller} trên FPGA.}\label{fig:ch5-fsm}
+  \caption{Sơ đồ các nhánh trạng thái của \texttt{layer\_cmd\_controller}.}\label{fig:ch5-fsm}
 \end{figure}
 
-\textbf{Luồng chuyển trạng thái.}
-Như minh hoạ trên Hình~\ref{fig:ch5-fsm}, tín hiệu cho phép thu khung chỉ được bật khi bộ điều khiển đang rảnh: \texttt{o\_rx\_enable = (state == IDLE)}.
-Khi một khung hoàn tất ở \texttt{IDLE}, FSM chốt số thứ tự \texttt{SEQ} và rẽ nhánh theo mã lệnh \texttt{CMD}:
+Trên Hình~\ref{fig:ch5-fsm}, tín hiệu mở bộ thu chỉ bật ở trạng thái rảnh (\texttt{o\_rx\_enable = (state == IDLE)}).
+Khi nhận gói tại \texttt{IDLE}, FSM chốt số thứ tự \texttt{SEQ}, chuyển sang nhánh thực thi tương ứng (\texttt{WRITE}, \texttt{WRITE\_BIAS}, \texttt{SWAP}, \texttt{RD\_GAP}, \texttt{RD\_FMAP\_ISSUE} $\to$ \texttt{RD\_FMAP\_WAIT}, hoặc \texttt{RUN\_START} $\to$ \texttt{RUN\_WAIT}; các lệnh \texttt{CONFIG}, \texttt{INFO} và trường hợp trả \texttt{NACK} hoàn tất ngay trong chu kỳ đầu), sau đó đi qua chuỗi phát \texttt{SEND} $\to$ \texttt{TX\_LAUNCH} $\to$ \texttt{TX\_WAIT} để xuất khung trả lời về host rồi quay lại \texttt{IDLE}.
+
+Mỗi lệnh được trả lời bằng một trong ba mã: tín hiệu xác nhận \texttt{0x80} \texttt{ACK} \texttt{[cmd, 0]}, từ chối \texttt{0x81} \texttt{NACK} \texttt{[cmd, code]} (mã~$1$: lỗi khung/CRC; mã~$2$: sai tham số hoặc địa chỉ; mã~$3$: sai trạng thái; mã~$4$: mã lệnh không hỗ trợ), hoặc kết quả \texttt{0x82} \texttt{RESULT}.
+Vì các thao tác như \texttt{SWAP} và \texttt{RUN} làm thay đổi trạng thái bank nhớ (không có tính luỹ đẳng), phía host không tự động gửi lại riêng lẻ từng lệnh khi gặp hết thời gian chờ hay \texttt{NACK}; thay vào đó, thủ tục \texttt{recover()} chờ bộ thu trên FPGA về lại trạng thái đầu, xoá bộ đệm nhận và thực hiện lại trọn vẹn từ đầu nhịp (\texttt{WRITE\_X} $+$ \texttt{SWAP}).
+
+Quyền điều khiển hai bộ đệm ping-pong (Mục~\ref{sec:mem}) được phân chia giữa host và phần cứng như sau:
 \begin{itemize}
-  \item \texttt{WRITE} (dùng chung cho \texttt{WRITE\_X}, \texttt{WRITE\_W}, \texttt{WRITE\_SHIFT}, ghi $1$~byte/chu kỳ) và \texttt{WRITE\_BIAS} (ghi $1$~từ $32$~bit/chu kỳ);
-  \item \texttt{SWAP} (phát xung đảo bank trong $1$~chu kỳ);
-  \item \texttt{RD\_GAP} (đọc tuần tự $64$~mục GAP) và cặp \texttt{RD\_FMAP\_ISSUE} $\to$ \texttt{RD\_FMAP\_WAIT} (phát địa chỉ và chờ cờ \texttt{rd\_valid} cho từng byte đọc từ SRAM ifmap);
-  \item \texttt{RUN\_START} $\to$ \texttt{RUN\_WAIT} (phát xung bắt đầu layer, tăng bộ đếm \texttt{cycle\_cnt} mỗi chu kỳ cho tới khi nhận \texttt{i\_layer\_done});
-  \item riêng \texttt{CONFIG}, \texttt{INFO} và mọi trường hợp từ chối bằng \texttt{NACK} hoàn tất ngay trong chu kỳ \texttt{IDLE} và chuyển thẳng tới khâu phát.
-\end{itemize}
-Mọi nhánh đều hội tụ về chuỗi ba trạng thái phát khung \texttt{SEND} $\to$ \texttt{TX\_LAUNCH} $\to$ \texttt{TX\_WAIT} để gửi gói trả lời (\texttt{0x80} \texttt{ACK}, \texttt{0x81} \texttt{NACK} hoặc \texttt{0x82} \texttt{RESULT}) về host, rồi mới quay lại \texttt{IDLE}.
-Trong suốt thời gian ngoài \texttt{IDLE}, \texttt{packet\_rx} bị giữ ở trạng thái đặt lại nên mọi byte host gửi sớm đều bị bỏ qua.
-
-\textbf{Mã lỗi và lý do không tự gửi lại lệnh đơn lẻ.}
-Khi từ chối gói bằng \texttt{0x81} \texttt{NACK} \texttt{[cmd, code]}, FPGA phân biệt bốn mã nguyên nhân: mã~$1$ cho lỗi khung (sai CRC-16 hoặc $\texttt{LEN}>\texttt{MAX\_PAYLOAD}$); mã~$2$ cho tham số, độ dài tải hoặc địa chỉ sai; mã~$3$ cho sai trạng thái (đang chạy layer, gọi \texttt{RUN} khi chưa có \texttt{CONFIG} hợp lệ, hoặc sai tham số \texttt{READ\_FMAP}); và mã~$4$ cho mã lệnh không được hỗ trợ.
-Các lỗi ở tầng thấp hơn (sai bit stop hoặc khung cụt quá $100$~ms) không sinh \texttt{NACK} vì đầu khung không còn tin cậy, và được host phát hiện qua hết thời gian chờ (timeout).
-
-Khi gặp timeout hoặc \texttt{NACK}, lớp \texttt{LayerHost} \emph{không tự động gửi lại lệnh vừa lỗi} vì nhiều lệnh không có tính luỹ đẳng (idempotent).
-Ví dụ điển hình là \texttt{SWAP} và \texttt{RUN}: nếu FPGA đã thực hiện đảo bank nhưng gói \texttt{ACK} chiều về bị nhiễu mất, gửi lại \texttt{SWAP} sẽ đảo ngược bank về trạng thái cũ và làm sai lệch ngầm toàn bộ các layer sau.
-Thay vào đó, phương thức \texttt{BoardClassifier.recover()} phục hồi ở \emph{mức nhịp}: đánh dấu mô hình thường trú không còn hợp lệ, ngừng gửi $200$~ms (gấp đôi ngưỡng timeout $100$~ms của \texttt{packet\_rx}), xả sạch bộ đệm cổng nối tiếp rồi chạy lại nhịp đó từ đầu (\texttt{WRITE\_X} $+$ \texttt{SWAP}), bảo đảm không dùng lại bất kỳ trạng thái dở dang nào.
-
-\textbf{Quyền sở hữu bank đọc/ghi (ping-pong).}
-Cả hai bộ nhớ ifmap ($2\times4\,096$~byte) và trọng số ($2\times16\,384$~byte) đều tách riêng bank ghi cho host và bank đọc cho lõi tính toán (Mục~\ref{sec:mem}), nhưng cơ chế đảo bank khác nhau:
-\begin{itemize}
-  \item \emph{Bộ nhớ ifmap:} host chỉ gọi \texttt{SWAP(x=1)} một lần ở đầu nhịp sau khi nạp cửa sổ mẫu. Cuối mỗi layer không bật GAP (\texttt{conv0}--\texttt{conv2}, \texttt{FC1}, \texttt{FC2}), phần cứng tự động đảo bank ifmap để đầu ra vừa ghi chuyển thành đầu vào cho layer kế tiếp (hoặc chờ đọc ở cuối mạng). Riêng \texttt{conv3} ghi vào \texttt{gap\_mem} nên không đảo bank; đầu \texttt{FC1}, host ghi $4$~byte đặc trưng RR vào địa chỉ~$200$ của bank ghi mà không gọi \texttt{SWAP}, sau đó cờ \texttt{gap\_in} tự đóng gói dữ liệu GAP vào cùng bank ghi này rồi tự đảo bank trước khi tính.
-  \item \emph{Bộ nhớ trọng số:} phần cứng không bao giờ tự đảo bank trọng số; quyền phát lệnh \texttt{SWAP(w=1)} hoàn toàn thuộc về host để quản lý hai bank trọng số thường trú.
+  \item \textbf{Bộ nhớ ifmap:} host ghi dữ liệu đầu vào vào bank ghi và gọi \texttt{SWAP(x=1)} một lần ở đầu nhịp. Sau khi tính xong mỗi layer không bật GAP (\texttt{conv0}--\texttt{conv2}, \texttt{FC1}, \texttt{FC2}), phần cứng tự động đảo bank ifmap để đầu ra vừa ghi chuyển sang bank đọc cho bước kế tiếp; riêng ở \texttt{conv3} kết quả cộng dồn vào \texttt{gap\_mem} không đảo bank, và ở đầu \texttt{FC1} host ghi $4$~byte đặc trưng RR vào địa chỉ~$200$ của bank ghi để cờ \texttt{gap\_in} đóng gói chung với dữ liệu GAP rồi tự đảo bank trước khi tính.
+  \item \textbf{Bộ nhớ trọng số:} việc đảo bank đọc/ghi hoàn toàn do host điều khiển thông qua lệnh \texttt{SWAP(w=1)}.
 \end{itemize}
