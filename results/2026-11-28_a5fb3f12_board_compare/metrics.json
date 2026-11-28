@@ -1,0 +1,269 @@
+{
+  "beats": 2946,
+  "answered": 396,
+  "failed": 0,
+  "fpga_eq_int8_sw": 396,
+  "fpga_ne_float": 8,
+  "agreement_fpga_rows_float_cols": [
+    [
+      220,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      133,
+      0
+    ],
+    [
+      5,
+      0,
+      2,
+      33
+    ]
+  ],
+  "float_vs_mit": {
+    "macro_f1": 0.649245465996765,
+    "macro_f1_nsv": 0.6357755638577557,
+    "ec57": {
+      "SVEB": {
+        "se": 0.0,
+        "ppv": 0.0
+      },
+      "VEB": {
+        "se": 0.9844961240310077,
+        "ppv": 0.9844961240310077
+      }
+    },
+    "per_class": {
+      "N": {
+        "precision": 0.92,
+        "recall": 0.971830985915493,
+        "f1": 0.9452054794520548,
+        "support": 213
+      },
+      "S": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "V": {
+        "precision": 0.9407407407407408,
+        "recall": 0.9844961240310077,
+        "f1": 0.9621212121212122,
+        "support": 129
+      },
+      "F": {
+        "precision": 0.9090909090909091,
+        "recall": 0.5555555555555556,
+        "f1": 0.6896551724137931,
+        "support": 54
+      }
+    },
+    "confusion": [
+      [
+        207,
+        2,
+        2,
+        2
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        127,
+        1
+      ],
+      [
+        17,
+        1,
+        6,
+        30
+      ]
+    ],
+    "n_pred_N_as_F": 2
+  },
+  "fpga_vs_mit": {
+    "macro_f1": 0.6514087221543199,
+    "macro_f1_nsv": 0.6345024096809372,
+    "ec57": {
+      "SVEB": {
+        "se": 0.0,
+        "ppv": 0.0
+      },
+      "VEB": {
+        "se": 0.9689922480620154,
+        "ppv": 0.984251968503937
+      }
+    },
+    "per_class": {
+      "N": {
+        "precision": 0.9321266968325792,
+        "recall": 0.9671361502347418,
+        "f1": 0.9493087557603687,
+        "support": 213
+      },
+      "S": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "V": {
+        "precision": 0.9398496240601504,
+        "recall": 0.9689922480620154,
+        "f1": 0.9541984732824428,
+        "support": 129
+      },
+      "F": {
+        "precision": 0.825,
+        "recall": 0.6111111111111112,
+        "f1": 0.7021276595744681,
+        "support": 54
+      }
+    },
+    "confusion": [
+      [
+        206,
+        1,
+        2,
+        4
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        125,
+        3
+      ],
+      [
+        14,
+        1,
+        6,
+        33
+      ]
+    ],
+    "n_pred_N_as_F": 4
+  },
+  "fp_detections": 10,
+  "in_vf": 0,
+  "missed_annotations_NSVF": [
+    10,
+    0,
+    4,
+    3
+  ],
+  "hardware": {
+    "beats_measured": 396,
+    "pe": 9,
+    "rows": 3,
+    "cols": 3,
+    "clock_mhz": 50.0,
+    "baud": 1500000,
+    "weights": "resident",
+    "cycles_per_beat": 1097565.0,
+    "compute_ms": 21.9513,
+    "link_s_per_beat": 0.2997708898990896,
+    "packets_per_beat": 27.0,
+    "tx_bytes_per_beat": 954.0,
+    "rx_bytes_per_beat": 303.0,
+    "uart_bytes_per_s": 4193.202350045189,
+    "uart_line_bytes_per_s": 150000.0,
+    "uart_use": 0.02795468233363459,
+    "macs_per_beat": 1609344,
+    "gops": 0.14662858236186468,
+    "peak_gops": 0.9,
+    "pe_efficiency": 0.16292064706873852,
+    "beats_per_s_compute": 45.555388519130986,
+    "beats_per_s_with_uart": 3.335880946734438,
+    "mean_rr_s": 0.6123571024335032,
+    "link_margin_x": 2.042750390605432,
+    "wait_for_window_s": 0.6209040506902014,
+    "latency_r_to_label_s": 0.920674940589291,
+    "layers": [
+      {
+        "name": "conv0",
+        "cycles": 67569.0,
+        "macs": 40320,
+        "pe_efficiency": 0.06630259438499904
+      },
+      {
+        "name": "conv1",
+        "cycles": 345939.0,
+        "macs": 460800,
+        "pe_efficiency": 0.1480029716221646
+      },
+      {
+        "name": "conv2",
+        "cycles": 412243.0,
+        "macs": 552960,
+        "pe_efficiency": 0.14903830992885264
+      },
+      {
+        "name": "conv3",
+        "cycles": 267785.0,
+        "macs": 552960,
+        "pe_efficiency": 0.2294377952461863
+      },
+      {
+        "name": "fc1",
+        "cycles": 3755.0,
+        "macs": 2176,
+        "pe_efficiency": 0.0643882231099275
+      },
+      {
+        "name": "fc2",
+        "cycles": 274.0,
+        "macs": 128,
+        "pe_efficiency": 0.05190592051905921
+      }
+    ],
+    "weights_bytes": 23408,
+    "weights_sram_bytes": 32768,
+    "biases": 212,
+    "power_mw": 210.19,
+    "power_source": "Quartus report",
+    "energy_uj_per_beat": 4613.943746999999,
+    "quartus": {
+      "le": 18683,
+      "le_pct": 38,
+      "registers": 8944,
+      "mem_bits": 386560,
+      "mem_pct": 23,
+      "mult9": 8,
+      "pins": 4,
+      "report_date": "28/11/2026",
+      "setup_slack_ns": 1.955,
+      "fmax_mhz": 55.42,
+      "m9k": 50,
+      "tile_le": 6452,
+      "layer_top_le": 10988,
+      "core_le": 15477,
+      "power_total_mw": 210.19,
+      "power_dynamic_mw": 110.97,
+      "power_static_mw": 90.45,
+      "power_io_mw": 8.76,
+      "power_date": "28/11/2026",
+      "power_confidence": "Low"
+    }
+  }
+}

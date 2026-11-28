@@ -3,15 +3,15 @@
 % nguon: rtl/cnn1d/comm/, rtl/cnn1d/top/layer_cmd_controller.v, python/link/, host/
 \chapter{Giao thức giao tiếp Host--Accelerator}\label{ch:uart}
 
-Chương này trình bày giao thức truyền thông và điều khiển giữa máy chủ (host) và bộ tăng tốc trên FPGA.
-Mục~\ref{sec:uartvl} và Mục~\ref{sec:khungoi} mô tả tầng vật lý UART, định dạng khung gói và cơ chế kiểm lỗi CRC-16.
-Mục~\ref{sec:bolenh} và Mục~\ref{sec:fsmuart} trình bày bộ lệnh điều khiển ở mức layer, máy trạng thái dừng--chờ, xử lý lỗi và quy tắc quản lý các bank nhớ ping-pong.
-Mục~\ref{sec:trinhtu} và Mục~\ref{sec:phiahost} tổng hợp trình tự thực thi một nhịp tim và cấu trúc phần mềm phía host.
-Mã nguồn tương ứng nằm tại \texttt{rtl/cnn1d/comm/}, \texttt{rtl/cnn1d/top/layer\_cmd\_controller.v}, \texttt{python/link/} và \texttt{host/}.
+Chương này trình bày giao thức truyền thông giữa máy chủ (host) và bộ tăng tốc trên FPGA.
+Mục~\ref{sec:uartvl} mô tả tầng vật lý UART; Mục~\ref{sec:khungoi} mô tả cấu trúc khung gói và cơ chế kiểm lỗi CRC-16; Mục~\ref{sec:bolenh} trình bày bộ lệnh điều khiển ở mức layer.
+Mục~\ref{sec:fsmuart} mô tả máy trạng thái xử lý lệnh và cách xử lý lỗi; Mục~\ref{sec:trinhtu} trình bày trình tự thực thi một nhịp; Mục~\ref{sec:phiahost} mô tả phần mềm phía host.
 
+{\emergencystretch=4em
 \input{chapters/ch05_giao_thuc_uart/s01_uartvl}
 \input{chapters/ch05_giao_thuc_uart/s02_khungoi}
 \input{chapters/ch05_giao_thuc_uart/s03_bolenh}
 \input{chapters/ch05_giao_thuc_uart/s04_fsmuart}
 \input{chapters/ch05_giao_thuc_uart/s05_trinhtu}
 \input{chapters/ch05_giao_thuc_uart/s06_phiahost}
+}

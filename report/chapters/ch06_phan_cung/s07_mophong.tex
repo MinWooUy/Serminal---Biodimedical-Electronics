@@ -1,10 +1,10 @@
 % Muc 6.7  --  phu trach: xem report/PHANCONG.md
 \section{Mô phỏng và kiểm thử RTL}\label{sec:mophong}
 \subsection{Môi trường và nguyên tắc}
-Mọi mô phỏng RTL chạy bằng ModelSim--Intel FPGA Edition (đi kèm Quartus Lite 18.1) qua một script duy nhất, \texttt{rtl/cnn1d/sim/run\_tb.sh}: chạy một testbench, chạy toàn bộ (\texttt{all}, hồi quy), ghi dạng sóng (\texttt{--wave}) hoặc mở giao diện (\texttt{--gui}); tham số có thể đổi từ dòng lệnh (ví dụ \texttt{--param ARRAY\_ROWS=7}).
+Mọi mô phỏng RTL chạy bằng ModelSim ALTERA Starter Edition 10.5b qua một script duy nhất, \texttt{rtl/cnn1d/sim/run\_tb.sh}: chạy một testbench, chạy toàn bộ (\texttt{all}, kiểm thử hồi quy), ghi dạng sóng (\texttt{--wave}) hoặc mở giao diện (\texttt{--gui}); tham số có thể đổi từ dòng lệnh (ví dụ \texttt{--param ARRAY\_ROWS=7}).
 Script trả mã thoát $0$ khi mọi testbench đạt, $1$ khi có lỗi, nên dùng được trong quy trình tự động.
-Một số nhóm có script Icarus Verilog riêng (\texttt{run\_comm\_tests.sh}, \texttt{run\_post\_tests.sh}, \texttt{run\_pc\_layer\_tests.sh}, \texttt{run\_gvu\_tests.sh}).
-Có $27$ testbench Verilog trong \texttt{rtl/cnn1d/tb/} (cộng các testbench SystemVerilog của khối GVU).
+Một số nhóm testbench có thêm script riêng chạy bằng Icarus Verilog (\texttt{run\_comm\_tests.sh}, \texttt{run\_post\_tests.sh}, \texttt{run\_pc\_layer\_tests.sh}).
+Thư mục \texttt{rtl/cnn1d/tb/} có $27$ testbench Verilog cho các khối của bộ tăng tốc.
 
 Nguyên tắc chung: \emph{so với golden từng byte}.
 Các vector kỳ vọng do mô hình số nguyên bằng Python sinh ra (cùng nguồn với golden dùng trên board) và được nạp vào testbench bằng \texttt{\$readmemh} từ \texttt{rtl/cnn1d/sim/hex/}; testbench so từng byte và báo lỗi khi có byte khác.
@@ -36,7 +36,7 @@ Testbench & Nội dung kiểm \\ \midrule
 \end{table}
 
 \textbf{Liên hệ với board.} Số chu kỳ của conv0--conv3 mô phỏng bằng \texttt{tb\_conv1d\_layer\_top} (mảng $7\times7$) là $21\,429$, $104\,379$, $124\,603$ và $113\,321$ (tổng $363\,732$) \emph{trùng từng chu kỳ} với giá trị \texttt{cycles} đo trên board cho cùng bốn layer (Chương~\ref{ch:thucnghiem}).
-Sự trùng khớp này cho thấy mô hình mô phỏng và phần cứng thật có cùng cấu hình.
+Sự trùng khớp này cho thấy mô phỏng RTL tái hiện đúng từng chu kỳ hành vi của phần cứng trên board, nên có thể dùng mô phỏng để phân tích thời gian (Mục~\ref{sec:bandwidth}).
 
 \subsection{Các lỗi thiết kế đã gặp và cách sửa}
 Bốn vấn đề lớn đã được tìm thấy khi chạy các testbench với kích thước thật của mô hình ECG:
@@ -59,8 +59,9 @@ Nhận xét chung: các testbench ban đầu chỉ thử $K=3$ nên không phát
 \subsection{Vấn đề còn mở và hạn chế của kiểm thử}
 Danh sách đầy đủ nằm ở \texttt{rtl/cnn1d/ERRORS.md}; những điểm đáng chú ý:
 \begin{itemize}
-  \item \texttt{cnn\_pipeline\_controller} (bộ tuần tự layer tự động) và \texttt{layer\_config\_ram} có testbench riêng nhưng \emph{chưa} nối vào \texttt{layer\_core}; các lệnh \texttt{CONFIG\_ALL}, \texttt{LOAD\_COMMIT}, \texttt{RUN\_ALL}, \texttt{GET\_RESULT} mới được dành mã. Vì vậy máy tính phải cấu hình và chạy từng layer.
-  \item Đường UART là dừng--chờ (mỗi lệnh một tín hiệu xác nhận \texttt{ACK}); chưa có FIFO yêu cầu hay chế độ gửi liên tục.
-  \item Một số testbench cũ của tầng UART (\texttt{tb\_uart\_crc\_top}) vẫn dùng giao diện tham số cũ của \texttt{ecg\_accel\_top} nên chưa phải là kiểm thử UART đầu--cuối hợp lệ; phần đầu--cuối thực tế được kiểm chứng trên board và qua \texttt{tb\_pc\_to\_fpga\_layer\_flow}.
-  \item Mô phỏng không thay thế đo thời gian: các số về tần số tối đa và độ dư thời gian lấy từ báo cáo của Quartus (Chương~\ref{ch:thucnghiem}).
+  \item \texttt{cnn\_pipeline\_controller} (bộ tuần tự layer tự động) và \texttt{layer\_config\_ram} có testbench riêng nhưng \emph{chưa} nối vào \texttt{layer\_core}; các lệnh \texttt{CONFIG\_ALL}, \texttt{LOAD\_COMMIT}, \texttt{RUN\_ALL}, \texttt{GET\_RESULT} mới được dành mã.
+  Vì vậy host phải cấu hình và chạy từng layer.
+  \item Đường UART theo kiểu dừng--chờ (mỗi lệnh phải chờ gói trả lời); chưa có hàng đợi lệnh hay chế độ gửi liên tục.
+  \item Một số testbench cũ của khối UART (\texttt{tb\_uart\_crc\_top}) vẫn dùng giao diện tham số cũ của \texttt{ecg\_accel\_top} nên chưa phải là kiểm thử UART đầu--cuối hợp lệ; phần đầu--cuối thực tế được kiểm chứng trên board và qua \texttt{tb\_pc\_to\_fpga\_layer\_flow}.
+  \item Mô phỏng chức năng không thay cho phân tích định thời: tần số tối đa và độ dư định thời (slack) lấy từ báo cáo của Quartus (Chương~\ref{ch:thucnghiem}).
 \end{itemize}

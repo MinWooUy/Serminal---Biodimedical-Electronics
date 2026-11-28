@@ -1,0 +1,23 @@
+Fmax (trich tu cnn1d.sta.rpt, ban 6x8 ngay 28/11/2026, Quartus Prime Lite 18.1.0)
+; Slow 1200mV 85C Model Fmax Summary              ;
+; 54.83 MHz ; 54.83 MHz       ; clk50      ;      ;
+; Slow 1200mV 0C Model Fmax Summary              ;
+; 59.1 MHz ; 59.1 MHz        ; clk50      ;      ;
+
+de10_lite_top.v: ARRAY_ROWS(6), ARRAY_COLS(8); cac tham so khac nhu ban 7x7
+sof: ab0336328653ea62fb316feb0699b13c9643038549e5845efe1c2fb303568179  (2026-11-28 14:04:56)
+
+Do tren board (results/hardware_logs/layer0-5_rec101_93600_beat000_20261128-151358.raw.log, 1.5 Mbaud):
+INFO bao mang 6x8; RUN tung layer = 17229 / 96069 / 113413 / 117037 / 3034 / 221, tong 347003 chu ky
+(mo hinh scripts/tile_cycle_model.py du bao 346404, lech +0.17 %).
+Du lieu doc ve cua ca 6 layer trung tung byte voi lan chay 7x7 ngay 24/11/2026 (layer0-5_..._20261124-085811.raw.log).
+
+Kiem lai (python scripts/raw_log_check.py docs/quartus/6x8/layer0-5_rec101_93600_beat000_20261128-151358.raw.log), ban sao raw log nam cung thu muc:
+  layer0-5_rec101_93600_beat000_20261128-151358.raw.log: array 6x8, rec101_93600 beat 0
+    conv0  status 0     17,229 cycles  PASS 2,944 B
+    conv1  status 0     96,069 cycles  PASS 2,944 B
+    conv2  status 0    113,413 cycles  PASS 3,008 B
+    conv3  status 0    117,037 cycles  PASS 128 B
+    fc1    status 0      3,034 cycles  PASS 32 B
+    fc2    status 0        221 cycles  PASS 17 B
+    total 347,003 cycles

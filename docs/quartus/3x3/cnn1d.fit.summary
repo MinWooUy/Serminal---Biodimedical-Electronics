@@ -1,0 +1,18 @@
+Fitter Status : Successful - Sat Nov 28 16:02:38 2026
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Lite Edition
+Revision Name : cnn1d
+Top-level Entity Name : de10_lite_top
+Family : MAX 10
+Device : 10M50DAF484C7G
+Timing Models : Final
+Total logic elements : 18,683 / 49,760 ( 38 % )
+    Total combinational functions : 16,908 / 49,760 ( 34 % )
+    Dedicated logic registers : 8,944 / 49,760 ( 18 % )
+Total registers : 8944
+Total pins : 4 / 360 ( 1 % )
+Total virtual pins : 0
+Total memory bits : 386,560 / 1,677,312 ( 23 % )
+Embedded Multiplier 9-bit elements : 8 / 288 ( 3 % )
+Total PLLs : 0 / 4 ( 0 % )
+UFM blocks : 0 / 1 ( 0 % )
+ADC blocks : 0 / 2 ( 0 % )

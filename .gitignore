@@ -11,11 +11,14 @@ results/img
 rtl/cnn1d/output_files
 rtl/cnn1d/incremental_db
 rtl/cnn1d/db
+rtl/cnn1d/de10_lite_top.v
+
 results/hardware_logs/*.log
 results/hardware_logs/*.csv
 *.bak
 *.qpf
 *.qsf
+*.qws
 
 model/
 

@@ -1,0 +1,46 @@
+record 208, samples 216000..237600 (60 s), segmentation detector, annotation -- DS1: IN-SAMPLE (final model trained on all DS1)
+FPGA INFO: 7x7 PE, 50 MHz, 1500000 baud, MAX_PAYLOAD 128, features 0x3F
+
+=== detector segmentation: PC pre-processing ===
+  [detector] 50/101 beats, 49 s elapsed, ETA 50 s
+  [detector] 100/101 beats, 97 s elapsed, ETA 1 s
+  [detector] 101/101 beats, 98 s elapsed, ETA 0 s
+
+--- detector: 101 beats, failed 0, reused 0, FPGA == software 101/101; link 97.6 s (0.97 s/beat sent)
+--- detector: FPGA labels vs annotations ---
+macro-F1 0.6907   macro-F1 (N/S/V) 0.6474   SVEB Se 0.0000 +P 0.0000   VEB Se 1.0000 +P 1.0000
+cls       P       R      F1      n
+  N  0.8909  1.0000  0.9423     49
+  S  0.0000  0.0000  0.0000      0
+  V  1.0000  1.0000  1.0000     29
+  F  1.0000  0.6957  0.8205     23
+confusion (rows = true N/S/V/F, cols = pred):
+      49      0      0      0
+       0      0      0      0
+       0      0     29      0
+       6      1      0     16
+--- detector: FP detections 0, missed annotations N/S/V/F [0, 0, 0, 0], in VF 0; gross macro-F1 0.6907
+  HTML skipped: plotly is not installed in this Python (pip install plotly; it is in requirements.txt)
+
+=== annotation segmentation: PC pre-processing ===
+  [annotation] 50/101 beats, 0 s elapsed, ETA 0 s
+  [annotation] 100/101 beats, 0 s elapsed, ETA 0 s
+  [annotation] 101/101 beats, 0 s elapsed, ETA 0 s
+
+--- annotation: 101 beats, failed 0, reused 101, FPGA == software 101/101; link 0.0 s (0.00 s/beat sent)
+--- annotation: FPGA labels vs annotations ---
+macro-F1 0.6907   macro-F1 (N/S/V) 0.6474   SVEB Se 0.0000 +P 0.0000   VEB Se 1.0000 +P 1.0000
+cls       P       R      F1      n
+  N  0.8909  1.0000  0.9423     49
+  S  0.0000  0.0000  0.0000      0
+  V  1.0000  1.0000  1.0000     29
+  F  1.0000  0.6957  0.8205     23
+confusion (rows = true N/S/V/F, cols = pred):
+      49      0      0      0
+       0      0      0      0
+       0      0     29      0
+       6      1      0     16
+  HTML skipped: plotly is not installed in this Python (pip install plotly; it is in requirements.txt)
+
+link: 23433 transactions, 2987719 B, 101 distinct beats on the board, 239.0 s wall
+results: D:\KHTN\KHTN_nam4\Dien_tu_y_sinh\seminar\Serminal---Biodimedical-Electronics\results\2026-11-24_e6f57081_board_eval

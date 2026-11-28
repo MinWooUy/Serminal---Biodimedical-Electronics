@@ -1,25 +1,25 @@
 % Muc 7.4  --  phu trach: xem report/PHANCONG.md
-% nguon: docs/quartus/cnn1d.fit.summary, cnn1d.sta.summary (21/11/2026); rtl/cnn1d/output_files/cnn1d.fit.rpt;
-%        ban 3x3: anh chup results/img/compile_fpga_3x3_sa (28/10/2026)
-\section{Tài nguyên và thời gian}\label{sec:taiguyen}
+% nguon: docs/quartus/cnn1d.fit.summary, cnn1d.sta.summary (21/11/2026); rtl/cnn1d/output_files/cnn1d.fit.rpt
+%        (ban 3x3 va 6x8 cung ma RTL: Muc 7.6, file s05b_somang.tex)
+\section{Tài nguyên và định thời}\label{sec:taiguyen}
 \subsection{Tài nguyên tổng}
-Bảng~\ref{tab:taiguyen} cho tài nguyên và thời gian mạch của bản $7\times7$ đang dùng.
-Cột thứ hai là một bản $3\times3$ cũ hơn, chỉ để tham khảo quy mô: hai bản khác nhau cả về chức năng và cỡ bộ nhớ, nên chênh lệch giữa chúng \emph{không} phải chỉ do kích thước mảng.
+Bảng~\ref{tab:taiguyen} cho tài nguyên và kết quả phân tích định thời (timing) của bản $7\times7$ đang dùng.
+Hai bản $3\times3$ và $6\times8$ tổng hợp từ cùng mã RTL được so ở Mục~\ref{sec:somang}.
 
 \begin{table}[htbp]\centering
-\caption{Tài nguyên và thời gian mạch trên MAX~10 10M50 (báo cáo Quartus).}\label{tab:taiguyen}
+\caption{Tài nguyên và định thời trên MAX~10 10M50 (báo cáo Quartus).}\label{tab:taiguyen}
 \small\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}lrr@{}}
+\begin{tabular}{@{}lr@{}}
 \toprule
- & $7\times7$ (21/11/2026) & $3\times3$ bản cũ (28/10/2026) \\ \midrule
-Phần tử logic (LE) & 41\,353 / 49\,760 (83\,\%) & 29\,244 (59\,\%) \\
-Thanh ghi & 15\,697 & 11\,575 \\
-Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) & 81\,920 (5\,\%) \\
-Khối M9K & 63 / 182 & -- \\
-Nhân nhúng 9 bit & 8 / 288 (3\,\%) & 6 / 288 (2\,\%) \\
-Chân I/O & 4 / 360 & 4 / 360 \\ \midrule
-Tần số tối đa (85\,$^\circ$C) & 50{,}21~MHz & 51{,}08~MHz \\
-Độ dư setup, mô hình chậm 85\,$^\circ$C & $+0{,}082$~ns & $+0{,}423$~ns \\ \bottomrule
+ & $7\times7$ (21/11/2026) \\ \midrule
+Phần tử logic (LE) & 41\,353 / 49\,760 (83\,\%) \\
+Thanh ghi & 15\,697 \\
+Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) \\
+Khối M9K & 63 / 182 \\
+Nhân nhúng 9 bit & 8 / 288 (3\,\%) \\
+Chân I/O & 4 / 360 \\ \midrule
+Tần số tối đa (85\,$^\circ$C) & 50{,}21~MHz \\
+Độ dư setup, mô hình chậm 85\,$^\circ$C & $+0{,}082$~ns \\ \bottomrule
 \end{tabular}
 \end{table}
 
@@ -28,7 +28,8 @@ Bảng~\ref{tab:taiguyenkhoi} tách tài nguyên của bản $7\times7$ theo kh�
 Mảng PE chiếm khoảng $39\,\%$ tổng số LE; cả khối ô tính (\texttt{conv1d\_tile\_top}, gồm mảng PE, bộ quản lý tổng riêng, hậu xử lý, loader, FIFO và bộ nhớ) chiếm khoảng $66\,\%$.
 
 \begin{table}[htbp]\centering
-\caption{Tài nguyên theo khối chính (Fitter, bản $7\times7$). Khối thụt vào nằm trong khối phía trên.}\label{tab:taiguyenkhoi}
+\caption{Tài nguyên theo khối chính (Fitter, bản $7\times7$).
+Khối thụt vào nằm trong khối phía trên.}\label{tab:taiguyenkhoi}
 \small\setlength{\tabcolsep}{5pt}
 \begin{tabular}{@{}lrrr@{}}
 \toprule
@@ -52,13 +53,13 @@ Toàn thiết kế & 41\,353 & 15\,697 & 63 \\
 \end{table}
 
 \textbf{Vì sao dùng nhiều LE.}
-Phép nhân trong mỗi PE được dựng bằng bộ nhân cây Wallace từ LE, không dùng khối nhân nhúng (Mục~\ref{sec:pe}), nên chỉ $8$ trên $288$ khối nhân được dùng.
+Phép nhân trong mỗi PE được dựng bằng bộ nhân cây Wallace từ LE, không dùng khối nhân nhúng (Mục~\ref{sec:pe}), nên chỉ $8$ trên $288$ phần tử nhân nhúng được dùng.
 Chuyển phép nhân sang khối nhân nhúng có thể giải phóng LE, nhưng chưa được thử nên không có số đo.
 
 \textbf{Bộ nhớ.}
 Trong $63$ khối M9K, hai bank trọng số dùng $32$, hai bank ifmap dùng $8$, các FIFO của hai feeder dùng $19$, bộ nhớ bias và hệ số dịch dùng $4$.
 
-\subsection{Thời gian mạch}
-Thiết kế đạt yêu cầu $50$~MHz ở mọi mô hình thời gian: tổng độ trễ âm (TNS) bằng $0$, độ dư setup nhỏ nhất $+0{,}082$~ns (mô hình chậm $1\,200$~mV, $85\,^\circ$C), độ dư hold nhỏ nhất $+0{,}088$~ns (mô hình nhanh $0\,^\circ$C); recovery và removal đều dương.
-Ở $0\,^\circ$C tần số tối đa là $54{,}6$~MHz.
-Độ dư setup rất mỏng, nên mọi thay đổi thêm logic vào đường dữ liệu đều phải biên dịch lại và kiểm tra thời gian.
+\subsection{Định thời}
+Thiết kế đạt yêu cầu $50$~MHz ở mọi mô hình định thời: tổng độ dư âm (Total Negative Slack, TNS) bằng $0$, độ dư setup nhỏ nhất $+0{,}082$~ns (mô hình chậm $1\,200$~mV, $85\,^\circ$C), độ dư hold nhỏ nhất $+0{,}088$~ns (mô hình nhanh $0\,^\circ$C); độ dư recovery và removal đều dương.
+Với mô hình chậm ở $0\,^\circ$C, tần số tối đa là $54{,}6$~MHz.
+Độ dư setup rất mỏng, nên mọi thay đổi thêm logic vào đường dữ liệu đều phải biên dịch lại và kiểm tra định thời.

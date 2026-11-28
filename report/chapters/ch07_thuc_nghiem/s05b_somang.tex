@@ -1,0 +1,104 @@
+% Muc 7.6  --  phu trach: xem report/PHANCONG.md
+% nguon: docs/quartus/cnn1d.*.summary (7x7, 21/11/2026); docs/quartus/6x8/, docs/quartus/3x3/ (28/11/2026, gom raw log board);
+%        results/hardware_logs/layer0-5_rec101_93600_beat000_20261124-085811.raw.log (7x7);
+%        ban ghi 208: results/2026-11-28_a5fb3f12_board_compare/ (3x3), results/2026-11-24_a5fb3f12_board_compare/ (7x7);
+%        kiem lai: python scripts/raw_log_check.py <raw log>; du bao: python scripts/tile_cycle_model.py --shape RxC
+%        hinh: report/figures/gen_somang.py
+\section{So sánh các kích thước mảng PE}\label{sec:somang}
+Kích thước mảng là tham số của RTL (\texttt{ARRAY\_ROWS}, \texttt{ARRAY\_COLS} trong \texttt{de10\_lite\_top.v}).
+Bộ điều khiển layer tự chia ô theo kích thước mảng và host đọc kích thước qua lệnh \texttt{INFO}, nên cùng một mã RTL và cùng chương trình host chạy được với nhiều cấu hình.
+Mục này so ba cấu hình:
+\begin{itemize}
+  \item $7\times7$: cấu hình chính, dùng ở các mục trước;
+  \item $6\times8$: cấu hình được đề xuất ở Mục~\ref{sec:bandwidth} vì $C_{out}=16,32,64$ chia hết cho $8$, và đã được mô hình dự báo trước khi tổng hợp;
+  \item $3\times3$: mảng nhỏ nhất chạy được mọi layer, vì FC1 cần ba hàng PE (Mục~\ref{sec:anhxa}).
+\end{itemize}
+Ba bản dùng cùng mã RTL và chỉ khác hai tham số trên; bản $7\times7$ biên dịch ngày 21/11/2026, hai bản còn lại ngày 28/11/2026, đều bằng Quartus Prime Lite 18.1.
+
+\subsection{Bảng tổng hợp}
+Bảng~\ref{tab:somang} gom các số của ba cấu hình.
+Mỗi số đi kèm cách thu được: tài nguyên và định thời là báo cáo của Quartus, chu kỳ là số đo trên board, công suất và năng lượng là ước lượng.
+
+\begin{table}[htbp]\centering
+\caption[So sánh ba kích thước mảng PE]{So sánh ba kích thước mảng PE trên MAX~10 10M50 ở $50$~MHz.
+Chu kỳ đo trên board với nhịp 0 của đoạn \texttt{rec101\_93600}.}\label{tab:somang}
+\small\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Chỉ số & $3\times3$ & $6\times8$ & $7\times7$ \\ \midrule
+Số PE & 9 & 48 & 49 \\
+\multicolumn{4}{@{}l}{\emph{Báo cáo Quartus}} \\
+\quad Phần tử logic (LE) & 18\,683 (38\,\%) & 43\,221 (87\,\%) & 41\,353 (83\,\%) \\
+\quad Thanh ghi & 8\,944 & 15\,612 & 15\,697 \\
+\quad Bit bộ nhớ & 386\,560 & 451\,871 & 452\,390 \\
+\quad Nhân nhúng 9 bit & 8 & 8 & 8 \\
+\quad Fmax, mô hình chậm 85\,$^\circ$C (MHz) & 55{,}42 & 54{,}83 & 50{,}21 \\
+\quad Độ dư setup nhỏ nhất (ns) & $+1{,}955$ & $+1{,}762$ & $+0{,}082$ \\
+\multicolumn{4}{@{}l}{\emph{Đo trên board}} \\
+\quad Chu kỳ mỗi nhịp & 1\,097\,565 & 347\,003 & 367\,091 \\
+\quad Thời gian tính mỗi nhịp (ms) & 21{,}95 & 6{,}94 & 7{,}34 \\
+\quad Hiệu suất PE $\eta$ (\%) & 16{,}29 & 9{,}66 & 8{,}95 \\
+\quad Mô hình chu kỳ, lệch so với đo & $-0{,}03\,\%$ & $-0{,}17\,\%$ & $-0{,}16\,\%$ \\
+\quad Sáu layer khớp golden & có & có & có \\
+\multicolumn{4}{@{}l}{\emph{Ước lượng}} \\
+\quad Công suất tổng (mW) & 210{,}19 & 360{,}10 & 332{,}17 \\
+\quad Năng lượng tính mỗi nhịp (mJ) & 4{,}61 & 2{,}50 & 2{,}44 \\ \bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize $\eta$ tính theo công thức~\eqref{eq:eta} với $R\times C$ của từng cấu hình.
+Năng lượng $=$ công suất tổng $\times$ thời gian tính.
+Công suất bản $3\times3$ lấy từ Power Analyzer của lần biên dịch ngày 27/11/2026, có số Fitter và định thời trùng lần biên dịch ngày 28/11/2026.
+Nguồn: \texttt{docs/quartus/}, \texttt{docs/quartus/6x8/}, \texttt{docs/quartus/3x3/}.
+\end{table}
+
+Hình~\ref{fig:somangchiso} vẽ lại sáu chỉ số chính, mỗi chỉ số một trục riêng.
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=\textwidth]{ch07_thuc_nghiem/somang_chiso}
+  \caption[Các chỉ số chính của ba kích thước mảng PE]{Các chỉ số chính của ba kích thước mảng PE.
+  Đường nét đứt ở ô Fmax là tần số yêu cầu $50$~MHz.}\label{fig:somangchiso}
+\end{figure}
+
+\subsection{Thời gian tính theo từng layer}
+Hình~\ref{fig:somangchuky} cho số chu kỳ đo được của từng layer.
+
+\begin{figure}[htbp]\centering
+  \includegraphics[width=0.92\textwidth]{ch07_thuc_nghiem/somang_chuky}
+  \caption{Số chu kỳ từng layer của ba kích thước mảng, đo trên board.}\label{fig:somangchuky}
+\end{figure}
+
+\textbf{$6\times8$ so với $7\times7$.}
+Bản $6\times8$ cần ít hơn $5{,}5\,\%$ chu kỳ dù ít hơn một PE.
+Ở conv0--conv2, các layer có pool dùng $6$ hàng ở cả hai cấu hình, còn $8$ cột chia hết $C_{out}$ nên số ô giảm từ $180$, $150$, $150$ xuống $120$ mỗi layer; số chu kỳ giảm $19{,}6\,\%$, $8{,}0\,\%$ và $9{,}0\,\%$.
+conv3 thì chậm hơn $3{,}3\,\%$: layer này không có pool nên bản $7\times7$ dùng đủ $7$ hàng, số ô chỉ giảm từ $70$ xuống $64$, trong khi mỗi ô phải nạp $8$ làn thay vì $7$ (thời gian nạp tỉ lệ với $\max(R_u,C_u)\cdot K$).
+
+\textbf{$3\times3$ so với $7\times7$.}
+Bản $3\times3$ có ít hơn $5{,}4$ lần số PE nhưng chỉ chậm hơn $3{,}0$ lần, vì hiệu suất PE cao hơn ($16{,}29\,\%$ so với $8{,}95\,\%$).
+Điều này khớp với công thức~\eqref{eq:eta-approx}: mỗi ô chỉ nạp $3$ làn, nên giới hạn $1/(M+1)$ là $1/4$ thay vì $1/8$.
+Mức lấp đầy kéo hiệu suất xuống dưới giới hạn đó: ở conv0--conv2 mảng chỉ dùng $2$ trong $3$ hàng (layer có pool cần số hàng chẵn), nên $\eta$ của conv1 và conv2 chỉ khoảng $15\,\%$.
+
+\subsection{Kiểm chứng mô hình chu kỳ và tính đúng}
+Số chu kỳ của bản $6\times8$ được mô hình dự báo là $346\,404$ (Bảng~\ref{tab:duBao}) trước khi bản này được tổng hợp; số đo là $347\,003$, lệch $0{,}17\,\%$.
+Ở cả ba cấu hình, mô hình thấp hơn số đo của conv0--conv3 đúng $69$, $69$, $133$ và $5$ chu kỳ, tức đúng phần ghi vùng đệm và đóng layer không được mô hình hoá (Mục~\ref{sec:bandwidth}).
+Như vậy công thức $\delta=20+R+2C_u+N_{\text{out}}$ đúng từng chu kỳ cho mọi ô của các layer tích chập ở $R=3$, $6$ và $7$, không chỉ ở cấu hình dùng để rút ra nó.
+Sai số còn lại nằm ở hai layer FC, nơi mô hình dùng hằng số khớp trên bản $7\times7$ (FC1 lệch $-2{,}5\,\%$ ở $3\times3$ và $-10{,}6\,\%$ ở $6\times8$); hai layer này chỉ chiếm dưới $1\,\%$ số chu kỳ nên tổng vẫn lệch dưới $0{,}2\,\%$.
+
+Về tính đúng, host chạy cả sáu layer của cùng một nhịp trên mỗi cấu hình và so với golden sau mỗi layer.
+Dữ liệu đọc về của cả sáu layer khớp từng byte với golden ở cả ba cấu hình; kết quả này kiểm lại được từ nhật ký byte UART bằng \texttt{scripts/raw\_log\_check.py}.
+Bản $3\times3$ còn được chạy trên $396$ nhịp đầu của bản ghi 208, và nhãn trùng mô hình int8 phần mềm ở cả $396$ nhịp.
+Cả hai bản chưa chạy lại $1\,306$ nhịp golden như bản $7\times7$ (Mục~\ref{sec:bitexact}); riêng bản $6\times8$ mới được kiểm trên một nhịp.
+
+\subsection{Đánh đổi}
+\begin{itemize}
+  \item \textbf{$6\times8$ nhanh hơn một chút nhưng tốn hơn.} Bản này dùng nhiều hơn $1\,868$ LE ($87\,\%$ so với $83\,\%$) và công suất ước lượng cao hơn $8\,\%$, nên năng lượng mỗi nhịp gần như không đổi ($2{,}50$ so với $2{,}44$~mJ).
+  Một phần LE tăng thêm có thể do khối hậu xử lý có một đơn vị cho mỗi cột (\texttt{conv1d\_post\_process.v}), tăng từ $7$ lên $8$; báo cáo Fitter theo khối của bản $6\times8$ không được lưu nên chưa tách được.
+  Ước lượng LE thô trong \texttt{scripts/tile\_cycle\_model.py} ($14\,040$ LE cho phần ngoài mảng cộng $557$ LE mỗi PE, lấy từ báo cáo Fitter của bản $7\times7$) cho $40\,776$, thấp hơn thực tế $5{,}7\,\%$; với $3\times3$ ước lượng này cho $19\,053$, cao hơn thực tế $2{,}0\,\%$.
+  \item \textbf{Độ dư định thời.} Bản $6\times8$ và $3\times3$ còn dư setup gần $2$~ns, trong khi bản $7\times7$ chỉ còn $+0{,}082$~ns.
+  Độ dư phụ thuộc kết quả đặt và đi dây của từng lần biên dịch, nên chênh lệch giữa $6\times8$ và $7\times7$ không được quy cho kích thước mảng.
+  \item \textbf{$3\times3$ tiết kiệm tài nguyên nhưng tốn năng lượng hơn.} Bản này chỉ dùng $45\,\%$ số LE và $63\,\%$ công suất ước lượng của bản $7\times7$, nhưng tính lâu gấp $3$ lần nên năng lượng mỗi nhịp gấp $1{,}9$ lần.
+  Khi chạy bản ghi 208 kèm cửa sổ hiển thị trực tiếp, với cùng chương trình host và cùng chế độ nạp mô hình một lần như Mục~\ref{sec:hieunang}, bản $3\times3$ mất trung bình $0{,}30$~s mỗi nhịp trên $396$ nhịp, so với $0{,}20$~s của bản $7\times7$ trên $2\,946$ nhịp.
+  Cả hai vẫn ngắn hơn khoảng RR trung bình $0{,}61$~s của bản ghi này.
+  Chênh lệch $0{,}10$~s lớn hơn nhiều so với $14{,}6$~ms tính toán thêm, nên phần lớn chênh lệch nằm ngoài mảng PE; nguyên nhân chưa được tách và chưa đo lại ở chế độ không hiển thị.
+  \item \textbf{Chỗ trống trên chip.} Bản $3\times3$ còn khoảng $31\,000$ LE, đủ để thử các cải tiến bộ nạp ở Mục~\ref{sec:bandwidth}; theo mô hình, $3\times3$ với đọc rộng $\times4$ và nạp chồng tính cần $372\,158$ chu kỳ, gần bằng bản $7\times7$ hiện tại (dự báo, chưa có RTL).
+\end{itemize}
