@@ -11,7 +11,7 @@ module de10_lite_top(
 	
 	ecg_accel_top #(
 		.CLK_FREQ(50000000), .BAUD_RATE(1500000),
-		.ARRAY_ROWS(3), .ARRAY_COLS(3),
+		.ARRAY_ROWS(6), .ARRAY_COLS(8),
 		.IFMAP_MEM_DEPTH(4096), .WGT_MEM_DEPTH(16384),
 		.FEEDER_DEPTH(1024), .COUT_MAX(64)
 	) u_ecg_accel(
