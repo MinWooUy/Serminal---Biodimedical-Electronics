@@ -9,7 +9,7 @@ Mô hình sau huấn luyện dùng số thực dấu phẩy động, trong khi F
 Lượng tử hoá chuyển mô hình sang dạng chỉ dùng số nguyên, với trọng số và kích hoạt int8, bộ tích luỹ int32~\cite{jacob2018quantization}.
 So với số thực 32 bit, int8 giảm bộ nhớ trọng số bốn lần và cho phép mỗi phép nhân chỉ cần một bộ nhân $8\times8$ bit.
 
-Nguyên tắc xuyên suốt là mọi hệ số tỉ lệ đều là luỹ thừa của 2: một số nguyên $q$ với số mũ $e$ biểu diễn giá trị $q\cdot2^{-e}$.
+Mọi hệ số tỉ lệ đều là luỹ thừa của 2: một số nguyên $q$ với số mũ $e$ biểu diễn giá trị $q\cdot2^{-e}$.
 Nhờ vậy việc đổi thang giữa các lớp chỉ là phép dịch bit, không cần bộ nhân hay bộ chia, và kết quả hoàn toàn xác định nên phần cứng có thể khớp từng bit với mô hình tham chiếu.
 Hình~\ref{fig:ch4-luongtu} gồm hai phần.
 Hàng trên là các bước chuyển mô hình float sang số nguyên, chỉ làm một lần trước khi triển khai; hàng dưới là phép tính mà mỗi lớp số nguyên thực hiện khi suy luận.
@@ -95,14 +95,14 @@ Ngưỡng chấp nhận đặt trước là macro-F1 của pipeline số nguyên
   \caption{Ảnh hưởng của lượng tử hoá trên kiểm định chéo DS1: F1 từng lớp của bốn cấu hình và tỉ lệ nhịp đổi nhãn so với bản float theo lớp thật. Lớp F có F1 gần 0 ở cả bốn cấu hình nên không vẽ ở hình bên trái.}\label{fig:ch4-saiso}
 \end{figure}
 
-Pipeline số nguyên hoàn toàn đạt macro-F1 0{,}5096 so với 0{,}5089 của bản float, tức không giảm mà còn nhỉnh hơn 0{,}0007, nằm rất xa ngưỡng 0{,}02.
+Pipeline số nguyên hoàn toàn đạt macro-F1 0{,}5096, cao hơn bản float (0{,}5089) 0{,}0007, trong khi ngưỡng cho phép giảm tới 0{,}02.
 Sai khác của từng seed nằm trong khoảng $\pm0{,}005$, nhỏ hơn độ dao động giữa các seed, nên có thể coi lượng tử hoá không làm thay đổi chất lượng mô hình.
 Kết quả trên DS2 ở Mục~\ref{sec:dochinhxac} xác nhận điều này với mức chênh 0{,}003.
 
 Tuy macro-F1 gần như không đổi, khoảng 1{,}1\,\% số nhịp nhận nhãn khác bản float.
 Hình~\ref{fig:ch4-saiso} cho thấy các nhịp này phân bố ở mọi lớp, với tỉ lệ cao nhất ở lớp S, khoảng 2{,}8\,\%, vì nhịp S vốn nằm gần ranh giới với nhịp N nên nhạy với sai số nhỏ của logit.
-Các thay đổi theo hai chiều, đúng thành sai và sai thành đúng, gần như bù trừ nhau, nên macro-F1 hầu như không đổi.
+Các thay đổi theo hai chiều, đúng thành sai và sai thành đúng, gần như bù trừ nhau.
 Bảng~\ref{tab:ch4-saiso} cũng cho thấy hai nguồn sai khác có mức ảnh hưởng tương đương, và khi kết hợp chúng không cộng dồn.
 
-Kết quả này có một hệ quả quan trọng cho phần cứng: vì nhãn của bản số nguyên và bản float khác nhau ở khoảng 1\,\% số nhịp, chuẩn tham chiếu cho bộ tăng tốc phải là pipeline số nguyên chứ không phải mô hình float.
+Vì nhãn của bản số nguyên và bản float khác nhau ở khoảng 1\,\% số nhịp, chuẩn tham chiếu cho bộ tăng tốc phải là pipeline số nguyên chứ không phải mô hình float.
 Bộ tăng tốc được coi là đúng khi khớp từng bit với pipeline số nguyên, và mọi kết quả độ chính xác của hệ thống được báo cáo trên pipeline này.
