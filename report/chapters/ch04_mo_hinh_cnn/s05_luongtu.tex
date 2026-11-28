@@ -1,10 +1,108 @@
-% Muc 4.5  --  phu trach: xem report/PHANCONG.md
+% Muc 4.5  --  phu trach: Hùng
+% nguon: docs/cnn_explained.md §3-5; docs/system_overview.md §2, §4;
+%        results/2026-10-15_a50fb3e1_A5_svdb_n25_lite_e3/pipeline_int.json cua repo 1DCNN (OOF DS1, 3 seed)
 \section{Lượng tử hoá int8}\label{sec:luongtu}
-\begin{goiy}
-  \begin{itemize}
-    \item Gộp BN vào conv $W'=W\gamma/\sqrt{\sigma^2+\epsilon}$; gộp 1/45 của GAP và z-score RR vào FC1.
-    \item Scale luỹ thừa 2; trọng số theo kênh; requantize $y=\mathrm{clamp}\big((acc+2^{s-1})\gg s,0,127\big)$; ReLU = kẹp.
-    \item Logit int32 cùng scale $2^{-11}$; argmax thay softmax (chứng minh đơn điệu).
-    \item Ngân sách int32 (kiểm tràn) và sai khác so với float (cổng lượng tử).
-  \end{itemize}
-\end{goiy}
+
+\subsection{Mục tiêu và nguyên tắc}
+
+Mô hình sau huấn luyện dùng số thực dấu phẩy động, trong khi FPGA MAX~10 không có đơn vị dấu phẩy động và có bộ nhớ trên chip hạn chế.
+Lượng tử hoá chuyển mô hình sang dạng chỉ dùng số nguyên, với trọng số và kích hoạt int8, bộ tích luỹ int32~\cite{jacob2018quantization}.
+So với số thực 32 bit, int8 giảm bộ nhớ trọng số bốn lần và cho phép mỗi phép nhân chỉ cần một bộ nhân $8\times8$ bit.
+
+Nguyên tắc xuyên suốt là mọi hệ số tỉ lệ đều là luỹ thừa của 2: một số nguyên $q$ với số mũ $e$ biểu diễn giá trị $q\cdot2^{-e}$.
+Nhờ vậy việc đổi thang giữa các lớp chỉ là phép dịch bit, không cần bộ nhân hay bộ chia, và kết quả hoàn toàn xác định nên phần cứng có thể khớp từng bit với mô hình tham chiếu.
+Hình~\ref{fig:ch4-luongtu} gồm hai phần.
+Hàng trên là các bước chuyển mô hình float sang số nguyên, chỉ làm một lần trước khi triển khai; hàng dưới là phép tính mà mỗi lớp số nguyên thực hiện khi suy luận.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/khoi_luongtu}
+  \caption{Khối lượng tử hoá. Hàng trên: chuyển đổi mô hình. Hàng dưới: phép tính số nguyên của một lớp, đến nhãn dự đoán. Khối nét đứt là khối kế tiếp.}\label{fig:ch4-luongtu}
+\end{figure}
+
+\subsection{Gộp các phép biến đổi tuyến tính}
+
+Khi suy luận, chuẩn hoá theo lô dùng trung bình $\mu_o$ và phương sai $\sigma_o^2$ đã ước lượng xong trong lúc huấn luyện, nên trở thành một phép biến đổi affine cố định theo kênh:
+$y_o=\gamma_o\,(x_o-\mu_o)/\sqrt{\sigma_o^2+\epsilon}+\beta_o$.
+Lớp tích chập đứng ngay trước không có bias, $x_o=W_o\ast u$ với $u$ là đầu vào.
+Thay $x_o$ vào biểu thức của $y_o$ và nhóm các hằng số lại, $y_o$ trở thành một phép tích chập mới với trọng số và bias:
+\begin{equation}
+  W'_o=W_o\,\frac{\gamma_o}{\sqrt{\sigma_o^2+\epsilon}},\qquad
+  b'_o=\beta_o-\mu_o\,\frac{\gamma_o}{\sqrt{\sigma_o^2+\epsilon}},
+  \label{eq:ch4-foldbn}
+\end{equation}
+trong đó $\gamma_o$, $\beta_o$, $\mu_o$, $\sigma_o^2$ là các tham số của chuẩn hoá theo lô ở kênh $o$.
+Theo cách tương tự, hệ số $1/45$ của phép lấy trung bình toàn cục và phép chuẩn hoá z-score của đặc trưng RR được gộp vào trọng số lớp FC1.
+Sau bước này, phần cứng không phải thực hiện chuẩn hoá theo lô, và phép lấy trung bình toàn cục chỉ còn là phép cộng.
+
+\subsection{Lượng tử trọng số và kích hoạt}
+
+Trọng số của mỗi kênh ra $c$ được lượng tử với số mũ riêng $k_c$.
+Lượng tử theo kênh cần thiết vì sau khi gộp chuẩn hoá theo lô, độ lớn trọng số giữa các kênh có thể chênh nhau nhiều lần; một thang chung sẽ làm các kênh có trọng số nhỏ mất gần hết độ phân giải.
+Kích hoạt dùng một số mũ chung cho mỗi lớp, được chọn sao cho giá trị lớn nhất quan sát trên dữ liệu huấn luyện vẫn nằm trong khoảng $\pm127$.
+Mỗi kênh ra được tính bằng
+\begin{equation}
+  acc=\sum w_q\,x_q+b_q,\qquad
+  y_q=\mathrm{clamp}\left(\big(acc+2^{s-1}\big)\gg s,\;0,\;127\right),
+  \label{eq:ch4-requant}
+\end{equation}
+trong đó $b_q$ là bias int32 và $s$ là lượng dịch.
+Công thức được suy ra trực tiếp từ quy ước $q\cdot2^{-e}$.
+Trọng số có thang $2^{-k_c}$ và đầu vào có thang $2^{-a_{in}}$, nên mỗi tích và cả tổng $acc$ có thang $2^{-(k_c+a_{in})}$; bias được lượng tử ở đúng thang này để cộng thẳng vào bộ tích luỹ.
+Lớp sau cần đầu vào ở thang $2^{-a_{out}}$, nên phải chia $acc$ cho $2^{k_c+a_{in}-a_{out}}=2^{s}$, và chia cho luỹ thừa 2 chính là dịch phải $s$ bit.
+Số hạng $2^{s-1}$ bằng một nửa số chia, cộng vào trước khi dịch để làm tròn về số gần nhất thay vì cắt bỏ phần lẻ.
+Phép kẹp về đoạn $[0,127]$ có cận dưới 0 chính là hàm ReLU $\max(0,\cdot)$ và cận trên 127 là giới hạn của int8.
+Do phép lượng tử lại là hàm không giảm, lớp gộp cực đại trên số nguyên cho kết quả đúng như trên số thực.
+Riêng lớp FC1 có hai nhóm đầu vào với độ lớn chênh lệch nhiều bậc, là tổng của phép lấy trung bình và bốn đặc trưng RR, nên mỗi nhóm được tích luỹ với số mũ riêng rồi mới cộng lại.
+Giá trị cụ thể của các số mũ được liệt kê ở Phụ lục~\ref{pl:luongtu}.
+
+Lớp cuối giữ bốn logit ở dạng int32 với cùng thang $2^{-11}$.
+Xác suất của lớp $i$ là $\mathrm{softmax}(z)_i=e^{z_i}/\sum_j e^{z_j}$.
+Bốn xác suất có chung mẫu số, và hàm $e^{x}$ đồng biến, nên logit nào lớn nhất thì xác suất tương ứng cũng lớn nhất.
+Do đó nhãn dự đoán được xác định trực tiếp từ logit:
+\begin{equation}
+  \hat{y}=\arg\max_i\,\mathrm{softmax}(z)_i=\arg\max_i\,z_i,
+  \label{eq:ch4-argmax}
+\end{equation}
+nên phần cứng chỉ cần so sánh bốn số nguyên, không cần hàm mũ hay phép chia.
+Toàn bộ trọng số của CNN Lite sau lượng tử hoá gồm 23\,408 byte int8 và 212 bias int32.
+Trên toàn bộ dữ liệu, không bộ tích luỹ nào vượt giới hạn của int32.
+
+\subsection{Đánh giá sai số lượng tử}
+
+Pipeline số nguyên có hai nguồn sai khác so với bản float: khối tiền xử lý và trích xuất đặc trưng số nguyên ở Mục~\ref{sec:tienxuly} và Mục~\ref{sec:dactrung}, và mạng int8.
+Để tách riêng ảnh hưởng của từng nguồn, macro-F1 kiểm định chéo trên DS1 được đo ở bốn cấu hình (Bảng~\ref{tab:ch4-saiso}).
+Ngưỡng chấp nhận đặt trước là macro-F1 của pipeline số nguyên hoàn toàn không giảm quá 0{,}02 so với bản float.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Macro-F1 kiểm định chéo trên DS1 của bản float và các bản số nguyên (trung bình $\pm$ độ lệch chuẩn qua ba seed).}\label{tab:ch4-saiso}
+  \begin{tabular}{llcc}
+    \toprule
+    Tiền xử lý & Mạng & macro-F1 & Nhãn trùng bản float \\
+    \midrule
+    float & float & $0{,}5089\pm0{,}0077$ & -- \\
+    số nguyên & float & $0{,}5104\pm0{,}0106$ & 98{,}9\,\% \\
+    float & int8 & $0{,}5096\pm0{,}0117$ & 98{,}9\,\% \\
+    số nguyên & int8 & $0{,}5096\pm0{,}0113$ & 98{,}9\,\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{ch04_mo_hinh_cnn/luongtu_saiso.pdf}
+  \caption{Ảnh hưởng của lượng tử hoá trên kiểm định chéo DS1: F1 từng lớp của bốn cấu hình và tỉ lệ nhịp đổi nhãn so với bản float theo lớp thật. Lớp F có F1 gần 0 ở cả bốn cấu hình nên không vẽ ở hình bên trái.}\label{fig:ch4-saiso}
+\end{figure}
+
+Pipeline số nguyên hoàn toàn đạt macro-F1 0{,}5096 so với 0{,}5089 của bản float, tức không giảm mà còn nhỉnh hơn 0{,}0007, nằm rất xa ngưỡng 0{,}02.
+Sai khác của từng seed nằm trong khoảng $\pm0{,}005$, nhỏ hơn độ dao động giữa các seed, nên có thể coi lượng tử hoá không làm thay đổi chất lượng mô hình.
+Kết quả trên DS2 ở Mục~\ref{sec:dochinhxac} xác nhận điều này với mức chênh 0{,}003.
+
+Tuy macro-F1 gần như không đổi, khoảng 1{,}1\,\% số nhịp nhận nhãn khác bản float.
+Hình~\ref{fig:ch4-saiso} cho thấy các nhịp này phân bố ở mọi lớp, với tỉ lệ cao nhất ở lớp S, khoảng 2{,}8\,\%, vì nhịp S vốn nằm gần ranh giới với nhịp N nên nhạy với sai số nhỏ của logit.
+Các thay đổi theo hai chiều, đúng thành sai và sai thành đúng, gần như bù trừ nhau, nên macro-F1 hầu như không đổi.
+Bảng~\ref{tab:ch4-saiso} cũng cho thấy hai nguồn sai khác có mức ảnh hưởng tương đương, và khi kết hợp chúng không cộng dồn.
+
+Kết quả này có một hệ quả quan trọng cho phần cứng: vì nhãn của bản số nguyên và bản float khác nhau ở khoảng 1\,\% số nhịp, chuẩn tham chiếu cho bộ tăng tốc phải là pipeline số nguyên chứ không phải mô hình float.
+Bộ tăng tốc được coi là đúng khi khớp từng bit với pipeline số nguyên, và mọi kết quả độ chính xác của hệ thống được báo cáo trên pipeline này.
