@@ -1,0 +1,33 @@
+Fmax (trich tu cnn1d.sta.rpt, ban 3x3 ngay 28/11/2026, Quartus Prime Lite 18.1.0)
+; Slow 1200mV 85C Model Fmax Summary              ;
+; 55.42 MHz ; 55.42 MHz       ; clk50      ;      ;
+; Slow 1200mV 0C Model Fmax Summary               ;
+; 60.48 MHz ; 60.48 MHz       ; clk50      ;      ;
+
+de10_lite_top.v: ARRAY_ROWS(3), ARRAY_COLS(3); cac tham so khac nhu ban 7x7
+sof: 485fe3d5afaf347fb4ae7e59bd17b6e109be9da51ea206c4665f2b5491ce9dfa  (2026-11-28 16:04)
+Fitter va Timing Analyzer cho so trung voi ban build 3x3 ngay 27/11/2026.
+
+Cong suat: lan build nay chua chay Power Analyzer. So cong suat dung trong bao cao lay tu
+anh chup Power Analyzer cua ban build 27/11/2026 (results/img/compile_fpga_3x3_1_5Mbps/power.png):
+tong 210.19 mW = dong 110.97 + tinh 90.45 + I/O 8.76; do tin cay Low (toggle rate mac dinh).
+
+Do tren board (results/hardware_logs/layer0-5_rec101_93600_beat000_20261128-162040.raw.log, 1.5 Mbaud):
+INFO bao mang 3x3; RUN tung layer = 67569 / 345939 / 412243 / 267785 / 3755 / 274, tong 1097565 chu ky.
+Du lieu doc ve cua ca 6 layer trung tung byte voi lan chay 7x7 ngay 24/11/2026 (layer0-5_..._20261124-085811.raw.log)
+va trung ban 3x3 ngay 27/11/2026 (layer0-5_..._20261127-215925.log: ca 6 layer PASS so voi golden).
+
+Kiem lai (python scripts/raw_log_check.py docs/quartus/3x3/layer0-5_rec101_93600_beat000_20261128-162040.raw.log), ban sao raw log nam cung thu muc:
+  layer0-5_rec101_93600_beat000_20261128-162040.raw.log: array 3x3, rec101_93600 beat 0
+    conv0  status 0     67,569 cycles  PASS 2,944 B
+    conv1  status 0    345,939 cycles  PASS 2,944 B
+    conv2  status 0    412,243 cycles  PASS 3,008 B
+    conv3  status 0    267,785 cycles  PASS 128 B
+    fc1    status 0      3,755 cycles  PASS 32 B
+    fc2    status 0        274 cycles  PASS 17 B
+    total 1,097,565 cycles
+
+Ban ghi 208 kem cua so hien thi (scripts/board_compare.py, mode live, --resident), 28/11/2026 16:44-16:50:
+results/2026-11-28_a5fb3f12_board_compare/ (log.txt, metrics.json): chay 396/2946 nhip roi dung,
+FPGA == int8 software 396/396, failed 0, link 0.300 s/beat (ban 7x7 ngay 24/11: 0.197 s/beat tren 2946 nhip,
+results/2026-11-24_a5fb3f12_board_compare/), latency R->nhan 0.92 s, RR trung binh 0.61 s.

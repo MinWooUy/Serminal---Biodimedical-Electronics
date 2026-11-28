@@ -1,25 +1,25 @@
 % Muc 7.4  --  phu trach: xem report/PHANCONG.md
-% nguon: docs/quartus/cnn1d.fit.summary, cnn1d.sta.summary (21/11/2026); rtl/cnn1d/output_files/cnn1d.fit.rpt;
-%        ban 3x3: anh chup results/img/compile_fpga_3x3_sa (28/10/2026)
+% nguon: docs/quartus/cnn1d.fit.summary, cnn1d.sta.summary (21/11/2026); rtl/cnn1d/output_files/cnn1d.fit.rpt
+%        (ban 3x3 va 6x8 cung ma RTL: Muc 7.6, file s05b_somang.tex)
 \section{Tài nguyên và định thời}\label{sec:taiguyen}
 \subsection{Tài nguyên tổng}
 Bảng~\ref{tab:taiguyen} cho tài nguyên và kết quả phân tích định thời (timing) của bản $7\times7$ đang dùng.
-Cột thứ hai là một bản $3\times3$ cũ hơn, chỉ để tham khảo quy mô: hai bản khác nhau cả về chức năng và cỡ bộ nhớ, nên chênh lệch giữa chúng \emph{không} phải chỉ do kích thước mảng.
+Hai bản $3\times3$ và $6\times8$ tổng hợp từ cùng mã RTL được so ở Mục~\ref{sec:somang}.
 
 \begin{table}[htbp]\centering
 \caption{Tài nguyên và định thời trên MAX~10 10M50 (báo cáo Quartus).}\label{tab:taiguyen}
 \small\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}lrr@{}}
+\begin{tabular}{@{}lr@{}}
 \toprule
- & $7\times7$ (21/11/2026) & $3\times3$ bản cũ (28/10/2026) \\ \midrule
-Phần tử logic (LE) & 41\,353 / 49\,760 (83\,\%) & 29\,244 (59\,\%) \\
-Thanh ghi & 15\,697 & 11\,575 \\
-Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) & 81\,920 (5\,\%) \\
-Khối M9K & 63 / 182 & -- \\
-Nhân nhúng 9 bit & 8 / 288 (3\,\%) & 6 / 288 (2\,\%) \\
-Chân I/O & 4 / 360 & 4 / 360 \\ \midrule
-Tần số tối đa (85\,$^\circ$C) & 50{,}21~MHz & 51{,}08~MHz \\
-Độ dư setup, mô hình chậm 85\,$^\circ$C & $+0{,}082$~ns & $+0{,}423$~ns \\ \bottomrule
+ & $7\times7$ (21/11/2026) \\ \midrule
+Phần tử logic (LE) & 41\,353 / 49\,760 (83\,\%) \\
+Thanh ghi & 15\,697 \\
+Bit bộ nhớ & 452\,390 / 1\,677\,312 (27\,\%) \\
+Khối M9K & 63 / 182 \\
+Nhân nhúng 9 bit & 8 / 288 (3\,\%) \\
+Chân I/O & 4 / 360 \\ \midrule
+Tần số tối đa (85\,$^\circ$C) & 50{,}21~MHz \\
+Độ dư setup, mô hình chậm 85\,$^\circ$C & $+0{,}082$~ns \\ \bottomrule
 \end{tabular}
 \end{table}
 
