@@ -7,6 +7,7 @@
   \item Độ chính xác đánh giá liên bệnh nhân, DS2 chỉ chạy một lần sau khi đóng băng mô hình.
   \item Một mảng PE dùng chung cho cả các layer tích chập và hai layer kết nối đầy đủ, cấu hình bằng lệnh qua UART, nên đổi kích thước layer không cần tổng hợp lại trong giới hạn của bộ nhớ.
   \item Số chu kỳ mô phỏng RTL trùng số đo trên board, nên các phân tích hiệu năng dựa trên mô phỏng có cơ sở.
+  \item Kích thước mảng là tham số: cùng mã RTL chạy đúng ở $3\times3$, $6\times8$ và $7\times7$, và mô hình chu kỳ dự báo bản $6\times8$ trước khi tổng hợp với sai lệch $0{,}17\,\%$ (Mục~\ref{sec:somang}).
 \end{itemize}
 
 \subsection{Hạn chế}
@@ -15,7 +16,7 @@
   \item Đường UART mất khoảng $0{,}1$~s mỗi nhịp do nhiều gói nhỏ theo kiểu gửi rồi chờ.
   \item Ở chế độ nạp mô hình một lần, nút reset của board không xoá RAM nhưng đưa con trỏ bank về $0$; host không được báo, nên nếu reset xảy ra giữa hai nhịp, các layer có thể đọc nhầm bank trọng số mà không phát sinh lỗi giao thức.
   Nhận định này suy từ RTL và đã thử trên mô hình phần mềm, chưa thử trên board; hiện cách xử lý là khởi động lại chương trình host để nạp lại mô hình.
-  \item Dùng $83\,\%$ LE và độ dư setup chỉ $+0{,}082$~ns, còn rất ít chỗ để mở rộng trên chip này.
+  \item Bản $7\times7$ dùng $83\,\%$ LE và độ dư setup chỉ $+0{,}082$~ns, còn rất ít chỗ để mở rộng trên chip này; bản $3\times3$ để trống hơn một nửa chip nhưng tính chậm gấp $3$ lần.
   \item Công suất chỉ là ước lượng của công cụ ($332$~mW, độ tin cậy thấp); chưa có số đo trên board.
   \item Tiền xử lý (lọc, phát hiện đỉnh R, chuẩn hoá) vẫn chạy trên máy host.
   \item Lớp S có độ chính xác dương khoảng $41\,\%$ và lớp F không được nhận đúng trên DS2.
@@ -30,6 +31,7 @@
   \item \textbf{Vị trí nhịp.} Kết quả theo chú thích cao hơn kết quả đầu--cuối; số nêu ra phải ghi rõ chế độ nào.
   \item \textbf{Thời gian đo ở host} phụ thuộc máy tính, bộ chuyển USB--UART và chương trình host, nên không lặp lại chính xác trên máy khác.
   \item \textbf{Hai sửa đổi (loader và số hàng của layer pool) áp cùng lúc,} nên mọi con số chia phần đóng góp của từng sửa đổi chỉ là ước lượng từ mô hình.
+  \item \textbf{Bản $3\times3$ và $6\times8$ mới kiểm trên ít nhịp} (một nhịp golden; riêng $3\times3$ thêm $396$ nhịp của bản ghi 208). Chênh lệch Fmax giữa các bản phụ thuộc kết quả đặt và đi dây, và chưa được thử với các hạt giống (seed) khác của Fitter.
 \end{itemize}
 
 \subsection{So sánh với công trình khác}

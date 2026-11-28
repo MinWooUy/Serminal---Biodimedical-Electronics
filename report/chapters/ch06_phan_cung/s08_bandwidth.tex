@@ -86,13 +86,15 @@ Phần $\delta$ của mỗi ô không phải hằng số mà phụ thuộc số 
 Áp công thức này lên mọi ô của conv0--conv3 thì tổng chu kỳ chỉ thấp hơn số đo board đúng bằng phần ghi vùng đệm cộng $5$ chu kỳ đóng layer ($69$, $69$, $133$ và $5$ chu kỳ cho conv0 đến conv3).
 Hai layer FC chưa được ghi mốc nên mô hình giữ cho chúng hằng số $\delta=55$ khớp từ số đo board; riêng FC1 mô hình thấp hơn đo $9{,}5\,\%$ ($2\,838$ so với $3\,137$ chu kỳ).
 
-\subsection{Hướng cải tiến (chưa thực hiện, chỉ là dự báo)}
+\subsection{Hướng cải tiến (phần lớn chưa thực hiện, chỉ là dự báo)}
 Mô hình cho phép dự báo các cải tiến tiếp theo mà không cần tổng hợp lại.
-Bảng~\ref{tab:duBao} là \emph{dự báo từ mô hình}, hiệu chỉnh trên đúng cấu hình $7\times7$ hiện tại ($366\,514$ chu kỳ mô hình so với $367\,091$ đo, lệch $0{,}16\,\%$); chưa có RTL hay số đo cho các dòng sau dòng đầu và cho cột $6\times8$.
-Các dự báo giả định $\delta=20+R+2C_u+N_{\text{out}}$ với $R$ là số hàng của mảng (hậu xử lý $R+1$ chu kỳ mới được quan sát ở $R=7$), và giữ nguyên $\delta$ khi đổi bộ nạp; thiết kế đọc rộng hay nạp chồng tính có thể đổi độ trễ loader hoặc cho các pha chồng lên nhau.
+Bảng~\ref{tab:duBao} là \emph{dự báo từ mô hình}, hiệu chỉnh trên đúng cấu hình $7\times7$ hiện tại ($366\,514$ chu kỳ mô hình so với $367\,091$ đo, lệch $0{,}16\,\%$); chưa có RTL hay số đo cho các dòng đọc rộng và nạp chồng tính.
+Dòng đầu của cột $6\times8$ được dự báo trước, sau đó bản $6\times8$ mới được tổng hợp và đo trên board: $347\,003$ chu kỳ, lệch $0{,}17\,\%$ so với dự báo (Mục~\ref{sec:somang}).
+Các dự báo giả định $\delta=20+R+2C_u+N_{\text{out}}$ với $R$ là số hàng của mảng; hậu xử lý $R+1$ chu kỳ ban đầu chỉ được quan sát ở $R=7$, và số đo trên bản $3\times3$ và $6\times8$ sau đó cho thấy công thức đúng từng chu kỳ ở cả $R=3$ và $R=6$.
+Các dự báo cũng giữ nguyên $\delta$ khi đổi bộ nạp; thiết kế đọc rộng hay nạp chồng tính có thể đổi độ trễ loader hoặc cho các pha chồng lên nhau.
 
 \begin{table}[htbp]\centering
-\caption{Dự báo số chu kỳ mỗi nhịp theo bộ nạp và hình dạng mảng (mô hình, \emph{chưa đo}).}\label{tab:duBao}
+\caption{Dự báo số chu kỳ mỗi nhịp theo bộ nạp và hình dạng mảng (mô hình; dòng cuối là số đo).}\label{tab:duBao}
 \small
 \begin{tabular}{@{}lrr@{}}
 \toprule
@@ -100,11 +102,12 @@ Bộ nạp & $7\times7$ & $6\times8$ \\ \midrule
 hiện tại ($1$ byte/chu kỳ, nạp rồi tính) & 366\,514 & 346\,404 \\
 đọc rộng $\times4$ & 153\,082 & 139\,428 \\
 đọc rộng $\times4$ và nạp chồng tính & 105\,864 & 99\,520 \\
-đọc rộng $\times8$ và nạp chồng tính & 81\,538 & 70\,116 \\ \bottomrule
+đọc rộng $\times8$ và nạp chồng tính & 81\,538 & 70\,116 \\ \midrule
+\emph{đo trên board}, bộ nạp hiện tại & 367\,091 & 347\,003 \\ \bottomrule
 \end{tabular}
 
 \smallskip
-\footnotesize Nguồn: mô hình \texttt{scripts/tile\_cycle\_model.py}, hiệu chỉnh trên số đo của mảng $7\times7$.
+\footnotesize Nguồn: mô hình \texttt{scripts/tile\_cycle\_model.py}, hiệu chỉnh trên số đo của mảng $7\times7$; số đo $6\times8$ ngày 28/11/2026 (\texttt{docs/quartus/6x8/}).
 \end{table}
 
 \begin{itemize}
@@ -113,6 +116,7 @@ hiện tại ($1$ byte/chu kỳ, nạp rồi tính) & 366\,514 & 346\,404 \\
   \item \textbf{Nạp chồng tính.} Nạp dữ liệu ô sau trong lúc ô trước đang tính; chỉ có ích khi nạp đã ngắn lại cỡ thời gian tính, nên phải làm sau bước đọc rộng.
   Cần tách FSM của ô và để bộ điều khiển layer chạy trước một ô.
   \item \textbf{Mảng $6\times8$ thay $7\times7$.} $C_{out}=16,32,64$ chia hết cho $8$ và $T=360,180,90$ chia hết cho $6$ nên $\mathrm{occ}\approx0{,}98$, trong khi chỉ ít hơn một PE ($48$ so với $49$).
+  Đây là cải tiến duy nhất đã được thử: số chu kỳ giảm $5{,}5\,\%$ nhưng bản này dùng thêm $1\,868$ LE (Mục~\ref{sec:somang}).
   Mảng lệch nhiều như $3\times10$ chậm gấp $2{,}4$ lần vì thời gian nạp tỉ lệ với $K\cdot\max(R,C)$.
 \end{itemize}
 Mô hình chạy bằng \texttt{scripts/tile\_cycle\_model.py}.
