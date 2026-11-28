@@ -58,7 +58,7 @@ Tham số & Ý nghĩa & Giá trị \\ \midrule
 \end{tabular}
 \end{table}
 
-Một kiểm tra khi mô phỏng (\texttt{\$fatal} trong \texttt{ecg\_accel\_top}, không có trong bản tổng hợp) bảo vệ các tham số này: tỉ số $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}$ phải không nhỏ hơn $8$, $\texttt{MAX\_PAYLOAD}\le256$ và $2\cdot\texttt{COUT\_MAX}\le\texttt{MAX\_PAYLOAD}$ (để đọc được bộ nhớ GAP trong một khung).
+Tỉ số $\texttt{CLK\_FREQ}/\texttt{BAUD\_RATE}$ phải không nhỏ hơn $8$, $\texttt{MAX\_PAYLOAD}\le256$ và $2\cdot\texttt{COUT\_MAX}\le\texttt{MAX\_PAYLOAD}$ (để đọc được bộ nhớ GAP trong một khung).
 
 \subsection{Giao diện với board}
 Bộ tăng tốc chỉ có bốn tín hiệu ra ngoài: xung nhịp \texttt{MAX10\_CLK1\_50}, nút \texttt{KEY0} (reset), \texttt{uart\_rx} (chân \texttt{PIN\_AB5}) và \texttt{uart\_tx} (chân \texttt{PIN\_AB6}).
