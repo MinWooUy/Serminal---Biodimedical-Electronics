@@ -1,42 +1,45 @@
 % Muc 5.3  --  phu trach: Dung (xem report/PHANCONG.md)
 % nguon: rtl/cnn1d/top/layer_cmd_controller.v, report/appendices/pl_a_bo_lenh.tex, python/link/proto_layer.py
 \section{Bộ lệnh}\label{sec:bolenh}
-Khối \texttt{layer\_cmd\_controller} thực hiện bộ lệnh điều khiển ở mức layer, tóm tắt trong Bảng~\ref{tab:lenh} (quy cách từng trường byte trình bày ở Phụ lục~\ref{pl:bolenh}).
+Bộ tăng tốc nhận lệnh ở mức layer: host nạp dữ liệu, cấu hình một layer, rồi ra lệnh chạy; việc chia layer thành các ô tính toán do phần cứng tự đảm nhiệm.
+Các lệnh được tóm tắt trong Bảng~\ref{tab:lenh}; quy cách từng trường được trình bày ở Phụ lục~\ref{pl:bolenh}.
 
 \begin{table}[htbp]\centering
 \caption{Bộ lệnh điều khiển bộ tăng tốc.}\label{tab:lenh}
 \footnotesize\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}ll>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{3.9cm}@{}}
+\begin{tabular}{@{}ll>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{3.6cm}@{}}
 \toprule
-Mã & Lệnh & Tham số tải (little-endian) & Phản hồi & Tác dụng \\ \midrule
-\texttt{0x08} & \texttt{WRITE\_X} & \texttt{addr:u16, data:i8[$n$]} & \texttt{ACK} & ghi bank ghi của bộ nhớ ifmap \\
-\texttt{0x09} & \texttt{WRITE\_W} & \texttt{addr:u16, data:i8[$n$]} & \texttt{ACK} & ghi bank ghi của bộ nhớ trọng số \\
-\texttt{0x0A} & \texttt{WRITE\_BIAS} & \texttt{base:u16, data:i32[$n$]} & \texttt{ACK} & ghi hệ số bias vào RAM bias ($256$~mục) \\
-\texttt{0x0B} & \texttt{WRITE\_SHIFT} & \texttt{base:u16, data:i8[$n$]} & \texttt{ACK} & ghi độ dịch kênh $S_O$ và dịch trước $S_G$ \\
-\texttt{0x0C} & \texttt{SWAP} & \texttt{flags:u8} (bit0: X, bit1: W) & \texttt{ACK} & đảo vai bank đọc/ghi (ifmap, trọng số) \\ \midrule
-\texttt{0x0D} & \texttt{CONFIG} & $11$, $12$ hoặc $16$~byte cấu hình & \texttt{ACK} & kiểm tra hợp lệ và chốt tham số layer \\
-\texttt{0x0E} & \texttt{RUN} & rỗng & \texttt{RESULT} \texttt{[status, cycles]} & chạy trọn layer, trả trạng thái và chu kỳ \\ \midrule
-\texttt{0x0F} & \texttt{READ\_GAP} & rỗng & \texttt{RESULT} ($128$~B) & đọc $\texttt{COUT\_MAX}$ bộ cộng dồn GAP (\texttt{u16}) \\
-\texttt{0x10} & \texttt{READ\_FMAP} & \texttt{offset:u16, len:u8} & \texttt{RESULT} (\texttt{len}~B) & đọc \texttt{len} byte từ bank đọc của ifmap \\
-\texttt{0x15} & \texttt{INFO} & rỗng & \texttt{RESULT} ($22$~B) & phần cứng tự khai báo cấu hình \\ \bottomrule
+Mã & Lệnh & Tham số & Phản hồi & Tác dụng \\ \midrule
+\texttt{0x08} & \texttt{WRITE\_X} & địa chỉ, dữ liệu & \texttt{ACK} & ghi bộ nhớ ifmap \\
+\texttt{0x09} & \texttt{WRITE\_W} & địa chỉ, dữ liệu & \texttt{ACK} & ghi bộ nhớ trọng số \\
+\texttt{0x0A} & \texttt{WRITE\_BIAS} & chỉ số đầu, dữ liệu & \texttt{ACK} & ghi hệ số bias \\
+\texttt{0x0B} & \texttt{WRITE\_SHIFT} & chỉ số đầu, dữ liệu & \texttt{ACK} & ghi hệ số dịch lượng tử hoá \\
+\texttt{0x0C} & \texttt{SWAP} & cờ chọn bộ nhớ & \texttt{ACK} & đổi vai bank đọc/ghi \\
+\texttt{0x0D} & \texttt{CONFIG} & tham số layer & \texttt{ACK} & kiểm tra và chốt cấu hình layer \\
+\texttt{0x0E} & \texttt{RUN} & không có & \texttt{RESULT} & chạy trọn một layer \\
+\texttt{0x0F} & \texttt{READ\_GAP} & không có & \texttt{RESULT} & đọc bộ cộng dồn GAP \\
+\texttt{0x10} & \texttt{READ\_FMAP} & địa chỉ, độ dài & \texttt{RESULT} & đọc bản đồ đặc trưng \\
+\texttt{0x15} & \texttt{INFO} & không có & \texttt{RESULT} & đọc cấu hình phần cứng \\ \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Nạp dữ liệu và đảo bank.}
-\texttt{WRITE\_X} và \texttt{WRITE\_W} ghi mảng $8$~bit có dấu vào \emph{bank ghi} của bộ đệm ping-pong tương ứng bắt đầu từ địa chỉ \texttt{addr}.
-\texttt{WRITE\_BIAS} ghi mảng số nguyên $32$~bit vào RAM bias ($\texttt{BIAS\_DEPTH}=256$); \texttt{WRITE\_SHIFT} ghi độ dịch lượng tử hoá $S_O$ ở địa chỉ $0\ldots63$ và độ dịch trước $S_G$ ở địa chỉ $64\ldots127$.
-\texttt{SWAP} đảo con trỏ bank đọc/ghi của ifmap (\texttt{bit~0}) hoặc trọng số (\texttt{bit~1}) trong một chu kỳ xung nhịp.
+\textbf{Nạp dữ liệu và đổi bank.}
+\texttt{WRITE\_X}, \texttt{WRITE\_W}, \texttt{WRITE\_BIAS} và \texttt{WRITE\_SHIFT} ghi dữ liệu vào ifmap, trọng số, bộ nhớ bias và bảng hệ số dịch.
+Dữ liệu ifmap và trọng số luôn được ghi vào \emph{bank ghi} của bộ đệm ping-pong; lệnh \texttt{SWAP} đổi vai hai bank để dữ liệu vừa ghi trở thành bank đọc.
 
-\textbf{Cấu hình và thực thi layer.}
-Lệnh \texttt{CONFIG} nhận $11$~byte cơ sở (\texttt{out\_len}, \texttt{cout}, \texttt{k\_len}, \texttt{window\_step}, \texttt{pool}, \texttt{gap}, \texttt{pad\_next}), tuỳ chọn thêm byte thứ~$12$ (\texttt{flags}) và bốn byte $13$--$16$ (\texttt{w\_base}, \texttt{b\_base} chỉ định địa chỉ gốc của trọng số trong bank đọc và của bias trong RAM bias).
-Bốn bit cờ trong \texttt{flags} điều khiển chế độ xử lý cho hai lớp kết nối đầy đủ (Fully Connected, FC) ngay trên mảng phần tử xử lý (Processing Element, PE) (Mục~\ref{sec:anhxa}):
+\textbf{Cấu hình và chạy layer.}
+Lệnh \texttt{CONFIG} truyền hình học của layer (số vị trí đầu ra, số kênh ra, độ dài cửa sổ, bước trượt) cùng các tuỳ chọn \texttt{pool}, \texttt{gap} và \texttt{pad\_next}.
+Phần mở rộng của \texttt{CONFIG} gồm byte cờ \texttt{flags} và hai địa chỉ gốc \texttt{w\_base}, \texttt{b\_base} của trọng số và bias.
+Bốn cờ trong \texttt{flags} cho phép hai lớp kết nối đầy đủ (Fully Connected, FC) chạy trên cùng mảng phần tử xử lý (Processing Element, PE) như một layer tích chập (Mục~\ref{sec:anhxa}):
 \begin{itemize}
-  \item \texttt{out\_int32} (bit~$0$) và \texttt{argmax} (bit~$1$): ghi trực tiếp kết quả $32$~bit của hàng~$0$ vào ifmap và xuất thêm $1$~byte chỉ số kênh lớn nhất tại địa chỉ $4\cdot\texttt{cout}$ (dùng ở FC2).
-  \item \texttt{row\_combine} (bit~$2$) và \texttt{gap\_in} (bit~$3$): đóng gói dữ liệu từ bộ nhớ GAP $16$~bit thành hai hàng $7$~bit trong bank ghi ifmap, đảo bank rồi ghép tổng của ba hàng PE trên cùng một kênh thành một đầu ra (dùng ở FC1 cho đầu vào GAP kết hợp đặc trưng RR).
+  \item \texttt{out\_int32}: xuất kết quả dạng số nguyên $32$~bit thay vì lượng tử hoá về $8$~bit;
+  \item \texttt{argmax}: ghi thêm chỉ số kênh có giá trị lớn nhất;
+  \item \texttt{row\_combine}: ghép kết quả của ba hàng PE thành một đầu ra;
+  \item \texttt{gap\_in}: lấy đầu vào từ bộ nhớ GAP của layer trước.
 \end{itemize}
-Mạch giải mã kiểm tra các ràng buộc tham số và tổ hợp cờ ngay khi nhận \texttt{CONFIG} (nếu không hợp lệ sẽ trả \texttt{NACK} mã~$2$) trước khi chốt vào thanh ghi cấu hình.
-Lệnh \texttt{RUN} kích hoạt thực thi toàn bộ các ô của layer đã cấu hình và trả về gói \texttt{RESULT} chứa \texttt{[status:u8, cycles:u32]} khi hoàn tất.
+Bộ điều khiển kiểm tra tính hợp lệ của tham số và tổ hợp cờ trước khi chốt cấu hình; cấu hình sai bị từ chối bằng \texttt{NACK} mã~$2$.
+Lệnh \texttt{RUN} thực thi toàn bộ layer đã cấu hình và trả về \texttt{RESULT} gồm trạng thái và số chu kỳ thực thi.
 
-\textbf{Đọc dữ liệu và nhận dạng phần cứng.}
-\texttt{READ\_GAP} và \texttt{READ\_FMAP} đọc dữ liệu từ bộ nhớ GAP hoặc từ bank đọc của ifmap theo đoạn địa chỉ yêu cầu.
-Lệnh \texttt{INFO} trả về $22$~byte thông số tổng hợp của FPGA (phiên bản, kích thước mảng PE, mặt nạ tính năng \texttt{features}, tần số xung nhịp, tốc độ baud, độ sâu các bộ nhớ và \texttt{MAX\_PAYLOAD}) để phần mềm host đồng bộ cấu hình khi kết nối.
+\textbf{Đọc kết quả và tự khai báo phần cứng.}
+\texttt{READ\_GAP} và \texttt{READ\_FMAP} đọc dữ liệu từ bộ nhớ GAP và từ bank đọc của ifmap.
+Lệnh \texttt{INFO} trả về cấu hình tổng hợp của phần cứng (kích thước mảng PE, tính năng hỗ trợ, độ sâu bộ nhớ, giới hạn tải), nhờ đó host tự thích nghi với bộ tăng tốc đang kết nối.

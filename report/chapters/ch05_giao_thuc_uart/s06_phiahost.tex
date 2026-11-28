@@ -1,10 +1,11 @@
 % Muc 5.6  --  phu trach: Dung (xem report/PHANCONG.md)
 % nguon: python/link/serial_link.py, proto_layer.py, layer_host.py, layersim/, host/, scripts/board_*.py
 \section{Phía host}\label{sec:phiahost}
-Phần mềm phía host được tổ chức thành hai khối dùng chung một giao diện điều khiển cho cả kết nối phần cứng lẫn mô phỏng:
-\sloppy
+Phần mềm phía host viết bằng Python, gồm các thành phần sau:
 \begin{itemize}
-  \item \textbf{Giao vận và điều phối mô hình (\texttt{python/\allowbreak link/}, \texttt{host/}):} \texttt{SerialTransport} đảm nhận truyền nhận byte qua cổng nối tiếp 8N1 (kèm \texttt{RawLog} lưu nhật ký byte thô); \texttt{LayerHost} đóng khung gói, tính/kiểm CRC-16, kiểm khớp \texttt{SEQ}, truy vấn \texttt{INFO} và tự động cắt gói theo \texttt{MAX\_PAYLOAD}. Phía trên, \texttt{ecg\_layer\_host\_pc.py} chạy kiểm tra từng layer và đọc lại đầu ra để đối chiếu với vector chuẩn, còn \texttt{board\_classifier.py} (\texttt{BoardClassifier}) điều phối chạy trọn sáu layer và chỉ đọc $17$~byte kết quả cuối cho mỗi nhịp.
-  \item \textbf{Mô hình giả lập và công cụ vận hành (\texttt{python/\allowbreak link/\allowbreak layersim}, \texttt{scripts/}):} gói \texttt{layersim} (\texttt{LayerFpgaSim}, \texttt{LayerLink}) mô phỏng hoạt động thu phát khung, giải mã lệnh và tính toán số nguyên của FPGA ở mức byte. Các công cụ dòng lệnh dùng chung giao diện gồm \texttt{layer\_board\_test.py} (truy vấn \texttt{INFO} và kiểm tra khói), \texttt{board\_monitor.py} (chạy tiền xử lý trên host, gọi FPGA ở luồng nền để hiển thị trực tiếp và kiểm tra tự động \texttt{--check all}), \texttt{board\_compare.py} (hiển thị đối chiếu trực tiếp nhãn PhysioNet, mô hình số thực và FPGA), và \texttt{board\_eval.py} (phân loại và xuất kết quả đánh giá cho cả bản ghi MIT-BIH).
+  \item \textbf{Kênh truyền} (\texttt{SerialTransport}, \texttt{RawLog}): gửi và nhận byte qua cổng nối tiếp, đồng thời ghi lại nhật ký byte thô để phục vụ kiểm tra.
+  \item \textbf{Giao thức} (\texttt{proto\_layer}, \texttt{LayerHost}): đóng khung gói, tính và kiểm CRC-16, ghép phản hồi theo \texttt{SEQ}, đọc \texttt{INFO} để lấy giới hạn phần cứng và tự động tách dữ liệu lớn thành nhiều khung.
+  \item \textbf{Điều phối mạng} (\texttt{ecg\_layer\_host\_pc.py}, \texttt{BoardClassifier}): nạp tham số mô hình, chạy sáu layer theo trình tự ở Mục~\ref{sec:trinhtu} và đọc kết quả phân loại.
+  \item \textbf{Mô hình giả lập FPGA} (\texttt{layersim}): mô phỏng ở mức byte hành vi thu khung, giải mã lệnh và tính toán của bộ tăng tốc, cho phép kiểm thử phần mềm host khi chưa có board.
+  \item \textbf{Công cụ vận hành} (\texttt{scripts/}): \texttt{layer\_board\_test} kiểm tra kết nối; \texttt{board\_monitor} hiển thị trực tiếp và kiểm tra tự động với vector chuẩn; \texttt{board\_compare} đối chiếu nhãn của FPGA với nhãn chuyên gia và mô hình số thực; \texttt{board\_eval} phân loại và đánh giá trên cả bản ghi.
 \end{itemize}
-\fussy
