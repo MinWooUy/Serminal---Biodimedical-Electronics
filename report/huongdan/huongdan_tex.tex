@@ -1,0 +1,173 @@
+% =====================================================================
+%  Huong dan ngan: lam bao cao bang LaTeX trong repo (danh cho thanh vien nhom)
+%  Bien dich (tu thu muc report/):
+%     xelatex -interaction=nonstopmode -halt-on-error -output-directory=huongdan/build huongdan/huongdan_tex.tex
+%  Chi tiet day du: report/README.md
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont{Courier New}[Scale=0.88]
+\usepackage[vietnamese]{babel}
+\usepackage[a4paper,top=1.8cm,bottom=1.8cm,left=2cm,right=2cm]{geometry}
+\usepackage{amssymb,needspace,xcolor,booktabs,array,enumitem,titlesec,fancyhdr,listings}
+\usepackage[hidelinks,unicode]{hyperref}
+
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\renewcommand{\arraystretch}{1.18}
+
+\definecolor{ink}{HTML}{1F3A5F}
+\definecolor{codebg}{HTML}{F4F6F8}
+\titleformat{\section}{\sffamily\large\bfseries\color{ink}}{\thesection}{0.5em}{}
+\titlespacing*{\section}{0pt}{9pt}{3pt}
+\pagestyle{fancy}\fancyhf{}\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\footnotesize\color{gray}Hướng dẫn LaTeX cho báo cáo --- cập nhật 25/11/2026}
+\fancyfoot[R]{\footnotesize\thepage}
+
+\lstset{basicstyle=\ttfamily\footnotesize,backgroundcolor=\color{codebg},frame=single,
+        rulecolor=\color{gray!40},columns=fullflexible,keepspaces=true,breaklines=true,
+        showstringspaces=false,xleftmargin=0pt,aboveskip=3pt,belowskip=3pt}
+
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\khung}[2]{\par\noindent\fcolorbox{ink!50}{ink!6}{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\textbf{#1}\par\vspace{1pt}#2}}\par\smallskip}
+
+\begin{document}
+
+{\sffamily\LARGE\bfseries\color{ink} Làm báo cáo bằng LaTeX trong repo}\par
+{\sffamily\color{gray} Hướng dẫn ngắn cho thành viên nhóm. Chi tiết đầy đủ: \file{report/README.md}.}\par\medskip
+
+\khung{5 điều cần nhớ}{%
+\begin{enumerate}
+  \item \textbf{Mỗi mục là một file} (\file{sNN\_ten.tex}). Chỉ sửa file thuộc mục mình nhận trong \file{PHANCONG.md}.
+  \item \textbf{Không viết nội dung vào \file{main.tex}.} Muốn sửa \file{config/} (preamble, macro, metadata) hoặc \file{bib/references.bib} thì báo nhóm trước.
+  \item \textbf{Mỗi câu một dòng} trong file \file{.tex}: xuống dòng không ảnh hưởng PDF, còn git so sánh theo dòng nên ít xung đột.
+  \item \textbf{Biên dịch được rồi mới push} (\file{.\textbackslash build.ps1 -Fast}). Không push khi bản dựng lỗi.
+  \item \textbf{Không commit \file{build/} và file \file{.pdf}} (đã có trong \file{.gitignore}); muốn gửi PDF thì gửi qua nhóm chat.
+\end{enumerate}}
+
+%--------------------------------------------------------------------
+\section{Cài đặt và biên dịch}
+\begin{enumerate}
+  \item Cài \textbf{MiKTeX} (Basic Installer, \url{https://miktex.org/download}), mục \emph{Install missing packages on-the-fly} chọn \textbf{Yes}. Lần biên dịch đầu tự tải gói nên cần mạng và mất vài phút.
+  \item Mở \emph{MiKTeX Console} $\to$ \emph{Updates}, cập nhật một lần (để hết cảnh báo ``have not checked for updates'').
+  \item Kiểm tra: \verb+xelatex --version+ phải in ra \verb+MiKTeX-XeTeX ...+. Báo cáo \textbf{bắt buộc dùng XeLaTeX} (font Times New Roman, tiếng Việt Unicode), không dùng pdfLaTeX.
+\end{enumerate}
+Mở PowerShell tại thư mục \file{report/}:
+
+\begin{tabular}{@{}>{\ttfamily}p{4.5cm}p{11.7cm}@{}}
+\toprule
+\normalfont Lệnh & \textbf{Dùng khi} \\ \midrule
+.\textbackslash build.ps1        & Biên dịch đầy đủ (xelatex, bibtex, xelatex $\times 2$) $\to$ \verb+build/main.pdf+. Dùng trước khi nộp và khi cần mục lục, trích dẫn đúng. \\
+.\textbackslash build.ps1 -Fast  & Một lượt xelatex, nhanh. Dùng lúc đang soạn; mục lục và số trích dẫn có thể chưa cập nhật. \\
+.\textbackslash build.ps1 -Open  & Biên dịch xong thì mở PDF. \\
+.\textbackslash build.ps1 -Clean & Xoá thư mục \verb+build/+ (khi gặp lỗi lạ do file tạm cũ). \\ \bottomrule
+\end{tabular}
+
+\smallskip
+Không có TeX trên máy: dùng Overleaf (tải thư mục \file{report/} lên, \emph{Main document} = \verb+main.tex+, \emph{Compiler} = XeLaTeX) và đổi tạm \verb+\setmainfont+ trong \file{config/preamble.tex} sang \verb+TeX Gyre Termes+; \textbf{thay đổi này chỉ để trên máy đó, không commit}.
+
+%--------------------------------------------------------------------
+\section{Cấu trúc thư mục \file{report/}}
+\begin{lstlisting}
+main.tex               Khung tai lieu - KHONG viet noi dung vao day
+config/                metadata.tex (ten de tai, thanh vien), preamble.tex, macros.tex
+frontmatter/           Bia, cam doan, cam on, tom tat, viet tat
+chapters/chNN_ten/     Moi chuong mot thu muc
+    00_chuong.tex      Tieu de chuong; chi \input cac muc
+    sNN_ten.tex        MOI MUC MOT FILE  <- don vi phan cong, ban viet o day
+appendices/            Phu luc A-E
+bib/references.bib     Tai lieu tham khao (BibTeX)
+figures/chNN_ten/      Hinh cua tung chuong (nguon .drawio dat o figures/src/)
+\end{lstlisting}
+Tài liệu cần đọc: \file{PHANCONG.md} (ai viết mục nào, trạng thái), \file{DINHVI.md} (định vị đề tài, \emph{đọc trước khi viết}), \file{THUATNGU.md} (thuật ngữ thống nhất).
+
+%--------------------------------------------------------------------
+\newpage
+\section{Quy trình git cho mỗi lần viết}
+\begin{enumerate}
+  \item Nhận mục trong \file{PHANCONG.md}, đổi trạng thái thành \emph{đang viết}.
+  \item Tạo nhánh từ \verb+dev+:
+\begin{lstlisting}
+git switch dev; git pull; git switch -c report/<ten>-<chuong>     # vi du: report/long-ch01
+\end{lstlisting}
+  \item Viết, biên dịch \verb+-Fast+ thường xuyên; commit nhỏ. Thông điệp commit dạng:\\ \verb+report: ch06 viet muc mem+
+  \item Trước khi push:
+\begin{lstlisting}
+git pull --rebase origin dev ; .\build.ps1 -Fast       # phai dung, khong loi
+git push -u origin report/<ten>-<chuong>
+\end{lstlisting}
+  \item Tạo Pull Request vào \verb+dev+; một người khác xem lại rồi merge. Gặp xung đột ở file không phải của mình thì dừng lại và hỏi nhóm.
+\end{enumerate}
+
+%--------------------------------------------------------------------
+\section{Cú pháp hay dùng}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{12.1cm}@{}}
+\toprule
+\textbf{Việc cần làm} & \textbf{Viết như sau} \\ \midrule
+Mục, mục con & \verb+\section{Tên mục}\label{sec:ch6-mem}+ ; \verb+\subsection{...}+. File \verb+sNN_*.tex+ bắt đầu bằng \verb+\section+ (\verb+\chapter+ chỉ ở \verb+00_chuong.tex+). \\
+Nhãn (label) & Có tiền tố và mã chương để không trùng: \verb+sec:ch6-mem+, \verb+fig:ch6-khoi+, \verb+tab:ch7-ds2+, \verb+eq:ch4-zscore+. \\
+Tham chiếu & \verb+Hình~\ref{fig:ch6-khoi}+, \verb+Bảng~\ref{tab:ch7-ds2}+, \verb+Mục~\ref{sec:ch6-mem}+, \verb+\eqref{eq:ch4-zscore}+. Luôn dùng dấu \verb+~+ để không ngắt dòng giữa ``Hình'' và số. \\
+Trích dẫn & \verb+Pan và Tompkins~\cite{pantompkins1985realtime} cho thấy ...+ \\
+Công thức & \verb+$x_t$+ trong dòng; hoặc \verb+\begin{equation}\label{eq:ch4-zscore} ... \end{equation}+ \\
+Tên module, lệnh, file & \verb+\texttt{layer\_cmd\_controller}+, \verb+\texttt{WRITE\_X}+ (dấu \verb+_+ phải viết \verb+\_+). \\
+Số và đơn vị & \verb+50\,MHz+, \verb+451\,584+ (khoảng trắng nhỏ \verb+\,+). Dấu thập phân: xem \file{THUATNGU.md}. \\
+Dấu nháy, gạch & ``nháy kép'' viết \verb+``nhay kep''+ ; khoảng số \verb+3--5+ ; ngắt ý \verb+---+. \\
+Ký tự đặc biệt & \verb+\%+ \quad \verb+\&+ \quad \verb+\#+ \quad \verb+\_+ (viết thẳng \verb+%+ sẽ biến phần còn lại của dòng thành chú thích). \\
+Ghi chú trong nhóm & \verb+\todo{việc cần làm}+ (chữ đỏ), \verb+\cmt{Tên}{nội dung}+ (chữ xanh); chỉ hiện khi \verb+\showhintstrue+ trong \file{metadata.tex}. Khung xám ``Dàn ý'' (\verb+goiy+): viết xong thì \textbf{xoá khung}. \\ \bottomrule
+\end{tabular}
+
+\medskip
+\textbf{Hình} (đặt file trong \file{figures/chNN\_ten/}, ưu tiên PDF/SVG vector; đường dẫn tính từ \file{figures/}, \emph{không} ghi \verb+figures/+; tên hình ở \emph{dưới}):
+\begin{lstlisting}
+\begin{figure}[htbp]\centering
+  \includegraphics[width=0.9\textwidth]{ch06_phan_cung/khoi_tong.pdf}
+  \caption{So do khoi tong the bo tang toc.}\label{fig:ch6-khoi}
+\end{figure}
+\end{lstlisting}
+\textbf{Bảng} (dùng \verb+booktabs+, không kẻ dọc; tên bảng ở \emph{trên}; ghi nguồn số liệu dưới bảng):
+\begin{lstlisting}
+\begin{table}[htbp]\centering
+\caption{Ket qua tren DS2.}\label{tab:ch7-ds2}
+\begin{tabular}{@{}lrr@{}} \toprule
+Lop & Se & +P \\ \midrule
+N & 0.99 & 0.98 \\ \bottomrule
+\end{tabular}
+\end{table}
+\end{lstlisting}
+\needspace{7\baselineskip}
+\textbf{Tài liệu tham khảo}: thêm mục vào cuối \file{bib/references.bib}, khoá dạng \verb|tacgia+nam+tukhoa|:
+\begin{lstlisting}
+@article{pantompkins1985realtime,
+  author = {J. Pan and W. J. Tompkins}, title = {A real-time {QRS} detection algorithm},
+  journal = {IEEE Trans. Biomed. Eng.}, volume = {32}, number = {3}, pages = {230--236}, year = {1985}}
+\end{lstlisting}
+
+%--------------------------------------------------------------------
+\section{Lỗi thường gặp}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{11.9cm}@{}}
+\toprule
+\textbf{Triệu chứng} & \textbf{Cách xử lý} \\ \midrule
+``Loi bien dich. Xem build/main.log'' & Tìm dòng đầu tiên bắt đầu bằng \verb+!+: \verb+Select-String build\main.log -Pattern '^!' -Context 0,4+. Dòng \verb+l.123+ cho biết số dòng lỗi trong file. \\
+\verb+Missing $ inserted+ & Dùng \verb+_+ hoặc \verb+^+ ngoài công thức: đổi thành \verb+\_+, hoặc bọc \verb+$...$+ / \verb+\texttt{}+. \\
+\emph{Undefined control sequence} & Gõ sai tên lệnh, hoặc dùng lệnh của gói chưa nạp. Hỏi nhóm trước khi thêm gói vào \file{preamble.tex}. \\
+Hiện \verb+??+ thay cho số hình, bảng, trích dẫn & Chạy \verb+.\build.ps1+ (đầy đủ, không \verb+-Fast+); nếu vẫn còn thì sai chính tả \verb+\label+ / khoá \verb+\cite+. \\
+\verb+File not found+ (hình) & Kiểm tra đường dẫn tính từ \file{figures/}, đúng chữ hoa/thường, không dấu cách trong tên file. \\
+Không ghi được \verb+build/main.pdf+ & Đóng trình xem PDF đang mở file đó rồi biên dịch lại. \\
+\emph{Times New Roman not found} (fontspec) & Máy không có font (Mac, Linux, Overleaf): đổi tạm sang \verb+TeX Gyre Termes+ như ở mục 1; không commit. \\
+Lỗi lạ sau khi pull & \verb+.\build.ps1 -Clean+ rồi biên dịch lại. \\ \bottomrule
+\end{tabular}
+
+%--------------------------------------------------------------------
+\section{Danh sách kiểm tra trước khi push}
+\begin{itemize}
+  \item[$\square$] \verb+.\build.ps1 -Fast+ chạy xong, không lỗi; \verb+git status+ không có \verb+build/+ hay \verb+.pdf+.
+  \item[$\square$] Mỗi con số có nguồn (\verb+docs/+, \verb+results/+, log); ghi trong chú thích hoặc \verb+% nguồn: ...+.
+  \item[$\square$] Thuật ngữ đúng \file{THUATNGU.md}; viết tắt giải thích ở lần đầu.
+  \item[$\square$] Nhãn có tiền tố và mã chương; mọi \verb+\cite+ có mục trong \file{references.bib}.
+  \item[$\square$] Đã xoá khung ``Dàn ý'' của mục vừa viết xong; cập nhật trạng thái trong \file{PHANCONG.md}.
+\end{itemize}
+
+\end{document}
